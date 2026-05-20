@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Derivita · Colorado Event ROI Tool</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cream: #faf6f0;
+    --white: #ffffff;
+    --navy: #0A1F44;
+    --orange: #E8450A;
+    --orange-light: #f97640;
+    --orange-hover: #c73a08;
+    --body: #5a6a80;
+    --muted: #8a99ad;
+    --border: rgba(10,31,68,0.12);
+    --card-shadow: 0 1px 12px rgba(10,31,68,0.07);
+  }
+
+  body {
+    font-family: 'Poppins', sans-serif;
+    background: var(--cream);
+    color: var(--navy);
+    font-size: 15px;
+    line-height: 1.65;
+  }
+
+  /* GRAPH PAPER TEXTURE */
+  .textured {
+    background-color: var(--cream);
+    background-image:
+      linear-gradient(rgba(10,31,68,0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(10,31,68,0.045) 1px, transparent 1px),
+      linear-gradient(rgba(10,31,68,0.018) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(10,31,68,0.018) 1px, transparent 1px);
+    background-size: 40px 40px, 40px 40px, 8px 8px, 8px 8px;
+  }
+
+  .page-wrap { max-width: 1060px; margin: 0 auto; padding: 0 32px; }
+
+  /* HEADER */
+  .page-header {
+    background: var(--navy);
+    padding: 40px 0 36px;
+    position: relative;
+    overflow: hidden;
+  }
+  .page-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--orange);
+  }
+  .header-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+  .header-logo { display: flex; align-items: center; gap: 12px; }
+  .logo-mark {
+    width: 40px; height: 40px;
+    background: var(--orange);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 20px; color: white; font-style: italic;
+  }
+  .logo-text { color: white; font-size: 18px; font-weight: 600; }
+  .logo-text span { color: var(--orange-light); }
+  .header-meta { text-align: right; }
+  .header-meta .label { font-size: 10px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(255,255,255,0.5); }
+  .header-meta .value { font-size: 15px; font-weight: 600; color: white; }
+
+  /* EYEBROW */
+  .eyebrow {
+    display: inline-block;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--orange);
+    background: rgba(232,69,10,0.1);
+    border-radius: 100px;
+    padding: 4px 12px;
+    margin-bottom: 12px;
+  }
+
+  /* SECTIONS */
+  .section { padding: 56px 0; }
+  .section-white { background: var(--white); padding: 56px 0; }
+  .section-navy {
+    background: var(--navy);
+    padding: 56px 0;
+  }
+
+  h2.section-title {
+    font-size: 28px; font-weight: 700; color: var(--navy); margin-bottom: 6px;
+  }
+  .section-navy h2.section-title { color: white; }
+  .section-sub { font-size: 15px; color: var(--body); margin-bottom: 32px; }
+  .section-navy .section-sub { color: rgba(255,255,255,0.65); }
+
+  /* STAT STRIP */
+  .stat-strip {
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: white;
+    overflow: hidden;
+    margin-bottom: 0;
+  }
+  .stat-cell {
+    padding: 24px 20px;
+    border-right: 1px solid var(--border);
+    text-align: center;
+  }
+  .stat-cell:last-child { border-right: none; }
+  .stat-num { font-size: 36px; font-weight: 700; color: var(--navy); line-height: 1; }
+  .stat-num span { color: var(--orange); }
+  .stat-label { font-size: 12px; color: var(--muted); margin-top: 4px; font-weight: 500; }
+
+  /* CONTROLS ROW */
+  .controls-row {
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    margin-bottom: 28px;
+    padding: 16px 20px;
+    background: white;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+  .controls-row label { font-size: 13px; font-weight: 600; color: var(--navy); white-space: nowrap; }
+  .controls-row .input-group { display: flex; align-items: center; gap: 8px; }
+  .controls-row input[type=number] {
+    width: 90px; padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 14px; font-weight: 600;
+    color: var(--navy);
+    background: var(--cream);
+  }
+  .controls-row input[type=number]:focus { outline: 2px solid var(--orange); border-color: transparent; }
+  .controls-tag { font-size: 11px; color: var(--muted); }
+  .controls-divider { width: 1px; height: 36px; background: var(--border); margin: 0 8px; }
+  .controls-row input[type=range] {
+    -webkit-appearance: none; width: 140px; height: 4px; border-radius: 2px;
+    background: var(--border); cursor: pointer; vertical-align: middle;
+  }
+  .controls-row input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--navy); cursor: pointer;
+  }
+  .controls-pct { font-size: 18px; font-weight: 700; color: var(--navy); min-width: 42px; }
+
+  /* DISTRICT TABLE */
+  .district-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .district-card {
+    background: white;
+    border-radius: 10px;
+    border-top: 3px solid var(--orange);
+    padding: 16px;
+    box-shadow: var(--card-shadow);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .district-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(10,31,68,0.12);
+  }
+  .district-card.flagship {
+    border-top-color: #0A1F44;
+    background: rgba(10,31,68,0.03);
+  }
+  .district-name { font-size: 13px; font-weight: 700; color: var(--navy); margin-bottom: 10px; line-height: 1.3; min-height: 36px; }
+  .district-badge {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--orange); background: rgba(232,69,10,0.1);
+    border-radius: 100px; padding: 2px 7px;
+    display: inline-block; margin-bottom: 8px;
+  }
+  .district-badge.flagship-badge { color: var(--navy); background: rgba(10,31,68,0.1); }
+  .district-stat { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid rgba(10,31,68,0.06); }
+  .district-stat:last-child { border-bottom: none; }
+  .ds-label { font-size: 11px; color: var(--muted); }
+  .ds-value { font-size: 12px; font-weight: 600; color: var(--navy); }
+  .ds-value.highlight { color: var(--orange); }
+
+  /* MAP SECTION */
+  #co-map-container {
+    position: relative;
+    border-radius: 12px;
+    overflow: visible;
+    border: 1px solid var(--border);
+    background: white;
+  }
+  #co-map svg { display: block; width: 100%; border-radius: 12px; }
+  #map-tooltip {
+    display: none;
+    position: absolute;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    pointer-events: none;
+    max-width: 220px;
+    box-shadow: 0 4px 16px rgba(10,31,68,0.12);
+    z-index: 100;
+  }
+  .tooltip-name { font-weight: 700; color: var(--navy); margin-bottom: 2px; font-size: 13px; }
+  .tooltip-city { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+  .tooltip-stat { display: flex; justify-content: space-between; gap: 16px; font-size: 12px; padding: 3px 0; border-top: 1px solid rgba(10,31,68,0.06); }
+  .tooltip-stat .tl { color: var(--body); }
+  .tooltip-stat .tv { font-weight: 600; color: var(--navy); }
+  .tooltip-stat .tv.orange { color: var(--orange); }
+
+  .map-legend { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; margin-top: 14px; }
+  .legend-item { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--body); }
+
+  /* PROXIMITY SECTION */
+  .proximity-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+  .prox-card {
+    background: white;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    padding: 16px;
+    text-align: center;
+    box-shadow: var(--card-shadow);
+  }
+  .prox-rank { font-size: 28px; font-weight: 700; color: var(--orange); line-height: 1; }
+  .prox-name { font-size: 12px; font-weight: 700; color: var(--navy); margin: 6px 0 4px; line-height: 1.3; }
+  .prox-dist { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+  .prox-stat { font-size: 11px; color: var(--body); }
+  .prox-stat strong { color: var(--navy); font-weight: 600; }
+  .prox-value { font-size: 13px; font-weight: 700; color: var(--orange); margin-top: 6px; }
+
+  /* STRATEGIC NOTES */
+  .notes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .note-card {
+    background: rgba(255,255,255,0.08);
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-left: 4px solid var(--orange-light);
+    padding: 20px 24px;
+  }
+  .note-district { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--orange-light); margin-bottom: 6px; }
+  .note-text { font-size: 14px; color: rgba(255,255,255,0.8); line-height: 1.6; }
+  .note-tag {
+    display: inline-block; margin-top: 10px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 3px 9px; border-radius: 100px;
+    color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.1);
+  }
+
+  /* ROI CALCULATOR */
+  .roi-wrap { max-width: 860px; margin: 0 auto; }
+
+  .roi-inputs {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 20px; margin-bottom: 32px;
+  }
+  .roi-field {
+    background: white;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    padding: 20px 24px;
+  }
+  .roi-field label { display: block; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 8px; }
+  .roi-field input[type=number], .roi-field input[type=range] {
+    width: 100%;
+    font-family: 'Poppins', sans-serif;
+  }
+  .roi-field input[type=number] {
+    font-size: 28px; font-weight: 700; color: var(--navy);
+    border: none; background: transparent;
+    border-bottom: 2px solid var(--border);
+    padding: 4px 0; outline: none;
+  }
+  .roi-field input[type=number]:focus { border-bottom-color: var(--orange); }
+  .roi-field input[type=range] {
+    -webkit-appearance: none;
+    height: 4px; border-radius: 2px;
+    background: var(--border);
+    margin: 12px 0 4px;
+    cursor: pointer;
+  }
+  .roi-field input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--orange);
+    cursor: pointer;
+  }
+  .roi-field .range-val { font-size: 28px; font-weight: 700; color: var(--orange); }
+  .roi-field .range-hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  .additional-inputs {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 16px; margin-bottom: 32px;
+  }
+  .add-field {
+    background: white; border-radius: 10px; border: 1px solid var(--border); padding: 16px 20px;
+  }
+  .add-field label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 6px; }
+  .add-field input[type=number] {
+    width: 100%; font-family: 'Poppins', sans-serif; font-size: 22px; font-weight: 700; color: var(--navy);
+    border: none; background: transparent; border-bottom: 2px solid var(--border); padding: 4px 0; outline: none;
+  }
+  .add-field input[type=number]:focus { border-bottom-color: var(--orange); }
+  .add-field input[type=range] {
+    -webkit-appearance: none; width: 100%; height: 4px; border-radius: 2px;
+    background: var(--border); margin: 10px 0 4px; cursor: pointer;
+  }
+  .add-field input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--navy); cursor: pointer;
+  }
+  .add-field .range-val { font-size: 22px; font-weight: 700; color: var(--navy); }
+
+  .roi-results {
+    background: var(--navy);
+    border-radius: 12px;
+    padding: 32px 36px;
+    border-top: 3px solid var(--orange);
+  }
+  .roi-results-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: rgba(255,255,255,0.5); margin-bottom: 24px; }
+  .roi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; }
+  .roi-cell { padding: 0 20px 0 0; border-right: 1px solid rgba(255,255,255,0.12); }
+  .roi-cell:last-child { border-right: none; padding-right: 0; }
+  .roi-cell:first-child { padding-left: 0; }
+  .roi-cell-label { font-size: 11px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; }
+  .roi-cell-val { font-size: 26px; font-weight: 700; color: white; line-height: 1.1; }
+  .roi-cell-val.accent { color: var(--orange-light); font-size: 30px; }
+  .roi-cell-sub { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 4px; }
+
+  .roi-verdict {
+    margin-top: 24px; padding-top: 20px;
+    border-top: 1px solid rgba(255,255,255,0.12);
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+  }
+  .verdict-text { font-size: 14px; color: rgba(255,255,255,0.7); max-width: 520px; }
+  .verdict-ratio {
+    text-align: right;
+  }
+  .verdict-ratio .ratio-label { font-size: 11px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.1em; }
+  .verdict-ratio .ratio-val { font-size: 32px; font-weight: 700; }
+  .ratio-positive { color: #4ade80; }
+  .ratio-neutral { color: #fbbf24; }
+  .ratio-negative { color: #f87171; }
+
+  /* MISSING INTEL section */
+  .intel-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .intel-card {
+    background: white; border-radius: 10px; border: 1px solid var(--border);
+    padding: 20px; box-shadow: var(--card-shadow);
+  }
+  .intel-icon { font-size: 22px; margin-bottom: 8px; }
+  .intel-title { font-size: 13px; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
+  .intel-desc { font-size: 12px; color: var(--body); line-height: 1.6; }
+
+  /* FOOTER */
+  .page-footer {
+    background: var(--navy);
+    padding: 24px 0;
+    text-align: center;
+    font-size: 12px;
+    color: rgba(255,255,255,0.35);
+    border-top: 3px solid var(--orange);
+  }
+
+  @media (max-width: 760px) {
+    .stat-strip { grid-template-columns: 1fr 1fr; }
+    .district-grid { grid-template-columns: 1fr 1fr; }
+    .proximity-grid { grid-template-columns: 1fr 1fr; }
+    .notes-grid { grid-template-columns: 1fr; }
+    .roi-inputs { grid-template-columns: 1fr; }
+    .additional-inputs { grid-template-columns: 1fr; }
+    .roi-grid { grid-template-columns: 1fr 1fr; gap: 16px; }
+    .roi-cell { border-right: none; padding: 0 0 16px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .roi-cell:last-child { border-bottom: none; padding-bottom: 0; }
+    .intel-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="page-header">
+  <div class="page-wrap">
+    <div class="header-inner">
+      <div class="header-logo">
+        <div class="logo-mark">D</div>
+        <div class="logo-text">Derivita <span>· Colorado Event Intelligence</span></div>
+      </div>
+      <div class="header-meta">
+        <div class="label">Territory AE</div>
+        <div class="value">Eric · UT/CO Coverage</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- SUMMARY STATS -->
+<div class="textured section">
+  <div class="page-wrap">
+    <div class="eyebrow">ICP Overview · Colorado</div>
+    <h2 class="section-title">Colorado District Landscape</h2>
+    <p class="section-sub">Public school districts with 5,000+ total students — Derivita's core ICP threshold. Values update when you change the per-student rate below.</p>
+
+    <div class="controls-row">
+      <label>Per-student rate: $</label>
+      <div class="input-group">
+        <input type="number" id="rate-input" value="12" min="1" max="100" step="1">
+        <span class="controls-tag">/ secondary student / year</span>
+      </div>
+      <div class="controls-divider"></div>
+      <label>Market penetration:</label>
+      <div class="input-group" style="gap:10px; align-items:center;">
+        <input type="range" id="penetration-slider" min="5" max="100" value="30" step="5">
+        <span class="controls-pct" id="penetration-display">30%</span>
+        <span class="controls-tag">of reachable districts × licensed students</span>
+      </div>
+    </div>
+
+    <div class="stat-strip" id="summary-stats">
+      <div class="stat-cell">
+        <div class="stat-num">27</div>
+        <div class="stat-label">ICP Districts (5K+ students)</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num" id="stat-total">490K</div>
+        <div class="stat-label">Total Students</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num" id="stat-secondary">378K</div>
+        <div class="stat-label">Secondary Students (est. 6–12)</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num" id="stat-tam"><span>$</span><span id="tam-val">4.5M</span></div>
+        <div class="stat-label">Total Addressable Market (CO)</div>
+      </div>
+      <div class="stat-cell" style="background: rgba(232,69,10,0.04);">
+        <div class="stat-num" id="stat-rtam"><span style="color:var(--orange);">$</span><span id="rtam-val">1.4M</span></div>
+        <div class="stat-label" style="color:var(--orange); font-weight:600;">Realistic TAM · <span id="rtam-pct">30%</span> penetration</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DISTRICT GRID -->
+<div class="section-white">
+  <div class="page-wrap">
+    <div class="eyebrow">All 27 ICP Districts</div>
+    <h2 class="section-title">District-by-District Opportunity</h2>
+    <p class="section-sub">Sorted by total enrollment. Cherry Creek is the current flagship account. Secondary students estimated from school-level grade span data.</p>
+    <div class="district-grid" id="district-grid"></div>
+  </div>
+</div>
+
+<!-- MAP -->
+<div class="textured section">
+  <div class="page-wrap">
+    <div class="eyebrow">Geographic View</div>
+    <h2 class="section-title">District Map · Front Range & Beyond</h2>
+    <p class="section-sub">Circle size = secondary enrollment. Hover for details. Cherry Creek (flagship) shown in navy.</p>
+    <div id="co-map-container">
+      <div id="co-map"></div>
+      <div id="map-tooltip"></div>
+    </div>
+    <div class="map-legend" style="margin-top:14px;">
+      <div class="legend-item">
+        <svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#E8450A" opacity="0.7"/></svg>
+        <span>ICP District</span>
+      </div>
+      <div class="legend-item">
+        <svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#0A1F44" opacity="0.85"/></svg>
+        <span>Flagship — Cherry Creek SD</span>
+      </div>
+      <div class="legend-item">
+        <svg width="12" height="12" style="margin-left:8px;"><circle cx="6" cy="6" r="3" fill="#E8450A" opacity="0.7"/></svg>
+        <span>Smaller (&lt;10K secondary)</span>
+      </div>
+      <div class="legend-item">
+        <svg width="20" height="20"><circle cx="10" cy="10" r="9" fill="#E8450A" opacity="0.7"/></svg>
+        <span>Larger (30K+ secondary)</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PROXIMITY -->
+<div class="section-white">
+  <div class="page-wrap">
+    <div class="eyebrow">Flagship Expansion Strategy</div>
+    <h2 class="section-title">5 Districts Closest to Cherry Creek</h2>
+    <p class="section-sub">Use the Cherry Creek relationship as a reference and referral anchor. These are the highest-probability adjacent wins — similar demographics, same metro area decision-maker network.</p>
+    <div class="proximity-grid" id="proximity-grid"></div>
+  </div>
+</div>
+
+<!-- STRATEGIC NOTES -->
+<div class="section-navy">
+  <div class="page-wrap">
+    <div class="eyebrow" style="background:rgba(249,118,64,0.15); color:#f97640;">Strategic Intelligence</div>
+    <h2 class="section-title">District-Level Notes for Eric</h2>
+    <p class="section-sub">Key context before the conference. CO is a "maintain and watch" state — standards alignment still in progress, which affects close rate assumptions.</p>
+    <div class="notes-grid" id="notes-grid"></div>
+  </div>
+</div>
+
+<!-- ROI CALCULATOR -->
+<div class="textured section">
+  <div class="page-wrap">
+    <div class="eyebrow">Event ROI Calculator</div>
+    <h2 class="section-title">Build Your Event Model</h2>
+    <p class="section-sub">Adjust the inputs to reflect what you know about this conference. The model uses your per-student rate and ACV assumptions to project revenue potential.</p>
+
+    <div class="roi-wrap">
+
+      <!-- Primary inputs -->
+      <div class="roi-inputs">
+        <div class="roi-field">
+          <label>Conference attendees (estimated)</label>
+          <input type="number" id="roi-attendees" value="400" min="10" max="10000">
+          <div class="range-hint">Total registrants at the event</div>
+        </div>
+        <div class="roi-field">
+          <label>Event cost (total, $)</label>
+          <input type="number" id="roi-cost" value="10000" min="0" max="500000">
+          <div class="range-hint">Sponsor fee + travel + staff time</div>
+        </div>
+      </div>
+
+      <!-- Funnel sliders -->
+      <div class="additional-inputs">
+        <div class="add-field">
+          <label>% ICP decision-makers</label>
+          <div class="range-val" id="v-icp">25%</div>
+          <input type="range" id="s-icp" min="5" max="80" value="25" step="1">
+          <div class="range-hint" style="font-size:11px;color:var(--muted);">Attendees who are district-level buyers (not teachers)</div>
+        </div>
+        <div class="add-field">
+          <label>% you'll connect with</label>
+          <div class="range-val" id="v-connect">30%</div>
+          <input type="range" id="s-connect" min="5" max="80" value="30" step="1">
+          <div class="range-hint" style="font-size:11px;color:var(--muted);">Of ICP attendees — booth stops, meaningful conversations</div>
+        </div>
+        <div class="add-field">
+          <label>% connections → meetings</label>
+          <div class="range-val" id="v-meeting">40%</div>
+          <input type="range" id="s-meeting" min="5" max="80" value="40" step="1">
+          <div class="range-hint" style="font-size:11px;color:var(--muted);">Post-event follow-up conversion to scheduled demo</div>
+        </div>
+        <div class="add-field">
+          <label>% meetings → closed deals</label>
+          <div class="range-val" id="v-close">20%</div>
+          <input type="range" id="s-close" min="3" max="60" value="20" step="1">
+          <div class="range-hint" style="font-size:11px;color:var(--muted);">Pipeline-to-close rate (CO is a "watch" state — be conservative)</div>
+        </div>
+        <div class="add-field">
+          <label>Avg ACV per deal ($)</label>
+          <input type="number" id="roi-acv" value="40000" min="1000" max="500000">
+          <div class="range-hint" style="font-size:11px;color:var(--muted);">$40K is the benchmark for a meaningful district deal</div>
+        </div>
+        <div class="add-field">
+          <label>Sales cycle (months)</label>
+          <input type="number" id="roi-cycle" value="6" min="1" max="24">
+          <div class="range-hint" style="font-size:11px;color:var(--muted);">Q3 event → Q1 close is typical (6–9 months)</div>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div class="roi-results">
+        <div class="roi-results-title">Projected Outcomes</div>
+        <div class="roi-grid">
+          <div class="roi-cell">
+            <div class="roi-cell-label">ICP Contacts</div>
+            <div class="roi-cell-val" id="res-icp">—</div>
+            <div class="roi-cell-sub">Decision-makers at event</div>
+          </div>
+          <div class="roi-cell">
+            <div class="roi-cell-label">Conversations</div>
+            <div class="roi-cell-val" id="res-connect">—</div>
+            <div class="roi-cell-sub">Booth / meaningful interactions</div>
+          </div>
+          <div class="roi-cell">
+            <div class="roi-cell-label">Meetings Booked</div>
+            <div class="roi-cell-val" id="res-meetings">—</div>
+            <div class="roi-cell-sub">Post-event demos scheduled</div>
+          </div>
+          <div class="roi-cell">
+            <div class="roi-cell-label">Deals Closed</div>
+            <div class="roi-cell-val" id="res-deals">—</div>
+            <div class="roi-cell-sub" id="res-deals-sub">At <span id="res-cycle">6</span>-month close</div>
+          </div>
+          <div class="roi-cell">
+            <div class="roi-cell-label">Projected Revenue</div>
+            <div class="roi-cell-val accent" id="res-revenue">—</div>
+            <div class="roi-cell-sub" id="res-rev-sub">At $<span id="res-acv-sub">40K</span> ACV</div>
+          </div>
+        </div>
+        <div class="roi-verdict">
+          <div class="verdict-text" id="verdict-text">Adjust the inputs above to generate your event ROI forecast.</div>
+          <div class="verdict-ratio">
+            <div class="ratio-label">Return on Event Spend</div>
+            <div class="ratio-val" id="roi-ratio">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MISSING INTEL -->
+<div class="section-white">
+  <div class="page-wrap">
+    <div class="eyebrow">Before You Go</div>
+    <h2 class="section-title">Intelligence to Gather Pre-Event</h2>
+    <p class="section-sub">Six data points that would sharpen this model and your event strategy significantly.</p>
+    <div class="intel-grid">
+      <div class="intel-card">
+        <div class="intel-icon">🗂️</div>
+        <div class="intel-title">HubSpot Contact Audit</div>
+        <div class="intel-desc">Which of the 27 ICP districts already have contacts in HubSpot? Warm outreach vs. cold changes your meeting conversion rate by 2–3x. Pull the list before you pack.</div>
+      </div>
+      <div class="intel-card">
+        <div class="intel-icon">🎯</div>
+        <div class="intel-title">Attendee Role Mix</div>
+        <div class="intel-desc">CAMT skews teacher-heavy. If only 15% of attendees are district-level buyers (not 25%), your meeting count drops by 40%. Confirm the audience profile with the event organizer.</div>
+      </div>
+      <div class="intel-card">
+        <div class="intel-icon">📐</div>
+        <div class="intel-title">Standards Alignment Status</div>
+        <div class="intel-desc">CO is flagged as not fully aligned in the targeting doc. Know which grade bands and standards are coverage gaps — it's the first objection you'll face with serious buyers.</div>
+      </div>
+      <div class="intel-card">
+        <div class="intel-icon">🏆</div>
+        <div class="intel-title">Cherry Creek Reference Playbook</div>
+        <div class="intel-desc">You have a win here. Build a 2-minute reference story before the event: who's the champion, what measurable result did they see, and will they take a reference call?</div>
+      </div>
+      <div class="intel-card">
+        <div class="intel-icon">🔍</div>
+        <div class="intel-title">Competitive Presence at Event</div>
+        <div class="intel-desc">Check the exhibitor list. If DeltaMath, IXL, or ALEKS are on the floor, your qualification conversation needs to address the comparison directly. Know their talking points cold.</div>
+      </div>
+      <div class="intel-card">
+        <div class="intel-icon">📅</div>
+        <div class="intel-title">District Fiscal Year Timing</div>
+        <div class="intel-desc">Most CO districts run July–June fiscal years. A June event means budget decisions are typically made or already locked for FY26. Position conversations toward FY27 pipeline, not immediate close.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="page-footer">
+  <div class="page-wrap">
+    Derivita · Colorado Event Intelligence · Prepared for AE use · Data source: NCES ELSI 2024–25
+  </div>
+</footer>
+
+<!-- D3 + TopoJSON -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+
+<script>
+// DATA
+const DISTRICTS = [
+  { name: "Douglas County SD", short: "Douglas County", total: 55674, secondary: 31620, lat: 39.45, lon: -104.90, city: "Castle Rock", flagship: false },
+  { name: "Denver Public Schools", short: "Denver", total: 54269, secondary: 45620, lat: 39.74, lon: -104.99, city: "Denver", flagship: false },
+  { name: "Jefferson County SD", short: "Jefferson County", total: 49686, secondary: 39736, lat: 39.65, lon: -105.15, city: "Lakewood", flagship: false },
+  { name: "Cherry Creek SD", short: "Cherry Creek", total: 30883, secondary: 29121, lat: 39.63, lon: -104.83, city: "Greenwood Village", flagship: true },
+  { name: "Aurora (Adams/Arapahoe)", short: "Aurora", total: 27293, secondary: 18351, lat: 39.73, lon: -104.83, city: "Aurora", flagship: false },
+  { name: "Adams 12 Five Star", short: "Adams 12", total: 22509, secondary: 18744, lat: 39.90, lon: -105.00, city: "Thornton", flagship: false },
+  { name: "St. Vrain Valley SD", short: "St. Vrain Valley", total: 20980, secondary: 16903, lat: 40.17, lon: -105.10, city: "Longmont", flagship: false },
+  { name: "El Paso County SD 49", short: "El Paso Co. 49", total: 19825, secondary: 16698, lat: 38.90, lon: -104.70, city: "Falcon/CS", flagship: false },
+  { name: "Boulder Valley SD", short: "Boulder Valley", total: 19111, secondary: 15940, lat: 40.01, lon: -105.27, city: "Boulder", flagship: false },
+  { name: "State Charter Inst.", short: "Charter Institute", total: 18863, secondary: 10500, lat: 39.55, lon: -105.78, city: "Statewide", flagship: false },
+  { name: "Poudre SD R-1", short: "Poudre", total: 18288, secondary: 16492, lat: 40.59, lon: -105.08, city: "Fort Collins", flagship: false },
+  { name: "Greeley SD No. 6", short: "Greeley", total: 17653, secondary: 11661, lat: 40.42, lon: -104.71, city: "Greeley", flagship: false },
+  { name: "Academy SD No. 20", short: "Academy 20", total: 17016, secondary: 14688, lat: 38.97, lon: -104.78, city: "Colorado Springs", flagship: false },
+  { name: "School District 27J", short: "District 27J", total: 16838, secondary: 12777, lat: 39.93, lon: -104.57, city: "Brighton", flagship: false },
+  { name: "Colorado Springs SD 11", short: "CS District 11", total: 12220, secondary: 11401, lat: 38.83, lon: -104.82, city: "Colorado Springs", flagship: false },
+  { name: "Mesa County Valley SD 51", short: "Mesa County", total: 11346, secondary: 10549, lat: 39.07, lon: -108.55, city: "Grand Junction", flagship: false },
+  { name: "Thompson SD R-2J", short: "Thompson", total: 10148, secondary: 7808, lat: 40.40, lon: -105.07, city: "Loveland", flagship: false },
+  { name: "Pueblo SD No. 60", short: "Pueblo 60", total: 8933, secondary: 6934, lat: 38.25, lon: -104.61, city: "Pueblo", flagship: false },
+  { name: "Harrison SD No. 2", short: "Harrison", total: 8572, secondary: 5949, lat: 38.78, lon: -104.80, city: "Colorado Springs", flagship: false },
+  { name: "Littleton SD No. 6", short: "Littleton", total: 8132, secondary: 7496, lat: 39.58, lon: -105.02, city: "Littleton", flagship: false },
+  { name: "Westminster Public Schools", short: "Westminster", total: 6763, secondary: 4032, lat: 39.84, lon: -105.04, city: "Westminster", flagship: false },
+  { name: "Mapleton SD No. 1", short: "Mapleton", total: 6447, secondary: 3269, lat: 39.85, lon: -104.96, city: "N. Denver area", flagship: false },
+  { name: "Pueblo County SD 70", short: "Pueblo County", total: 6293, secondary: 5744, lat: 38.20, lon: -104.45, city: "Pueblo County", flagship: false },
+  { name: "Byers SD No. 32J", short: "Byers", total: 6208, secondary: 5440, lat: 39.69, lon: -104.23, city: "Byers", flagship: false },
+  { name: "Lewis-Palmer SD 38", short: "Lewis-Palmer", total: 5720, secondary: 3482, lat: 39.09, lon: -104.86, city: "Monument", flagship: false },
+  { name: "El Paso SD No. 3", short: "El Paso SD 3", total: 5568, secondary: 4713, lat: 38.72, lon: -104.88, city: "El Paso County", flagship: false },
+  { name: "Adams SD No. 14", short: "Adams 14", total: 5044, secondary: 2377, lat: 39.84, lon: -104.91, city: "Commerce City", flagship: false },
+];
+
+const STRATEGIC_NOTES = [
+  { district: "Denver Public Schools", text: "Largest district in CO at 54K total students. Complex buying process — multiple decision-makers across curriculum, assessment, and technology. A win here is transformational but expect a 12–18 month cycle. Lead with PLC and district analytics, not teacher workflow.", tag: "High complexity" },
+  { district: "Jefferson County SD", text: "49K students, strong Canvas presence historically. Devlin's Canvas background is directly relevant here — lead with LMS integration and the 85% utilization proof point. Second largest CO district and geographically diverse.", tag: "Canvas angle" },
+  { district: "Douglas County SD", text: "Largest district in CO. Affluent, high-performing, high expectations for evidence and rigor. ESSA Level III/IV evidence lands well here — they care about results. May already be using IXL — come prepared to address the comparison.", tag: "Evidence-driven buyer" },
+  { district: "Aurora (Adams/Arapahoe)", text: "High-need district with achievement gaps and reform urgency. The +13 percentile point gain narrative resonates strongly. Focus on RTI/intervention use case — similar dynamics to the Norman, OK win. Budget-constrained, so ROI framing matters.", tag: "High-need · RTI angle" },
+  { district: "Colorado Springs cluster", text: "Four separate ICP districts in the CS metro: Academy 20, CS District 11, Harrison, El Paso Co. 49. Combined secondary enrollment ~48K. Academy 20 is the most affluent and highest-performing — best entry point. A CS win creates social proof for the others.", tag: "Cluster strategy" },
+  { district: "Mesa County Valley SD 51", text: "Grand Junction — geographically isolated, 4+ hours from Denver. Represents a distinct Western Slope market. 11K students, moderate complexity. If Eric doesn't have existing contacts here, conference is the best opportunity. Low competitive noise in this geography.", tag: "Western Slope · lower competition" },
+];
+
+// HELPERS
+function fmt(n) { return n >= 1000000 ? '$' + (n/1000000).toFixed(1) + 'M' : n >= 1000 ? '$' + (n/1000).toFixed(0) + 'K' : '$' + n; }
+function fmtN(n) { return n >= 1000000 ? (n/1000000).toFixed(1) + 'M' : n >= 1000 ? (n/1000).toFixed(0) + 'K' : n; }
+function dist(a, b) {
+  const R = 3958.8;
+  const dLat = (b.lat - a.lat) * Math.PI/180;
+  const dLon = (b.lon - a.lon) * Math.PI/180;
+  const x = Math.sin(dLat/2)**2 + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
+}
+
+// RATE-DRIVEN UPDATES
+function getRate() { return parseFloat(document.getElementById('rate-input').value) || 12; }
+function getPenetration() { return parseFloat(document.getElementById('penetration-slider').value) / 100 || 0.30; }
+
+function updateStats() {
+  const rate = getRate();
+  const pen = getPenetration();
+  const totalSec = DISTRICTS.reduce((s, d) => s + d.secondary, 0);
+  const tam = totalSec * rate;
+  const rtam = tam * pen;
+  document.getElementById('stat-total').textContent = fmtN(DISTRICTS.reduce((s,d) => s+d.total,0));
+  document.getElementById('stat-secondary').textContent = fmtN(totalSec);
+  document.getElementById('tam-val').textContent = (tam/1000000).toFixed(1) + 'M';
+  document.getElementById('rtam-val').textContent = rtam >= 1000000 ? (rtam/1000000).toFixed(1) + 'M' : (rtam/1000).toFixed(0) + 'K';
+  document.getElementById('rtam-pct').textContent = Math.round(pen*100) + '%';
+}
+
+function buildDistrictGrid() {
+  const rate = getRate();
+  const pen = getPenetration();
+  const grid = document.getElementById('district-grid');
+  grid.innerHTML = '';
+  DISTRICTS.forEach(d => {
+    const val = d.secondary * rate;
+    const rval = val * pen;
+    const card = document.createElement('div');
+    card.className = 'district-card' + (d.flagship ? ' flagship' : '');
+    card.innerHTML = `
+      <div class="district-name">${d.name}</div>
+      ${d.flagship ? '<span class="district-badge flagship-badge">★ Flagship Account</span>' : ''}
+      <div class="district-stat"><span class="ds-label">City / Area</span><span class="ds-value">${d.city}</span></div>
+      <div class="district-stat"><span class="ds-label">Total students</span><span class="ds-value">${d.total.toLocaleString()}</span></div>
+      <div class="district-stat"><span class="ds-label">Secondary (est.)</span><span class="ds-value">${d.secondary.toLocaleString()}</span></div>
+      <div class="district-stat"><span class="ds-label">Full opportunity @ $${rate}</span><span class="ds-value">${fmt(val)}</span></div>
+      <div class="district-stat"><span class="ds-label">Realistic @ ${Math.round(pen*100)}% penetration</span><span class="ds-value highlight">${fmt(rval)}</span></div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function buildProximityGrid() {
+  const rate = getRate();
+  const pen = getPenetration();
+  const flagship = DISTRICTS.find(d => d.flagship);
+  const others = DISTRICTS.filter(d => !d.flagship && d.name !== 'State Charter Inst.');
+  const closest = others
+    .map(d => ({ ...d, miles: Math.round(dist(flagship, d)) }))
+    .sort((a, b) => a.miles - b.miles)
+    .slice(0, 5);
+
+  const grid = document.getElementById('proximity-grid');
+  grid.innerHTML = '';
+  closest.forEach((d, i) => {
+    const val = d.secondary * rate;
+    const rval = val * pen;
+    const card = document.createElement('div');
+    card.className = 'prox-card';
+    card.innerHTML = `
+      <div class="prox-rank">#${i+1}</div>
+      <div class="prox-name">${d.short}</div>
+      <div class="prox-dist">${d.miles} mi from Cherry Creek</div>
+      <div class="prox-stat">Secondary: <strong>${d.secondary.toLocaleString()}</strong></div>
+      <div class="prox-value">${fmt(rval)}</div>
+      <div style="font-size:10px; color:var(--muted); margin-top:2px;">@ ${Math.round(pen*100)}% · full: ${fmt(val)}</div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function buildNotes() {
+  const grid = document.getElementById('notes-grid');
+  grid.innerHTML = '';
+  STRATEGIC_NOTES.forEach(n => {
+    const card = document.createElement('div');
+    card.className = 'note-card';
+    card.innerHTML = `
+      <div class="note-district">${n.district}</div>
+      <div class="note-text">${n.text}</div>
+      <span class="note-tag">${n.tag}</span>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+// MAP
+function buildMap() {
+  const width = 860, height = 480;
+  const svg = d3.select('#co-map').append('svg')
+    .attr('viewBox', `0 0 ${width} ${height}`)
+    .attr('width', '100%');
+
+  const projection = d3.geoAlbers()
+    .rotate([105.5, 0])
+    .center([0, 39.0])
+    .scale(5100)
+    .translate([width/2, height/2]);
+
+  const path = d3.geoPath().projection(projection);
+
+  const radiusScale = d3.scaleSqrt().domain([0, 50000]).range([5, 34]);
+
+  const coFips = new Set([
+    '08001','08003','08005','08007','08009','08011','08013','08014','08015','08017',
+    '08019','08021','08023','08025','08027','08029','08031','08033','08035','08037',
+    '08039','08041','08043','08045','08047','08049','08051','08053','08055','08057',
+    '08059','08061','08063','08065','08067','08069','08071','08073','08075','08077',
+    '08079','08081','08083','08085','08087','08089','08091','08093','08095','08097',
+    '08099','08101','08103','08105','08107','08109','08111','08113','08115','08117',
+    '08119','08121','08123','08125'
+  ]);
+
+  const tooltip = document.getElementById('map-tooltip');
+  const container = document.getElementById('co-map-container');
+
+  d3.json('https://cdn.jsdelivr.net/npm/us-atlas@3/counties-10m.json').then(us => {
+    const counties = topojson.feature(us, us.objects.counties).features
+      .filter(d => coFips.has(d.id));
+
+    svg.append('g').selectAll('path')
+      .data(counties).join('path')
+      .attr('d', path)
+      .attr('fill', 'rgba(10,31,68,0.04)')
+      .attr('stroke', 'rgba(10,31,68,0.15)')
+      .attr('stroke-width', 0.6);
+
+    DISTRICTS.forEach(d => {
+      const [x, y] = projection([d.lon, d.lat]);
+      const r = radiusScale(d.secondary);
+      const color = d.flagship ? '#0A1F44' : '#E8450A';
+
+      svg.append('circle')
+        .attr('cx', x).attr('cy', y).attr('r', r)
+        .attr('fill', color)
+        .attr('fill-opacity', d.flagship ? 0.85 : 0.65)
+        .attr('stroke', color)
+        .attr('stroke-width', 1.5)
+        .style('cursor', 'pointer')
+        .on('mousemove', function(event) {
+          const rect = container.getBoundingClientRect();
+          tooltip.style.display = 'block';
+          tooltip.style.left = (event.clientX - rect.left + 16) + 'px';
+          tooltip.style.top = (event.clientY - rect.top - 10) + 'px';
+          tooltip.innerHTML = `
+            <div class="tooltip-name">${d.name}${d.flagship ? ' ★' : ''}</div>
+            <div class="tooltip-city">${d.city}</div>
+            <div class="tooltip-stat"><span class="tl">Total students</span><span class="tv">${d.total.toLocaleString()}</span></div>
+            <div class="tooltip-stat"><span class="tl">Secondary (est.)</span><span class="tv">${d.secondary.toLocaleString()}</span></div>
+            <div class="tooltip-stat"><span class="tl">Full opportunity</span><span class="tv">${fmt(d.secondary * getRate())}</span></div>
+            <div class="tooltip-stat"><span class="tl">Realistic @ ${Math.round(getPenetration()*100)}%</span><span class="tv orange">${fmt(d.secondary * getRate() * getPenetration())}</span></div>
+          `;
+        })
+        .on('mouseleave', () => { tooltip.style.display = 'none'; });
+
+      if (d.secondary > 15000 || d.flagship) {
+        svg.append('text')
+          .attr('x', x).attr('y', y - r - 5)
+          .attr('text-anchor', 'middle')
+          .attr('font-family', 'Poppins, sans-serif')
+          .attr('font-size', '10px')
+          .attr('font-weight', '600')
+          .attr('fill', d.flagship ? '#0A1F44' : '#5a6a80')
+          .attr('pointer-events', 'none')
+          .text(d.short);
+      }
+    });
+  });
+}
+
+// ROI CALCULATOR
+function bindSlider(sliderId, displayId) {
+  const s = document.getElementById(sliderId);
+  const v = document.getElementById(displayId);
+  v.textContent = s.value + '%';
+  s.addEventListener('input', () => { v.textContent = s.value + '%'; calcROI(); });
+}
+
+function calcROI() {
+  const attendees = parseFloat(document.getElementById('roi-attendees').value) || 0;
+  const cost = parseFloat(document.getElementById('roi-cost').value) || 0;
+  const acv = parseFloat(document.getElementById('roi-acv').value) || 40000;
+  const cycle = parseFloat(document.getElementById('roi-cycle').value) || 6;
+  const pctIcp = parseFloat(document.getElementById('s-icp').value)/100;
+  const pctConnect = parseFloat(document.getElementById('s-connect').value)/100;
+  const pctMeeting = parseFloat(document.getElementById('s-meeting').value)/100;
+  const pctClose = parseFloat(document.getElementById('s-close').value)/100;
+
+  const icp = Math.round(attendees * pctIcp);
+  const connections = Math.round(icp * pctConnect);
+  const meetings = Math.round(connections * pctMeeting);
+  const deals = Math.round(meetings * pctClose);
+  const revenue = deals * acv;
+  const ratio = cost > 0 ? revenue / cost : 0;
+
+  document.getElementById('res-icp').textContent = icp.toLocaleString();
+  document.getElementById('res-connect').textContent = connections.toLocaleString();
+  document.getElementById('res-meetings').textContent = meetings.toLocaleString();
+  document.getElementById('res-deals').textContent = deals.toLocaleString();
+  document.getElementById('res-revenue').textContent = fmt(revenue);
+  document.getElementById('res-cycle').textContent = cycle;
+  document.getElementById('res-acv-sub').textContent = (acv/1000).toFixed(0) + 'K';
+
+  const ratioEl = document.getElementById('roi-ratio');
+  if (ratio >= 3) {
+    ratioEl.textContent = ratio.toFixed(1) + 'x';
+    ratioEl.className = 'ratio-val ratio-positive';
+  } else if (ratio >= 1) {
+    ratioEl.textContent = ratio.toFixed(1) + 'x';
+    ratioEl.className = 'ratio-val ratio-neutral';
+  } else {
+    ratioEl.textContent = ratio.toFixed(2) + 'x';
+    ratioEl.className = 'ratio-val ratio-negative';
+  }
+
+  let verdict = '';
+  if (ratio >= 5) verdict = `Strong event ROI. ${meetings} meetings at ${cycle}-month close yields ${deals} deals — well above the ${fmt(cost)} investment. Prioritize pre-event outreach to the closest 5 districts to maximize pipeline quality.`;
+  else if (ratio >= 2) verdict = `Solid event ROI — ${deals} projected closed deals against ${fmt(cost)} in event cost. Tighten post-event follow-up speed; Q3 meetings need demos booked within 2 weeks to hit Q1 close.`;
+  else if (ratio >= 1) verdict = `Marginal ROI. Consider whether this event is the most efficient use of CO investment, or if targeted 1:1 outreach to the top 5 districts would generate the same pipeline at lower cost.`;
+  else verdict = `Below breakeven on current assumptions. Raise conversion rates or ACV, or reconsider the event. Note: CO standards alignment is incomplete, which likely depresses the close rate below CO's theoretical potential.`;
+
+  document.getElementById('verdict-text').textContent = verdict;
+}
+
+// INIT
+document.addEventListener('DOMContentLoaded', () => {
+  updateStats();
+  buildDistrictGrid();
+  buildProximityGrid();
+  buildNotes();
+  buildMap();
+
+  document.getElementById('rate-input').addEventListener('input', () => {
+    updateStats();
+    buildDistrictGrid();
+    buildProximityGrid();
+  });
+
+  const penSlider = document.getElementById('penetration-slider');
+  const penDisplay = document.getElementById('penetration-display');
+  penSlider.addEventListener('input', () => {
+    penDisplay.textContent = penSlider.value + '%';
+    updateStats();
+    buildDistrictGrid();
+    buildProximityGrid();
+  });
+
+  bindSlider('s-icp', 'v-icp');
+  bindSlider('s-connect', 'v-connect');
+  bindSlider('s-meeting', 'v-meeting');
+  bindSlider('s-close', 'v-close');
+
+  ['roi-attendees','roi-cost','roi-acv','roi-cycle'].forEach(id => {
+    document.getElementById(id).addEventListener('input', calcROI);
+  });
+
+  calcROI();
+});
+</script>
+</body>
+</html>
