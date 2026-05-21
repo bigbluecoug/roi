@@ -183,8 +183,7 @@
     padding: 9px 12px;
   }
   .state-picker select:focus { outline: 2px solid var(--orange); border-color: transparent; }
-  .state-context strong { display: block; font-size: 14px; color: var(--navy); margin-bottom: 2px; }
-  .state-context span { display: block; font-size: 12px; color: var(--body); line-height: 1.5; }
+  .state-context strong { display: block; font-size: 15px; color: var(--navy); }
 
   /* DISTRICT TABLE */
   .district-grid {
@@ -658,7 +657,6 @@
       </div>
       <div class="state-context">
         <strong id="state-event-label">Colorado event context</strong>
-        <span id="state-source-note">NCES district data and curated sales notes update by state.</span>
       </div>
     </div>
 
@@ -757,7 +755,7 @@
     <div class="map-legend" style="margin-top:14px;">
       <div class="legend-item">
         <svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#E8450A" opacity="0.7"/></svg>
-        <span>NCES Priority Target</span>
+        <span id="target-legend">NCES Priority Target</span>
       </div>
       <div class="legend-item">
         <svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#0A1F44" opacity="0.85"/></svg>
@@ -765,11 +763,11 @@
       </div>
       <div class="legend-item">
         <svg width="12" height="12" style="margin-left:8px;"><circle cx="6" cy="6" r="3" fill="#E8450A" opacity="0.7"/></svg>
-        <span>Smaller (&lt;10K secondary)</span>
+        <span id="small-legend">Smaller (&lt;10K secondary)</span>
       </div>
       <div class="legend-item">
         <svg width="20" height="20"><circle cx="10" cy="10" r="9" fill="#E8450A" opacity="0.7"/></svg>
-        <span>Larger (30K+ secondary)</span>
+        <span id="large-legend">Larger (30K+ secondary)</span>
       </div>
     </div>
   </div>
@@ -929,7 +927,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
 
 <script>
-const DISTRICT_SOURCE_NOTE = "NCES CCD 2024-25 LEA Directory + Membership v1a and NCES EDGE 2024-25 LEA geocodes; filtered to open public LEAs with 5,000+ total students. Secondary enrollment is the NCES grade 6-12 subtotal.";
+const DISTRICT_SOURCE_NOTE = "NCES CCD 2024-25 LEA Directory + Membership v1a and NCES EDGE 2024-25 LEA geocodes. Secondary enrollment is the NCES grade 6-12 subtotal.";
 const DISTRICT_PREVIEW_LIMIT = 20;
 const CALIFORNIA_SPLIT_LAT = 35.5;
 const STATE_ALIASES = { CA: "CA-S" };
@@ -947,18 +945,28 @@ function district(name, short, total, lat, lon, city, opts = {}) {
 }
 
 function makeProfile(config) {
+  const minEnrollmentInclusive = config.minEnrollmentInclusive ?? config.icpThreshold ?? 5000;
+  const maxEnrollmentExclusive = config.maxEnrollmentExclusive ?? null;
   const profile = {
-    icpThreshold: 5000,
+    icpThreshold: minEnrollmentInclusive,
+    minEnrollmentInclusive,
+    maxEnrollmentExclusive,
     perStudentDefault: 12,
     penetrationDefault: 30,
     secondaryRatio: 0.58,
     ...config
   };
+  profile.minEnrollmentInclusive = profile.minEnrollmentInclusive ?? profile.icpThreshold ?? 5000;
+  profile.maxEnrollmentExclusive = profile.maxEnrollmentExclusive ?? null;
+  profile.icpThreshold = profile.minEnrollmentInclusive;
   profile.districts = (profile.districts || [])
-    .filter(d => d.total >= profile.icpThreshold)
+    .filter(d =>
+      d.total >= profile.minEnrollmentInclusive &&
+      (profile.maxEnrollmentExclusive == null || d.total < profile.maxEnrollmentExclusive)
+    )
     .map(d => ({
       ...d,
-      secondary: d.secondary || Math.round(d.total * (d.secondaryRatio || profile.secondaryRatio))
+      secondary: d.secondary ?? Math.round(d.total * (d.secondaryRatio || profile.secondaryRatio))
     }))
     .sort((a, b) => b.total - a.total);
   const anchor = profile.districts.find(d =>
@@ -978,10 +986,26 @@ function makeProfile(config) {
   }));
   profile.countLabel = profile.countLabel || "NCES Priority Targets (5K+ students)";
   profile.tamLabel = profile.tamLabel || `NCES Profile TAM (${profile.stateCode})`;
+  profile.targetTypeLabel = profile.targetTypeLabel || "NCES Priority Targets";
+  profile.targetNounPlural = profile.targetNounPlural || "targets";
+  profile.profileCodeLabel = profile.profileCodeLabel || profile.stateCode;
+  profile.selectLabel = profile.selectLabel || profile.stateName;
+  profile.districtTitle = profile.districtTitle || "Priority Target Opportunity";
+  profile.districtGroupLabel = profile.districtGroupLabel || `NCES public LEA targets with ${profileEnrollmentPhrase(profile)}`;
   profile.sourceNote = profile.sourceNote || DISTRICT_SOURCE_NOTE;
   profile.strategicNotes = profile.strategicNotes || buildStrategicNotes(profile);
   profile.intelCards = profile.intelCards || makeIntelCards(profile);
   return profile;
+}
+
+function profileEnrollmentPhrase(p) {
+  if (p.maxEnrollmentExclusive != null && p.minEnrollmentInclusive <= 1) {
+    return `fewer than ${p.maxEnrollmentExclusive.toLocaleString()} total students`;
+  }
+  if (p.maxEnrollmentExclusive != null) {
+    return `${p.minEnrollmentInclusive.toLocaleString()}-${(p.maxEnrollmentExclusive - 1).toLocaleString()} total students`;
+  }
+  return `${p.minEnrollmentInclusive.toLocaleString()}+ total students`;
 }
 
 function buildStrategicNotes(p) {
@@ -1051,6 +1075,36 @@ const STATE_PROFILE_CONFIGS = {
     audienceNote: "Utah events often include district specialists plus teacher leaders. Pre-book math coordinators and digital learning leaders so booth traffic does not overstate buyer access.",
     closeRateHint: "Pipeline-to-close rate (UT has strong district networks — validate budget and alignment)",
     verdictContext: "Utah can move through relationship networks quickly, but alignment and district procurement timing still drive close probability."
+  },
+  "UT-RURAL": {
+    stateCode: "UT-RURAL",
+    dataStateCode: "UT-RURAL",
+    stateName: "Utah Rural Schools",
+    stateFips: "49",
+    minEnrollmentInclusive: 1,
+    maxEnrollmentExclusive: 5000,
+    coverage: "Eric · UT/CO Coverage",
+    eventLabel: "Utah rural events · Small-district and charter profile",
+    sourceNote: "NCES CCD 2024-25 LEA Directory + Membership v1a with NCES EDGE 2024-25 district geocodes. This profile includes open Utah public LEAs with fewer than 5,000 total students.",
+    countLabel: "Utah Rural Schools (<5K students)",
+    tamLabel: "Rural Profile TAM (UT)",
+    targetTypeLabel: "Utah Rural Schools",
+    targetNounPlural: "rural schools",
+    profileCodeLabel: "UT rural",
+    selectLabel: "Utah Rural Schools (<5K)",
+    districtTitle: "Rural School Opportunity",
+    districtGroupLabel: "Utah rural public LEAs with fewer than 5,000 students",
+    anchorDistrict: "Sevier District",
+    anchorLeaId: "4900930",
+    anchorStrategy: "Sevier District is used as the Utah rural planning anchor because it is the largest open Utah public LEA under 5,000 students in this NCES profile. Treat it as a planning reference only until HubSpot confirms account or customer status.",
+    clusterTitle: "Rural district + charter mix",
+    clusterNote: "The rural profile mixes small regular districts and charter LEAs. Segment outreach by implementation reality: rural districts may need regional support and flexible pilots, while charters may move faster but have smaller ACV.",
+    standardsNote: "Confirm Utah Secondary Math I-III alignment, middle-school coverage, Canvas/LMS expectations, and whether each small district needs full secondary math or targeted intervention support.",
+    fiscalNote: "Small Utah districts generally follow July-June fiscal years, but buying windows can depend heavily on local board calendars, grants, and cooperative purchasing conversations.",
+    competitionNote: "Expect IXL, ALEKS, DeltaMath, Canvas-native workflows, and low-cost local assessment practices. Discovery should focus on teacher time, support capacity, and whether the district needs districtwide analytics.",
+    audienceNote: "Rural Utah events and networks may have fewer district-level buyers on site. Pre-event outreach to superintendents, curriculum leads, and regional service contacts is more important than booth volume.",
+    closeRateHint: "Pipeline-to-close rate (rural UT requires tight fit, budget validation, and lightweight implementation)",
+    verdictContext: "Utah rural TAM is broad but fragmented, so event ROI depends on finding true buyers, right-sized ACV, and regional proof rather than raw attendee volume."
   },
   TX: {
     stateCode: "TX",
@@ -1919,6 +1973,140 @@ const NCES_DISTRICTS = {
       "leaType": "Independent charter district",
       "secondarySource": "NCES membership grades 6-12"
     }
+  ],
+  "UT-RURAL": [
+    {"leaId": "4900930", "name": "Sevier District", "short": "Sevier District", "ncesName": "Sevier District", "total": 4658, "secondary": 2532, "lat": 38.776181, "lon": -112.081494, "city": "Richfield", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900750", "name": "Park City District", "short": "Park City District", "ncesName": "Park City District", "total": 4269, "secondary": 2582, "lat": 40.668924, "lon": -111.487838, "city": "Park City", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900150", "name": "Carbon District", "short": "Carbon District", "ncesName": "Carbon District", "total": 3334, "secondary": 1842, "lat": 39.604568, "lon": -110.816709, "city": "Price", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900960", "name": "South Sanpete District", "short": "South Sanpete District", "ncesName": "South Sanpete District", "total": 3305, "secondary": 1778, "lat": 39.26476, "lon": -111.636727, "city": "Manti", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900540", "name": "Millard District", "short": "Millard District", "ncesName": "Millard District", "total": 3198, "secondary": 1711, "lat": 39.36014, "lon": -112.568441, "city": "Delta", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900570", "name": "Morgan District", "short": "Morgan District", "ncesName": "Morgan District", "total": 3185, "secondary": 1911, "lat": 41.038172, "lon": -111.675193, "city": "Morgan", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900900", "name": "San Juan District", "short": "San Juan District", "ncesName": "San Juan District", "total": 2897, "secondary": 1597, "lat": 37.628682, "lon": -109.477986, "city": "Blanding", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900174", "name": "Ascent Academies of Utah", "short": "Ascent Academies of Utah", "ncesName": "Ascent Academies of Utah", "total": 2854, "secondary": 739, "lat": 40.678371, "lon": -111.915744, "city": "Salt Lake City", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900450", "name": "Juab District", "short": "Juab District", "ncesName": "Juab District", "total": 2758, "secondary": 1526, "lat": 39.716964, "lon": -111.829635, "city": "Nephi", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900660", "name": "North Sanpete District", "short": "North Sanpete District", "ncesName": "North Sanpete District", "total": 2706, "secondary": 1430, "lat": 39.536325, "lon": -111.45098, "city": "Mt. Pleasant", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900066", "name": "Summit Academy", "short": "Summit Academy", "ncesName": "Summit Academy", "total": 2567, "secondary": 1160, "lat": 40.512454, "lon": -111.855147, "city": "Draper", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900062", "name": "Freedom Preparatory Academy", "short": "Freedom Prep Acad.", "ncesName": "Freedom Preparatory Academy", "total": 2165, "secondary": 731, "lat": 40.24691, "lon": -111.679273, "city": "Provo", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900184", "name": "Wallace Stegner Academy", "short": "Wallace Stegner Academy", "ncesName": "Wallace Stegner Academy", "total": 2162, "secondary": 772, "lat": 40.747888, "lon": -111.946152, "city": "Salt Lake City", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900270", "name": "Emery District", "short": "Emery District", "ncesName": "Emery District", "total": 2091, "secondary": 1149, "lat": 39.328682, "lon": -110.964264, "city": "Huntington", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900124", "name": "Providence Hall", "short": "Providence Hall", "ncesName": "Providence Hall", "total": 2044, "secondary": 1178, "lat": 40.485051, "lon": -112.004349, "city": "Herriman", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900130", "name": "Utah Virtual Academy", "short": "Utah Virtual Academy", "ncesName": "Utah Virtual Academy", "total": 1890, "secondary": 1346, "lat": 40.67404, "lon": -111.881991, "city": "Murray", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900044", "name": "Syracuse Arts Academy", "short": "Syracuse Arts Academy", "ncesName": "Syracuse Arts Academy", "total": 1718, "secondary": 647, "lat": 41.088772, "lon": -112.082019, "city": "Syracuse", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900300", "name": "Garfield District", "short": "Garfield District", "ncesName": "Garfield District", "total": 1628, "secondary": 534, "lat": 37.823113, "lon": -112.432937, "city": "Panguitch", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900990", "name": "South Summit District", "short": "South Summit District", "ncesName": "South Summit District", "total": 1616, "secondary": 969, "lat": 40.637128, "lon": -111.274844, "city": "Kamas", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900033", "name": "American Leadership Academy", "short": "Amer. Leader. Acad.", "ncesName": "American Leadership Academy", "total": 1597, "secondary": 853, "lat": 40.096676, "lon": -111.669983, "city": "Spanish Fork", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900042", "name": "Spectrum Academy", "short": "Spectrum Academy", "ncesName": "Spectrum Academy", "total": 1525, "secondary": 938, "lat": 40.852654, "lon": -111.932266, "city": "North Salt Lake", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900480", "name": "Kane District", "short": "Kane District", "ncesName": "Kane District", "total": 1484, "secondary": 778, "lat": 37.035897, "lon": -112.525424, "city": "Kanab", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900060", "name": "Beaver District", "short": "Beaver District", "ncesName": "Beaver District", "total": 1471, "secondary": 787, "lat": 38.278029, "lon": -112.6416, "city": "Beaver", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900330", "name": "Grand District", "short": "Grand District", "ncesName": "Grand District", "total": 1436, "secondary": 809, "lat": 38.56926, "lon": -109.543351, "city": "Moab", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900136", "name": "Excelsior Academy", "short": "Excelsior Academy", "ncesName": "Excelsior Academy", "total": 1406, "secondary": 539, "lat": 40.60105, "lon": -112.300875, "city": "Erda", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900137", "name": "Hawthorn Academy", "short": "Hawthorn Academy", "ncesName": "Hawthorn Academy", "total": 1364, "secondary": 392, "lat": 40.586419, "lon": -111.949835, "city": "West Jordan", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900065", "name": "Davinci Academy", "short": "Davinci Academy", "ncesName": "Davinci Academy", "total": 1271, "secondary": 646, "lat": 41.23046, "lon": -111.973681, "city": "Ogden", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900015", "name": "Thomas Edison", "short": "Thomas Edison", "ncesName": "Thomas Edison", "total": 1189, "secondary": 404, "lat": 41.779334, "lon": -111.829034, "city": "North Logan", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900049", "name": "Monticello Academy", "short": "Monticello Academy", "ncesName": "Monticello Academy", "total": 1131, "secondary": 260, "lat": 40.709382, "lon": -112.007722, "city": "West Valley City", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900063", "name": "No. UT. Acad. for Math Engineering & Science", "short": "No. UT. Acad. for Math Engineering", "ncesName": "No. UT. Acad. for Math Engineering & Science", "total": 1126, "secondary": 1126, "lat": 41.099045, "lon": -111.982266, "city": "Layton", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900141", "name": "Vista School", "short": "Vista School", "ncesName": "Vista School", "total": 1114, "secondary": 470, "lat": 37.169235, "lon": -113.666523, "city": "Ivins", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900690", "name": "North Summit District", "short": "North Summit District", "ncesName": "North Summit District", "total": 1073, "secondary": 628, "lat": 40.914957, "lon": -111.397414, "city": "Coalville", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900043", "name": "Lakeview Academy", "short": "Lakeview Academy", "ncesName": "Lakeview Academy", "total": 1061, "secondary": 382, "lat": 40.368518, "lon": -111.928192, "city": "Saratoga Springs", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900041", "name": "Entheos Academy", "short": "Entheos Academy", "ncesName": "Entheos Academy", "total": 1054, "secondary": 311, "lat": 40.640591, "lon": -112.002841, "city": "Kearns", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900143", "name": "Canyon Grove Academy", "short": "Canyon Grove Academy", "ncesName": "Canyon Grove Academy", "total": 1052, "secondary": 284, "lat": 40.40152, "lon": -111.750341, "city": "Pleasant Grove", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900151", "name": "Utah Connections Academy", "short": "Utah Connections Academy", "ncesName": "Utah Connections Academy", "total": 1052, "secondary": 778, "lat": 40.726113, "lon": -111.87264, "city": "Salt Lake City", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900014", "name": "John Hancock Charter School", "short": "John Hancock Charter", "ncesName": "John Hancock Charter School", "total": 1043, "secondary": 285, "lat": 40.365348, "lon": -111.739241, "city": "Pleasant Grove", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900140", "name": "Early Light Academy at Daybreak", "short": "Early Light Acad. at Daybreak", "ncesName": "Early Light Academy at Daybreak", "total": 1022, "secondary": 396, "lat": 40.5392, "lon": -112.01365, "city": "South Jordan", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900045", "name": "Legacy Preparatory Academy", "short": "Legacy Preparatory Academy", "ncesName": "Legacy Preparatory Academy", "total": 1016, "secondary": 368, "lat": 40.867494, "lon": -111.916763, "city": "Woods Cross", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900058", "name": "Ogden Preparatory Academy", "short": "Ogden Preparatory Academy", "ncesName": "Ogden Preparatory Academy", "total": 1014, "secondary": 403, "lat": 41.241304, "lon": -111.976568, "city": "Ogden", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900046", "name": "George Washington Academy", "short": "George Washington Academy", "ncesName": "George Washington Academy", "total": 1013, "secondary": 199, "lat": 37.06974, "lon": -113.521714, "city": "St. George", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900132", "name": "Quest Academy", "short": "Quest Academy", "ncesName": "Quest Academy", "total": 1009, "secondary": 370, "lat": 41.191698, "lon": -112.097186, "city": "West Haven", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900068", "name": "North Davis Preparatory Academy", "short": "North Davis Prep Acad.", "ncesName": "North Davis Preparatory Academy", "total": 966, "secondary": 363, "lat": 41.067099, "lon": -111.998223, "city": "Layton", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900176", "name": "Utah Military Academy", "short": "Utah Military Academy", "ncesName": "Utah Military Academy", "total": 952, "secondary": 952, "lat": 41.169227, "lon": -112.005605, "city": "Riverdale", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900022", "name": "Lincoln Academy", "short": "Lincoln Academy", "ncesName": "Lincoln Academy", "total": 911, "secondary": 445, "lat": 40.400266, "lon": -111.763711, "city": "Pleasant Grove", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900162", "name": "Leadership Learning Academy", "short": "Leader. Learn. Acad.", "ncesName": "Leadership Learning Academy", "total": 907, "secondary": 94, "lat": 41.099611, "lon": -111.966988, "city": "Layton", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900138", "name": "Mountain Heights Academy", "short": "Mountain Heights Academy", "ncesName": "Mountain Heights Academy", "total": 864, "secondary": 864, "lat": 40.58685, "lon": -111.92681, "city": "West Jordan", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900023", "name": "Beehive Science & Technology Academy", "short": "Beehive Science & Technology Acad.", "ncesName": "Beehive Science & Technology Academy", "total": 859, "secondary": 424, "lat": 40.581881, "lon": -111.829669, "city": "Sandy", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900133", "name": "Venture Academy", "short": "Venture Academy", "ncesName": "Venture Academy", "total": 802, "secondary": 533, "lat": 41.269041, "lon": -112.017033, "city": "Marriott-Slaterville City", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900038", "name": "Renaissance Academy", "short": "Renaissance Academy", "ncesName": "Renaissance Academy", "total": 742, "secondary": 193, "lat": 40.43051, "lon": -111.832554, "city": "Lehi", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900122", "name": "Gateway Preparatory Academy", "short": "Gateway Prep Acad.", "ncesName": "Gateway Preparatory Academy", "total": 732, "secondary": 214, "lat": 37.747156, "lon": -113.05751, "city": "Enoch", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900051", "name": "Mountainville Academy", "short": "Mountainville Academy", "ncesName": "Mountainville Academy", "total": 716, "secondary": 94, "lat": 40.45066, "lon": -111.776396, "city": "Alpine", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900187", "name": "Franklin Discovery Academy", "short": "Franklin Discovery Academy", "ncesName": "Franklin Discovery Academy", "total": 710, "secondary": 94, "lat": 40.296443, "lon": -111.7453, "city": "Vineyard", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900170", "name": "Scholar Academy", "short": "Scholar Academy", "ncesName": "Scholar Academy", "total": 690, "secondary": 228, "lat": 40.5494, "lon": -112.294608, "city": "Tooele", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900032", "name": "Reagan Academy", "short": "Reagan Academy", "ncesName": "Reagan Academy", "total": 683, "secondary": 208, "lat": 40.166048, "lon": -111.63105, "city": "Springville", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900156", "name": "Highmark Charter School", "short": "Highmark Charter School", "ncesName": "Highmark Charter School", "total": 668, "secondary": 359, "lat": 41.126327, "lon": -111.914313, "city": "South Weber", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900056", "name": "Karl G. Maeser Preparatory Academy", "short": "Karl G. Maeser Prep Acad.", "ncesName": "Karl G. Maeser Preparatory Academy", "total": 656, "secondary": 656, "lat": 40.327438, "lon": -111.722903, "city": "Lindon", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900158", "name": "Valley Academy", "short": "Valley Academy", "ncesName": "Valley Academy", "total": 642, "secondary": 163, "lat": 37.184505, "lon": -113.304803, "city": "Hurricane", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900185", "name": "Wasatch Waldorf Charter School", "short": "Wasatch Waldorf Charter", "ncesName": "Wasatch Waldorf Charter School", "total": 625, "secondary": 179, "lat": 40.666469, "lon": -111.849994, "city": "Holladay", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900183", "name": "Vanguard Academy", "short": "Vanguard Academy", "ncesName": "Vanguard Academy", "total": 623, "secondary": 623, "lat": 40.712239, "lon": -111.944175, "city": "West Valley City", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900040", "name": "Channing Hall", "short": "Channing Hall", "ncesName": "Channing Hall", "total": 604, "secondary": 176, "lat": 40.506018, "lon": -111.884596, "city": "Draper", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900179", "name": "Terra Academy", "short": "Terra Academy", "ncesName": "Terra Academy", "total": 595, "secondary": 288, "lat": 40.452218, "lon": -109.5652, "city": "Vernal", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900161", "name": "Esperanza School", "short": "Esperanza School", "ncesName": "Esperanza School", "total": 575, "secondary": 88, "lat": 40.697983, "lon": -112.009397, "city": "West Valley City", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900202", "name": "Bridge Elementary School", "short": "Bridge Elementary School", "ncesName": "Bridge Elementary School", "total": 558, "secondary": 71, "lat": 41.175211, "lon": -112.065224, "city": "Roy", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900181", "name": "Athenian eAcademy", "short": "Athenian eAcademy", "ncesName": "Athenian eAcademy", "total": 557, "secondary": 159, "lat": 40.37025, "lon": -111.777421, "city": "American Fork", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900037", "name": "Success Academy", "short": "Success Academy", "ncesName": "Success Academy", "total": 534, "secondary": 534, "lat": 37.674743, "lon": -113.072253, "city": "Cedar City", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900160", "name": "Voyage Academy", "short": "Voyage Academy", "ncesName": "Voyage Academy", "total": 528, "secondary": 74, "lat": 41.141152, "lon": -112.055622, "city": "Clinton", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900071", "name": "Canyon Rim Academy", "short": "Canyon Rim Academy", "ncesName": "Canyon Rim Academy", "total": 524, "secondary": 57, "lat": 40.706038, "lon": -111.809599, "city": "Salt Lake City", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900025", "name": "North Star Academy", "short": "North Star Academy", "ncesName": "North Star Academy", "total": 522, "secondary": 217, "lat": 40.497601, "lon": -111.96141, "city": "Bluffdale", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900048", "name": "Noah Webster Academy", "short": "Noah Webster Academy", "ncesName": "Noah Webster Academy", "total": 520, "secondary": 74, "lat": 40.29025, "lon": -111.690451, "city": "Orem", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900024", "name": "Wasatch Peak Academy", "short": "Wasatch Peak Academy", "ncesName": "Wasatch Peak Academy", "total": 519, "secondary": 75, "lat": 40.849411, "lon": -111.931034, "city": "North Salt Lake", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900020", "name": "Utah County Academy of Science", "short": "UT County Acad. of Science", "ncesName": "Utah County Academy of Science", "total": 510, "secondary": 510, "lat": 40.283221, "lon": -111.717576, "city": "Orem", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900840", "name": "Rich District", "short": "Rich District", "ncesName": "Rich District", "total": 507, "secondary": 275, "lat": 41.664713, "lon": -111.188227, "city": "Randolph", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900139", "name": "Jefferson Academy", "short": "Jefferson Academy", "ncesName": "Jefferson Academy", "total": 502, "secondary": 56, "lat": 41.01157, "lon": -111.958241, "city": "Kaysville", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900196", "name": "Leadership Academy of Utah", "short": "Leadership Academy of Utah", "ncesName": "Leadership Academy of Utah", "total": 497, "secondary": 497, "lat": 41.095638, "lon": -111.994051, "city": "Clearfield", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900203", "name": "Mountain Sunrise Academy", "short": "Mountain Sunrise Academy", "ncesName": "Mountain Sunrise Academy", "total": 493, "secondary": 81, "lat": 40.365572, "lon": -111.872989, "city": "Saratoga Springs", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900016", "name": "Timpanogos Academy", "short": "Timpanogos Academy", "ncesName": "Timpanogos Academy", "total": 490, "secondary": 67, "lat": 40.337115, "lon": -111.712683, "city": "Lindon", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900194", "name": "Ignite Entrepreneurship Academy", "short": "Ignite Entrepreneurship Acad.", "ncesName": "Ignite Entrepreneurship Academy", "total": 489, "secondary": 96, "lat": 40.437039, "lon": -111.876069, "city": "Lehi", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4901170", "name": "Wayne District", "short": "Wayne District", "ncesName": "Wayne District", "total": 468, "secondary": 223, "lat": 38.341721, "lon": -111.546511, "city": "Bicknell", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900017", "name": "Academy for Math Engineering & Science", "short": "Acad. for Math Engineering & Scien", "ncesName": "Academy for Math Engineering & Science", "total": 460, "secondary": 460, "lat": 40.646611, "lon": -111.853367, "city": "Salt Lake City", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900189", "name": "Athlos Academy of Utah", "short": "Athlos Academy of Utah", "ncesName": "Athlos Academy of Utah", "total": 458, "secondary": 83, "lat": 40.526474, "lon": -112.031656, "city": "Herriman", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900131", "name": "Merit College Preparatory Academy", "short": "Merit College Prep Acad.", "ncesName": "Merit College Preparatory Academy", "total": 456, "secondary": 456, "lat": 40.167476, "lon": -111.635907, "city": "Springville", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900182", "name": "Lumen Scholar Institute", "short": "Lumen Scholar Institute", "ncesName": "Lumen Scholar Institute", "total": 454, "secondary": 326, "lat": 40.31075, "lon": -111.728751, "city": "Orem", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900780", "name": "Piute District", "short": "Piute District", "ncesName": "Piute District", "total": 453, "secondary": 185, "lat": 38.2448, "lon": -112.220837, "city": "Junction", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900175", "name": "Mountain West Montessori Academy", "short": "Mtn. West Mont. Acad.", "ncesName": "Mountain West Montessori Academy", "total": 450, "secondary": 136, "lat": 40.540934, "lon": -111.988793, "city": "South Jordan", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900157", "name": "Promontory School of Expeditionary Learning", "short": "Promontory of Expeditionary Learn.", "ncesName": "Promontory School of Expeditionary Learning", "total": 443, "secondary": 124, "lat": 41.460803, "lon": -112.04061, "city": "Perry", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900147", "name": "Good Foundations Academy", "short": "Good Foundations Academy", "ncesName": "Good Foundations Academy", "total": 441, "secondary": 49, "lat": 41.169983, "lon": -112.007226, "city": "Riverdale", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900019", "name": "Fast Forward High", "short": "Fast Forward High", "ncesName": "Fast Forward High", "total": 439, "secondary": 439, "lat": 41.758275, "lon": -111.855613, "city": "Logan", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900192", "name": "Treeside Charter School", "short": "Treeside Charter School", "ncesName": "Treeside Charter School", "total": 434, "secondary": 42, "lat": 40.209537, "lon": -111.633679, "city": "Provo", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900073", "name": "Dual Immersion Academy", "short": "Dual Immersion Academy", "ncesName": "Dual Immersion Academy", "total": 433, "secondary": 117, "lat": 40.744039, "lon": -111.93085, "city": "Salt Lake City", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900145", "name": "Weilenmann School of Discovery", "short": "Weilenmann of Discovery", "ncesName": "Weilenmann School of Discovery", "total": 422, "secondary": 126, "lat": 40.752215, "lon": -111.592551, "city": "Park City", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900021", "name": "Odyssey Charter School", "short": "Odyssey Charter School", "ncesName": "Odyssey Charter School", "total": 420, "secondary": 47, "lat": 40.361441, "lon": -111.779679, "city": "American Fork", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900018", "name": "Salt Lake Arts Academy", "short": "Salt Lake Arts Academy", "ncesName": "Salt Lake Arts Academy", "total": 415, "secondary": 311, "lat": 40.750849, "lon": -111.885988, "city": "Salt Lake City", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900197", "name": "Salt Lake Academy High School", "short": "Salt Lake Acad. High", "ncesName": "Salt Lake Academy High School", "total": 403, "secondary": 403, "lat": 40.483171, "lon": -111.9779, "city": "Herriman", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900144", "name": "Maria Montessori Academy", "short": "Maria Montessori Academy", "ncesName": "Maria Montessori Academy", "total": 402, "secondary": 114, "lat": 41.303304, "lon": -111.974584, "city": "Ogden", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900072", "name": "Guadalupe School", "short": "Guadalupe School", "ncesName": "Guadalupe School", "total": 390, "secondary": 31, "lat": 40.799053, "lon": -111.926572, "city": "Salt Lake City", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900061", "name": "Walden School of Liberal Arts", "short": "Walden of Liberal Arts", "ncesName": "Walden School of Liberal Arts", "total": 386, "secondary": 201, "lat": 40.289558, "lon": -111.657441, "city": "Provo", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900034", "name": "Navigator Pointe Academy", "short": "Navigator Pointe Academy", "ncesName": "Navigator Pointe Academy", "total": 375, "secondary": 77, "lat": 40.626498, "lon": -112.002495, "city": "West Jordan", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900186", "name": "American Academy of Innovation", "short": "Amer. Acad. of Innovation", "ncesName": "American Academy of Innovation", "total": 373, "secondary": 373, "lat": 40.556975, "lon": -112.020216, "city": "South Jordan", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900123", "name": "Salt Lake Center for Science Education", "short": "Salt Lake Center for Science Educa", "ncesName": "Salt Lake Center for Science Education", "total": 368, "secondary": 368, "lat": 40.794465, "lon": -111.931302, "city": "Salt Lake City", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900067", "name": "Itineris Early College High", "short": "Itineris Early College High", "ncesName": "Itineris Early College High", "total": 366, "secondary": 366, "lat": 40.59323, "lon": -111.974871, "city": "West Jordan", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900052", "name": "Paradigm High School", "short": "Paradigm High School", "ncesName": "Paradigm High School", "total": 361, "secondary": 361, "lat": 40.541137, "lon": -111.975776, "city": "South Jordan", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900008", "name": "Pinnacle Canyon Academy", "short": "Pinnacle Canyon Academy", "ncesName": "Pinnacle Canyon Academy", "total": 360, "secondary": 220, "lat": 39.603225, "lon": -110.799454, "city": "Price", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900064", "name": "Ranches Academy", "short": "Ranches Academy", "ncesName": "Ranches Academy", "total": 360, "secondary": 51, "lat": 40.359434, "lon": -111.985038, "city": "Eagle Mountain", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900070", "name": "Edith Bowen Laboratory School", "short": "Edith Bowen Laboratory", "ncesName": "Edith Bowen Laboratory School", "total": 359, "secondary": 54, "lat": 41.744818, "lon": -111.808856, "city": "Logan", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900198", "name": "Advantage Arts Academy", "short": "Advantage Arts Academy", "ncesName": "Advantage Arts Academy", "total": 354, "secondary": 32, "lat": 40.53613, "lon": -112.037433, "city": "Herriman", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900177", "name": "Greenwood Charter School", "short": "Greenwood Charter School", "ncesName": "Greenwood Charter School", "total": 354, "secondary": 99, "lat": 41.274596, "lon": -111.97964, "city": "Ogden", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900195", "name": "Bonneville Academy", "short": "Bonneville Academy", "ncesName": "Bonneville Academy", "total": 337, "secondary": 118, "lat": 40.637922, "lon": -112.323263, "city": "Stansbury Park", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900193", "name": "The Center for Creativity Innovation and Discovery", "short": "The Center for Creativity Innovati", "ncesName": "The Center for Creativity Innovation and Discovery", "total": 332, "secondary": 142, "lat": 41.714201, "lon": -111.8217, "city": "Providence", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900011", "name": "Soldier Hollow Charter School", "short": "Soldier Hollow Charter", "ncesName": "Soldier Hollow Charter School", "total": 328, "secondary": 89, "lat": 40.47192, "lon": -111.467663, "city": "Heber City", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900159", "name": "Pacific Heritage Academy", "short": "Pacific Heritage Academy", "ncesName": "Pacific Heritage Academy", "total": 327, "secondary": 114, "lat": 40.792978, "lon": -111.940529, "city": "Salt Lake City", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900069", "name": "Utah Schools for the Deaf and the Blind", "short": "UT s for the Deaf and the Blind", "ncesName": "Utah Schools for the Deaf and the Blind", "total": 321, "secondary": 88, "lat": 41.251045, "lon": -111.945884, "city": "Ogden", "leaType": "State operated agency", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900036", "name": "East Hollywood High", "short": "East Hollywood High", "ncesName": "East Hollywood High", "total": 318, "secondary": 318, "lat": 40.724569, "lon": -111.975505, "city": "West Valley City", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900125", "name": "Rockwell Charter High School", "short": "Rockwell Charter High", "ncesName": "Rockwell Charter High School", "total": 315, "secondary": 315, "lat": 40.379536, "lon": -111.977281, "city": "Eagle Mountain", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900012", "name": "Utah Arts Academy", "short": "Utah Arts Academy", "ncesName": "Utah Arts Academy", "total": 311, "secondary": 311, "lat": 37.127141, "lon": -113.603976, "city": "Saint George", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900118", "name": "Open Classroom", "short": "Open Classroom", "ncesName": "Open Classroom", "total": 307, "secondary": 65, "lat": 40.772448, "lon": -111.878562, "city": "Salt Lake City", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900165", "name": "Mana Academy Charter School", "short": "Mana Acad. Charter", "ncesName": "Mana Academy Charter School", "total": 301, "secondary": 139, "lat": 40.72004, "lon": -111.973131, "city": "West Valley City", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4901020", "name": "Tintic District", "short": "Tintic District", "ncesName": "Tintic District", "total": 276, "secondary": 175, "lat": 39.959752, "lon": -112.103779, "city": "Eureka", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900155", "name": "Endeavor Hall", "short": "Endeavor Hall", "ncesName": "Endeavor Hall", "total": 257, "secondary": 33, "lat": 40.713494, "lon": -111.944273, "city": "West Valley City", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900166", "name": "Utah International Charter School", "short": "UT Intl. Charter", "ncesName": "Utah International Charter School", "total": 244, "secondary": 244, "lat": 40.689337, "lon": -111.85865, "city": "Salt Lake City", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900188", "name": "St. George Academy", "short": "St. George Academy", "ncesName": "St. George Academy", "total": 229, "secondary": 229, "lat": 37.08807, "lon": -113.50279, "city": "Washington", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900074", "name": "C.S. Lewis Academy", "short": "C.S. Lewis Academy", "ncesName": "C.S. Lewis Academy", "total": 224, "secondary": 24, "lat": 39.982091, "lon": -111.765536, "city": "Santaquin", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900178", "name": "Roots Charter High School", "short": "Roots Charter High School", "ncesName": "Roots Charter High School", "total": 218, "secondary": 218, "lat": 40.72227, "lon": -111.929611, "city": "West Valley City", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900169", "name": "Mountain View Montessori", "short": "Mountain View Montessori", "ncesName": "Mountain View Montessori", "total": 210, "secondary": 28, "lat": 37.146722, "lon": -113.520051, "city": "Washington", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900180", "name": "Daggett District", "short": "Daggett District", "ncesName": "Daggett District", "total": 200, "secondary": 127, "lat": 40.992179, "lon": -109.727131, "city": "Manila", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900039", "name": "InTech Collegiate Academy", "short": "InTech Collegiate Academy", "ncesName": "InTech Collegiate Academy", "total": 196, "secondary": 196, "lat": 41.754868, "lon": -111.850878, "city": "Logan", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900146", "name": "Bear River Charter School", "short": "Bear River Charter School", "ncesName": "Bear River Charter School", "total": 162, "secondary": 16, "lat": 41.73027, "lon": -111.845831, "city": "Logan", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900171", "name": "Utah Career Path High School", "short": "UT Career Path High", "ncesName": "Utah Career Path High School", "total": 148, "secondary": 148, "lat": 41.0291, "lon": -111.925111, "city": "Kaysville", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900168", "name": "Winter Sports School", "short": "Winter Sports School", "ncesName": "Winter Sports School", "total": 105, "secondary": 105, "lat": 40.691797, "lon": -111.543206, "city": "Park City", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900009", "name": "City Academy", "short": "City Academy", "ncesName": "City Academy", "total": 92, "secondary": 92, "lat": 40.765327, "lon": -111.874873, "city": "Salt Lake City", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900013", "name": "Uintah River High", "short": "Uintah River High", "ncesName": "Uintah River High", "total": 82, "secondary": 82, "lat": 40.282246, "lon": -109.863026, "city": "Fort Duchesne", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"},
+    {"leaId": "4900035", "name": "Moab Charter School", "short": "Moab Charter School", "ncesName": "Moab Charter School", "total": 70, "secondary": 5, "lat": 38.568406, "lon": -109.543545, "city": "Moab", "leaType": "Independent charter district", "secondarySource": "NCES membership grades 6-12"}
   ],
   "TX": [
     {
@@ -11251,7 +11439,7 @@ function getPenetration() { return (parseFloat(document.getElementById('penetrat
 
 function populateStateSelector() {
   const select = document.getElementById('state-select');
-  select.innerHTML = Object.values(STATE_PROFILES).map(p => `<option value="${p.stateCode}">${p.stateName}</option>`).join('');
+  select.innerHTML = Object.values(STATE_PROFILES).map(p => `<option value="${p.stateCode}">${p.selectLabel}</option>`).join('');
   select.addEventListener('change', () => applyProfile(select.value, true));
 }
 
@@ -11282,6 +11470,8 @@ function applyProfile(stateCode, resetControls = false) {
 function renderProfileCopy() {
   const p = currentProfile;
   const isFlagship = p.anchor.type === 'flagship';
+  const enrollmentPhrase = profileEnrollmentPhrase(p);
+  const maxSecondary = Math.max(...p.districts.map(d => d.secondary), 0);
   const anchorDescription = isFlagship
     ? `${p.anchor.short} is the known flagship/reference account.`
     : `${p.anchor.short} is only the proximity anchor for nearby-target planning; no district is automatically assigned as the priority target.`;
@@ -11293,21 +11483,23 @@ function renderProfileCopy() {
   setText('header-coverage', p.coverage);
   setText('overview-eyebrow', `ICP Overview · ${p.stateName}`);
   setText('landscape-title', `${p.stateName} District Landscape`);
-  setText('landscape-sub', `Open public LEAs with ${p.icpThreshold.toLocaleString()}+ total students in the NCES ${p.stateCode} profile. Values update when you change the per-student rate below.`);
+  setText('landscape-sub', `Open public LEAs with ${enrollmentPhrase} in the NCES ${p.profileCodeLabel} profile. Values update when you change the per-student rate below.`);
   setText('state-event-label', p.eventLabel);
-  setText('state-source-note', p.sourceNote);
   setText('stat-count-label', p.countLabel);
   setText('tam-label', p.tamLabel);
-  setText('district-eyebrow', `${p.districts.length} ${p.stateCode} NCES Priority Targets`);
-  setText('district-title', 'Priority Target Opportunity');
+  setText('district-eyebrow', `${p.districts.length} ${p.profileCodeLabel} ${p.targetTypeLabel}`);
+  setText('district-title', p.districtTitle);
   setText('district-sub', `Sorted by NCES total enrollment, with the largest ${DISTRICT_PREVIEW_LIMIT} shown by default. ${anchorDescription} Secondary students are NCES membership grades 6-12.`);
   setText('map-title', `District Map · ${p.stateName}`);
   setText('map-sub', `Circle size = secondary enrollment. Hover for details. ${mapDescription}`);
+  setText('target-legend', p.targetTypeLabel);
   setText('anchor-legend', `${p.anchor.label} — ${p.anchor.short}`);
+  setText('small-legend', `Smaller profile districts`);
+  setText('large-legend', maxSecondary >= 30000 ? 'Larger (30K+ secondary)' : 'Larger within profile');
   setText('notes-sub', `Sales-ready context for ${p.stateName}. Unknown customer/reference details are intentionally marked as target assumptions until validated in HubSpot or with the event team.`);
-  setText('roi-sub', `Adjust the inputs to reflect what you know about the ${p.stateName} event. The model uses the ${p.stateCode} profile, your per-student rate, and ACV assumptions to project revenue potential.`);
+  setText('roi-sub', `Adjust the inputs to reflect what you know about the ${p.stateName} event. The model uses the ${p.profileCodeLabel} profile, your per-student rate, and ACV assumptions to project revenue potential.`);
   setText('close-rate-hint', p.closeRateHint);
-  setText('cycle-hint', `${p.stateCode} event → pipeline close is typically 6-12 months depending on fiscal timing and procurement complexity`);
+  setText('cycle-hint', `${p.profileCodeLabel} event → pipeline close is typically 6-12 months depending on fiscal timing and procurement complexity`);
   setText('intel-sub', `Six ${p.stateName}-specific data points that would sharpen this model and your event strategy.`);
   setText('footer-copy', `Derivita · ${p.stateName} Event Intelligence · Prepared for AE use · ${DISTRICT_SOURCE_NOTE}`);
 }
@@ -11372,12 +11564,12 @@ function buildDistrictGrid() {
   }
   if (note) {
     if (hasSearch) {
-      note.textContent = `Showing ${resultCount} search ${resultCount === 1 ? 'result' : 'results'} for "${districtSearchQuery}"${hasFilter ? ` within ${districtFilterLabel(districtFilter)}` : ''} across all ${totalCount} ${currentProfile.stateCode} targets. Search checks district, city, NCES ID/type, status, and saved notes.`;
+      note.textContent = `Showing ${resultCount} search ${resultCount === 1 ? 'result' : 'results'} for "${districtSearchQuery}"${hasFilter ? ` within ${districtFilterLabel(districtFilter)}` : ''} across all ${totalCount} ${currentProfile.profileCodeLabel} ${currentProfile.targetNounPlural}. Search checks district, city, NCES ID/type, status, and saved notes.`;
     } else {
       const filterLabel = hasFilter ? `${districtFilterLabel(districtFilter)} from ` : '';
       note.textContent = hasMore
-        ? `Showing ${showAllDistricts ? `all ${resultCount}` : `largest ${DISTRICT_PREVIEW_LIMIT} of ${resultCount}`} ${filterLabel}NCES 5K+ public LEA targets. Summary stats, TAM, map, and nearby-target planning use the full ${totalCount}. Status and notes save in this browser.`
-        : `Showing all ${resultCount} ${filterLabel}NCES 5K+ public LEA targets. Status and notes save in this browser.`;
+        ? `Showing ${showAllDistricts ? `all ${resultCount}` : `largest ${DISTRICT_PREVIEW_LIMIT} of ${resultCount}`} ${filterLabel}${currentProfile.districtGroupLabel}. Summary stats, TAM, map, and nearby-target planning use the full ${totalCount}. Status and notes save in this browser.`
+        : `Showing all ${resultCount} ${filterLabel}${currentProfile.districtGroupLabel}. Status and notes save in this browser.`;
     }
   }
 
