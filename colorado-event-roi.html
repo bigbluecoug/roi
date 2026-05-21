@@ -1202,6 +1202,27 @@ const STATE_PROFILE_CONFIGS = {
     audienceNote: "Missouri events may include a practical mix of curriculum leaders, teacher leaders, and administrators. Pre-book St. Louis/KC suburban district leaders to avoid relying on walk-up traffic.",
     closeRateHint: "Pipeline-to-close rate (MO favors practical pilots and regional proof)",
     verdictContext: "Missouri TAM is smaller than TX/CA/FL, so ROI depends on meeting quality, regional proof, and efficient follow-up."
+  },
+  OK: {
+    stateCode: "OK",
+    stateName: "Oklahoma",
+    stateFips: "40",
+    coverage: "Eric · OK Event Coverage",
+    eventLabel: "Oklahoma events · Tulsa, Oklahoma City, and suburban district profile",
+    sourceNote: "NCES CCD 2024-25 LEA Directory + Membership v1a with NCES EDGE 2024-25 district geocodes.",
+    countLabel: "NCES Priority Targets (5K+ students)",
+    tamLabel: "NCES Profile TAM (OK)",
+    anchorDistrict: "Tulsa Public Schools",
+    anchorLeaId: "4030240",
+    anchorStrategy: "Tulsa is used as the Oklahoma proximity anchor for nearby-target planning, not an automatically assigned priority target or claimed reference. It is the largest Oklahoma ICP target in the NCES 2024-25 profile and anchors the Tulsa-area peer network.",
+    clusterTitle: "Tulsa + Oklahoma City corridor",
+    clusterNote: "Oklahoma has two primary motions: Tulsa-area districts such as Broken Arrow, Union, Jenks, Owasso, and Bixby, plus the Oklahoma City metro with OKCPS, Edmond, Moore, Putnam City, Norman, Mustang, Yukon, and Deer Creek.",
+    standardsNote: "Confirm Oklahoma Academic Standards for Mathematics alignment, OSTP/CCRA testing priorities, Algebra readiness needs, and district pacing expectations before demoing.",
+    fiscalNote: "Oklahoma districts generally run July-June fiscal years. Spring events can shape next-year budget planning, while fall events are stronger for intervention, pilot, and midyear implementation discovery.",
+    competitionNote: "Expect IXL, ALEKS, DeltaMath, Edmentum, i-Ready, and local LMS or benchmark workflows. Separate virtual/charter needs from brick-and-mortar district implementation questions.",
+    audienceNote: "Oklahoma events may mix district curriculum leaders, teacher leaders, and regional administrators. Pre-book Tulsa and Oklahoma City metro decision-makers before relying on walk-up traffic.",
+    closeRateHint: "Pipeline-to-close rate (OK is relationship-driven — validate budget and alignment)",
+    verdictContext: "Oklahoma TAM is mid-sized, so ROI depends on meeting quality, metro-cluster relevance, and whether alignment is validated before follow-up."
   }
 };
 
@@ -10932,6 +10953,30 @@ const NCES_DISTRICTS = {
       "leaType": "Regular public district",
       "secondarySource": "NCES membership grades 6-12"
     }
+  ],
+  "OK": [
+    { "leaId": "4030240", "name": "Tulsa Public Schools", "short": "Tulsa", "ncesName": "TULSA", "total": 33617, "secondary": 15284, "lat": 36.119484, "lon": -95.932682, "city": "Tulsa", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12" },
+    { "leaId": "4022770", "name": "Oklahoma City Public Schools", "short": "Oklahoma City", "ncesName": "OKLAHOMA CITY", "total": 32750, "secondary": 16352, "lat": 35.473707, "lon": -97.529441, "city": "Oklahoma City", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12" },
+    { "leaId": "4000777", "name": "Epic Charter Virtual School", "short": "Epic Charter Virtual", "ncesName": "EPIC CHARTER VIRTUAL SCHOOL", "total": 28536, "secondary": 20343, "lat": 35.522075, "lon": -97.545516, "city": "OKC", "leaType": "Charter LEA", "secondarySource": "NCES membership grades 6-12" },
+    { "leaId": "4010590", "name": "Edmond Public Schools", "short": "Edmond", "ncesName": "EDMOND", "total": 25746, "secondary": 13703, "lat": 35.668652, "lon": -97.498067, "city": "Edmond", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12" },
+    { "leaId": "4020250", "name": "Moore Public Schools", "short": "Moore", "ncesName": "MOORE", "total": 23567, "secondary": 12821, "lat": 35.333382, "lon": -97.466003, "city": "Moore", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12" },
+    { "leaId": "4005490", "name": "Broken Arrow Public Schools", "short": "Broken Arrow", "ncesName": "BROKEN ARROW", "total": 19882, "secondary": 10416, "lat": 36.045997, "lon": -95.790205, "city": "Broken Arrow", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12" },
+    { "leaId": "4025290", "name": "Putnam City Schools", "short": "Putnam City", "ncesName": "PUTNAM CITY", "total": 18836, "secondary": 9417, "lat": 35.512988, "lon": -97.611042, "city": "Warr Acres", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12" },
+    { "leaId": "4021720", "name": "Norman Public Schools", "short": "Norman", "ncesName": "NORMAN", "total": 16048, "secondary": 8527, "lat": 35.217117, "lon": -97.452468, "city": "Norman", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12" },
+    { "leaId": "4030600", "name": "Union Public Schools", "short": "Union", "ncesName": "UNION", "total": 14950, "secondary": 8034, "lat": 36.074808, "lon": -95.882251, "city": "Tulsa", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12" },
+    { "leaId": "4017250", "name": "Lawton Public Schools", "short": "Lawton", "ncesName": "LAWTON", "total": 13642, "secondary": 6833, "lat": 34.619897, "lon": -98.402836, "city": "Lawton", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12" },
+    { "leaId": "4021000", "name": "Mustang Public Schools", "short": "Mustang", "ncesName": "MUSTANG", "total": 13426, "secondary": 6816, "lat": 35.384016, "lon": -97.725306, "city": "Yukon", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12" },
+    { "leaId": "4015720", "name": "Jenks Public Schools", "short": "Jenks", "ncesName": "JENKS", "total": 12527, "secondary": 6515, "lat": 36.025262, "lon": -95.968911, "city": "Jenks", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12" },
+    { "leaId": "4019950", "name": "Midwest City-Del City Schools", "short": "Mid-Del", "ncesName": "MIDWEST CITY-DEL CITY", "total": 12087, "secondary": 6210, "lat": 35.450226, "lon": -97.398384, "city": "Midwest City", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12" },
+    { "leaId": "4023280", "name": "Owasso Public Schools", "short": "Owasso", "ncesName": "OWASSO", "total": 9761, "secondary": 5263, "lat": 36.281585, "lon": -95.853048, "city": "Owasso", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12" },
+    { "leaId": "4033480", "name": "Yukon Public Schools", "short": "Yukon", "ncesName": "YUKON", "total": 9597, "secondary": 5129, "lat": 35.505538, "lon": -97.752849, "city": "Yukon", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12" },
+    { "leaId": "4004500", "name": "Bixby Public Schools", "short": "Bixby", "ncesName": "BIXBY", "total": 8374, "secondary": 4355, "lat": 35.940969, "lon": -95.876913, "city": "Bixby", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12" },
+    { "leaId": "4009570", "name": "Deer Creek Public Schools", "short": "Deer Creek", "ncesName": "DEER CREEK", "total": 8156, "secondary": 4186, "lat": 35.682672, "lon": -97.621281, "city": "Edmond", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12" },
+    { "leaId": "4010920", "name": "Enid Public Schools", "short": "Enid", "ncesName": "ENID", "total": 7381, "secondary": 3764, "lat": 36.391179, "lon": -97.880461, "city": "Enid", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12" },
+    { "leaId": "4003630", "name": "Bartlesville Public Schools", "short": "Bartlesville", "ncesName": "BARTLESVILLE", "total": 6181, "secondary": 3127, "lat": 36.742092, "lon": -95.981576, "city": "Bartlesville", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12" },
+    { "leaId": "4028680", "name": "Stillwater Public Schools", "short": "Stillwater", "ncesName": "STILLWATER", "total": 6049, "secondary": 3183, "lat": 36.118421, "lon": -97.058371, "city": "Stillwater", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12" },
+    { "leaId": "4007620", "name": "Choctaw-Nicoma Park Schools", "short": "Choctaw-Nicoma Park", "ncesName": "CHOCTAW-NICOMA PARK", "total": 5828, "secondary": 3206, "lat": 35.478043, "lon": -97.302235, "city": "Choctaw", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12" },
+    { "leaId": "4023970", "name": "Piedmont Public Schools", "short": "Piedmont", "ncesName": "PIEDMONT", "total": 5407, "secondary": 2800, "lat": 35.653672, "lon": -97.753574, "city": "Piedmont", "leaType": "Regular public district", "secondarySource": "NCES membership grades 6-12" }
   ]
 };
 
