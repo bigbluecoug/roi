@@ -29,6 +29,103 @@
     font-size: 15px;
     line-height: 1.65;
   }
+  body.is-locked { overflow: hidden; }
+
+  /* LOGIN */
+  .login-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: grid;
+    place-items: center;
+    padding: 28px;
+    background: var(--navy);
+  }
+  .login-screen[hidden] { display: none; }
+  .login-screen::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.045) 1px, transparent 1px),
+      radial-gradient(circle at 50% 28%, rgba(232,69,10,0.22), transparent 34%);
+    background-size: 40px 40px, 40px 40px, auto;
+  }
+  .login-panel {
+    position: relative;
+    width: min(440px, 100%);
+    background: white;
+    border-radius: 12px;
+    border-top: 4px solid var(--orange);
+    box-shadow: 0 24px 70px rgba(0,0,0,0.32);
+    padding: 34px;
+  }
+  .login-brand { text-align: center; margin-bottom: 26px; }
+  .login-logo {
+    width: 92px;
+    height: 92px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--navy);
+    box-shadow: 0 10px 28px rgba(10,31,68,0.18);
+    margin-bottom: 14px;
+  }
+  .login-title { font-size: 24px; font-weight: 700; color: var(--navy); line-height: 1.2; }
+  .login-subtitle { font-size: 13px; color: var(--body); margin-top: 6px; }
+  .login-field { margin-bottom: 16px; }
+  .login-field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .login-field input {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 13px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 14px;
+    color: var(--navy);
+    background: var(--cream);
+  }
+  .login-field input:focus { outline: 2px solid var(--orange); border-color: transparent; }
+  .login-button {
+    width: 100%;
+    border: none;
+    border-radius: 8px;
+    background: var(--orange);
+    color: white;
+    font-family: 'Poppins', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 12px 16px;
+    cursor: pointer;
+    margin-top: 4px;
+  }
+  .login-button:hover { background: var(--orange-hover); }
+  .login-note { font-size: 11px; color: var(--muted); line-height: 1.5; margin-top: 14px; text-align: center; }
+  .login-error { min-height: 18px; font-size: 12px; color: #dc2626; margin: -4px 0 12px; }
+  .app-shell.is-auth-hidden { filter: blur(6px); pointer-events: none; user-select: none; }
+  .sign-out-button {
+    border: 1px solid rgba(255,255,255,0.26);
+    border-radius: 999px;
+    background: rgba(255,255,255,0.08);
+    color: white;
+    font-family: 'Poppins', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 7px 12px;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+  .sign-out-button:hover { background: rgba(255,255,255,0.14); }
 
   /* GRAPH PAPER TEXTURE */
   .textured {
@@ -606,6 +703,7 @@
   }
 
   @media (max-width: 760px) {
+    .login-panel { padding: 28px 22px; }
     .state-picker { grid-template-columns: 1fr; }
     .stat-strip { grid-template-columns: 1fr 1fr; }
     .district-grid { grid-template-columns: 1fr 1fr; }
@@ -626,18 +724,41 @@
 </style>
 </head>
 <body>
+<div class="login-screen" id="login-screen" role="dialog" aria-modal="true" aria-labelledby="login-title">
+  <form class="login-panel" id="login-form">
+    <div class="login-brand">
+      <img class="login-logo" src="assets/eric-event-roi-logo.png" alt="Derivita event intelligence">
+      <div class="login-title" id="login-title">Derivita Event Intelligence</div>
+      <div class="login-subtitle">Sign in to view the ROI planning tool.</div>
+    </div>
+    <div class="login-field">
+      <label for="login-email">Work email</label>
+      <input id="login-email" type="email" autocomplete="email" placeholder="name@derivita.com" required>
+    </div>
+    <div class="login-field">
+      <label for="login-code">Access code</label>
+      <input id="login-code" type="password" autocomplete="current-password" placeholder="Optional until HubSpot auth is connected">
+    </div>
+    <div class="login-error" id="login-error" role="alert"></div>
+    <button class="login-button" type="submit">Continue</button>
+    <p class="login-note">This is a lightweight static gate for the browser session. HubSpot-backed authentication can replace it later.</p>
+  </form>
+</div>
+
+<div class="app-shell is-auth-hidden" id="app-shell" aria-hidden="true">
 
 <!-- HEADER -->
 <header class="page-header">
   <div class="page-wrap">
     <div class="header-inner">
       <div class="header-logo">
-        <img class="logo-mark" src="assets/eric-event-roi-logo.png" alt="Eric Price">
+        <img class="logo-mark" src="assets/eric-event-roi-logo.png" alt="Derivita event intelligence">
         <div class="logo-text">Derivita <span id="logo-subtitle">· Multi-State Event Intelligence</span></div>
       </div>
       <div class="header-meta">
         <div class="label">Territory Coverage</div>
         <div class="value" id="header-coverage">Multi-State Coverage</div>
+        <button class="sign-out-button" type="button" id="sign-out-button">Sign out</button>
       </div>
     </div>
   </div>
@@ -921,6 +1042,7 @@
     <span id="footer-copy">Derivita · Multi-State Event Intelligence · Prepared for AE use · Data source: NCES CCD/ELSI 2024–25 baseline + curated state notes</span>
   </div>
 </footer>
+</div>
 
 <!-- D3 + TopoJSON -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
@@ -933,6 +1055,7 @@ const CALIFORNIA_SPLIT_LAT = 35.5;
 const STATE_ALIASES = { CA: "CA-S" };
 const DISTRICT_PLANNING_STORAGE_KEY = "derivita-roi-district-planning-v1";
 const EXPANSION_ANCHOR_STORAGE_KEY = "derivita-roi-expansion-anchor-v1";
+const AUTH_STORAGE_KEY = "derivita-roi-authenticated-v1";
 const DISTRICT_STATUS_OPTIONS = [
   { value: "", label: "Not marked" },
   { value: "priority", label: "Priority" },
@@ -11217,6 +11340,58 @@ function setText(id, text) {
   if (el) el.textContent = text;
 }
 
+function isAuthenticated() {
+  try {
+    return sessionStorage.getItem(AUTH_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function setAuthenticated(value) {
+  try {
+    if (value) sessionStorage.setItem(AUTH_STORAGE_KEY, "true");
+    else sessionStorage.removeItem(AUTH_STORAGE_KEY);
+  } catch {}
+}
+
+function showLoginScreen(show) {
+  const loginScreen = document.getElementById("login-screen");
+  const appShell = document.getElementById("app-shell");
+  if (!loginScreen || !appShell) return;
+  loginScreen.hidden = !show;
+  appShell.classList.toggle("is-auth-hidden", show);
+  appShell.setAttribute("aria-hidden", String(show));
+  document.body.classList.toggle("is-locked", show);
+  if (show) {
+    document.getElementById("login-email")?.focus();
+  }
+}
+
+function bindLoginGate() {
+  const loginForm = document.getElementById("login-form");
+  const signOutButton = document.getElementById("sign-out-button");
+  const loginError = document.getElementById("login-error");
+  showLoginScreen(!isAuthenticated());
+
+  loginForm?.addEventListener("submit", event => {
+    event.preventDefault();
+    const email = document.getElementById("login-email")?.value.trim() || "";
+    if (!email) {
+      if (loginError) loginError.textContent = "Enter your work email to continue.";
+      return;
+    }
+    if (loginError) loginError.textContent = "";
+    setAuthenticated(true);
+    showLoginScreen(false);
+  });
+
+  signOutButton?.addEventListener("click", () => {
+    setAuthenticated(false);
+    showLoginScreen(true);
+  });
+}
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -11884,6 +12059,7 @@ function calcROI() {
 }
 
 function initApp() {
+  bindLoginGate();
   populateStateSelector();
   bindDistrictPlanningControls();
   bindSlider('s-icp', 'v-icp');
