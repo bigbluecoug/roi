@@ -12,7 +12,7 @@ php artisan migrate:fresh --seed
 php artisan serve
 ```
 
-The seeder imports district data from `../colorado-event-roi.html`, then creates one default event for each supported state. The local seeded login defaults to:
+The seeder imports district data from `colorado-event-roi.html`, then creates one default event for each supported state. The local seeded login defaults to:
 
 - Email: `lead@example.com`
 - Password: `password`

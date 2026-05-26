@@ -52,7 +52,11 @@ class DistrictSeeder extends Seeder
 
     private function districtsFromRoiTool(): array
     {
-        $path = base_path('../colorado-event-roi.html');
+        $path = collect([
+            base_path('colorado-event-roi.html'),
+            base_path('../colorado-event-roi.html'),
+        ])->first(fn (string $candidate) => is_file($candidate));
+
         if (! is_file($path)) {
             return [];
         }
