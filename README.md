@@ -12,12 +12,13 @@ php artisan migrate:fresh --seed
 php artisan serve
 ```
 
-The seeder imports district data from `colorado-event-roi.html`, then creates one default event for each supported state. The local seeded login defaults to:
+The seeder imports district data from `colorado-event-roi.html`, creates one default event for each supported state, and creates the default internal users:
 
-- Email: `lead@example.com`
-- Password: `password`
+- Email: `eric.price@derivita.com`
+- Email: `duane@derivita.com`
+- Password: `capture`
 
-Override those with `INTERNAL_USER_EMAIL`, `INTERNAL_USER_PASSWORD`, and `INTERNAL_USER_NAME` before seeding.
+Override the shared seeded password with `INTERNAL_USER_PASSWORD` before seeding.
 
 ## Required Env Vars
 

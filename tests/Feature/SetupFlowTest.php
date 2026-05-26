@@ -6,6 +6,7 @@ use App\Models\Capture;
 use App\Models\District;
 use App\Models\Event;
 use App\Models\User;
+use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\DistrictSeeder;
 use Database\Seeders\EventSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -26,6 +27,20 @@ class SetupFlowTest extends TestCase
             'email' => $user->email,
             'password' => 'password',
         ])->assertRedirect(route('setup.state'));
+    }
+
+    public function test_seeded_derivita_users_can_login_with_capture_password(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        foreach (['eric.price@derivita.com', 'duane@derivita.com'] as $email) {
+            $this->post('/login', [
+                'email' => $email,
+                'password' => 'capture',
+            ])->assertRedirect(route('setup.state'));
+
+            $this->post('/logout');
+        }
     }
 
     public function test_state_selection_stores_state_and_moves_to_events(): void

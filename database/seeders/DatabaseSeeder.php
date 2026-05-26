@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -21,11 +20,23 @@ class DatabaseSeeder extends Seeder
             EventSeeder::class,
         ]);
 
-        User::updateOrCreate([
-            'email' => env('INTERNAL_USER_EMAIL', 'lead@example.com'),
-        ], [
-            'name' => env('INTERNAL_USER_NAME', 'Event Lead Rep'),
-            'password' => Hash::make(env('INTERNAL_USER_PASSWORD', 'password')),
-        ]);
+        $password = env('INTERNAL_USER_PASSWORD', 'capture');
+
+        foreach ($this->internalUsers() as $user) {
+            User::updateOrCreate([
+                'email' => $user['email'],
+            ], [
+                'name' => $user['name'],
+                'password' => $password,
+            ]);
+        }
+    }
+
+    private function internalUsers(): array
+    {
+        return [
+            ['name' => 'Eric Price', 'email' => 'eric.price@derivita.com'],
+            ['name' => 'Duane', 'email' => 'duane@derivita.com'],
+        ];
     }
 }
