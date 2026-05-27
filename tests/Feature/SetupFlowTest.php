@@ -9,6 +9,7 @@ use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\DistrictSeeder;
 use Database\Seeders\EventSeeder;
+use Database\Seeders\InternalUserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -31,7 +32,7 @@ class SetupFlowTest extends TestCase
 
     public function test_seeded_derivita_users_can_login_with_capture_password(): void
     {
-        $this->seed(DatabaseSeeder::class);
+        $this->seed(InternalUserSeeder::class);
 
         foreach (['eric.price@derivita.com', 'duane@derivita.com'] as $email) {
             $this->post('/login', [
@@ -41,6 +42,14 @@ class SetupFlowTest extends TestCase
 
             $this->post('/logout');
         }
+    }
+
+    public function test_database_seeder_includes_internal_users(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $this->assertDatabaseHas('users', ['email' => 'eric.price@derivita.com']);
+        $this->assertDatabaseHas('users', ['email' => 'duane@derivita.com']);
     }
 
     public function test_state_selection_stores_state_and_moves_to_events(): void

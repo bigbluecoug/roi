@@ -44,9 +44,11 @@ That hints iPhone Safari to open the rear camera for badge and business-card pho
 ## Maintenance
 
 ```bash
+php artisan db:seed --class=InternalUserSeeder --force
 php artisan captures:purge-images
 php artisan test
 ./vendor/bin/pint --test
 ```
 
+`db:seed --class=InternalUserSeeder --force` creates or resets the default internal login accounts.
 `captures:purge-images` deletes stored badge/card images after the configured retention window while keeping extracted fields and sync history.
