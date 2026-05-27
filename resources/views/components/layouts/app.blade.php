@@ -136,6 +136,11 @@
         .hero-actions form {
             display: flex;
         }
+        .review-nav-actions {
+            justify-content: flex-start;
+            align-items: stretch;
+            margin-bottom: 16px;
+        }
         h1 {
             margin: 0;
             font-size: clamp(26px, 5vw, 42px);
@@ -166,6 +171,17 @@
             grid-template-columns: minmax(360px, 1.08fr) minmax(0, 0.92fr);
             gap: 16px;
             align-items: start;
+        }
+        .capture-preview {
+            max-width: 760px;
+            margin-bottom: 16px;
+        }
+        .capture-preview-actions {
+            justify-content: flex-start;
+            align-items: stretch;
+        }
+        .capture-preview-actions form {
+            display: flex;
         }
         .review-layout > *,
         .review-media,
@@ -488,6 +504,8 @@
             .panel { padding: 14px; }
             .hero-actions,
             .hero-actions form,
+            .capture-preview-actions,
+            .capture-preview-actions form,
             .form-actions,
             .sync-form {
                 width: 100%;

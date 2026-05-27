@@ -4,16 +4,6 @@
             <h1>{{ $capture->displayName() }}</h1>
             <p class="subhead">{{ $capture->event->state_code }} · {{ $capture->event->name }}</p>
         </div>
-        <div class="row hero-actions">
-            <a class="button secondary" href="{{ route('events.show', $capture->event) }}">Back to Event</a>
-            <a class="button secondary" href="{{ route('captures.index') }}">Back to Log</a>
-            <form method="post" action="{{ route('captures.destroy', $capture) }}" onsubmit="return confirm('Delete this lead from the local capture log? This will not remove any HubSpot records.');">
-                @csrf
-                @method('delete')
-                <input type="hidden" name="return_to" value="event">
-                <button class="button danger" type="submit" data-busy-label="Deleting...">Delete Lead</button>
-            </form>
-        </div>
     </div>
 
     @php
@@ -39,6 +29,34 @@
         }
         $publicSources = $capture->publicEnrichmentSources();
     @endphp
+
+    @if ($capture->image_path)
+        <section class="stack capture-preview">
+            <img class="capture-image" src="{{ route('captures.image', $capture) }}" alt="Captured badge or business card">
+            <div class="row capture-preview-actions">
+                <form method="post" action="{{ route('captures.reprocess', $capture) }}">
+                    @csrf
+                    <button class="button accent" type="submit" data-busy-label="Reading Image...">Re-run AI from Image</button>
+                </form>
+                <form method="post" action="{{ route('captures.image.destroy', $capture) }}">
+                    @csrf
+                    @method('delete')
+                    <button class="button danger" type="submit">Remove Image</button>
+                </form>
+            </div>
+        </section>
+    @endif
+
+    <div class="row hero-actions review-nav-actions">
+        <a class="button secondary" href="{{ route('events.show', $capture->event) }}">Back to Event</a>
+        <a class="button secondary" href="{{ route('captures.index') }}">Back to Log</a>
+        <form method="post" action="{{ route('captures.destroy', $capture) }}" onsubmit="return confirm('Delete this lead from the local capture log? This will not remove any HubSpot records.');">
+            @csrf
+            @method('delete')
+            <input type="hidden" name="return_to" value="event">
+            <button class="button danger" type="submit" data-busy-label="Deleting...">Delete Lead</button>
+        </form>
+    </div>
 
     <div class="review-layout">
         <section class="panel review-panel">
@@ -141,21 +159,6 @@
         </section>
 
         <section class="stack review-media">
-            @if ($capture->image_path)
-                <img class="capture-image" src="{{ route('captures.image', $capture) }}" alt="Captured badge or business card">
-                <form method="post" action="{{ route('captures.reprocess', $capture) }}">
-                    @csrf
-                    <button class="button accent" type="submit" data-busy-label="Reading Image...">Re-run AI from Image</button>
-                </form>
-                <form method="post" action="{{ route('captures.image.destroy', $capture) }}">
-                    @csrf
-                    @method('delete')
-                    <button class="button danger" type="submit">Remove Image</button>
-                </form>
-            @else
-                <div class="empty">Image removed from capture log.</div>
-            @endif
-
             <form
                 id="web-enrich-form"
                 method="post"

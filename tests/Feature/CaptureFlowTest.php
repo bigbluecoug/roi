@@ -327,6 +327,29 @@ class CaptureFlowTest extends TestCase
             ->assertSeeInOrder(['First Name', 'Badge Clues']);
     }
 
+    public function test_review_image_appears_before_form_when_available(): void
+    {
+        $user = User::factory()->create();
+        $event = Event::create(['name' => 'CO Math', 'state_code' => 'CO']);
+        $capture = Capture::create([
+            'user_id' => $user->id,
+            'event_id' => $event->id,
+            'status' => Capture::STATUS_NEEDS_REVIEW,
+            'full_name' => 'Alex Rivera',
+            'image_path' => 'captures/badge.jpg',
+            'extracted_payload' => [
+                'insights' => [
+                    'role_category' => 'Curriculum leader',
+                ],
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('captures.review', $capture))
+            ->assertOk()
+            ->assertSeeInOrder(['Captured badge or business card', 'First Name', 'Badge Clues']);
+    }
+
     public function test_public_email_search_fills_blank_email_when_confident_and_sourced(): void
     {
         config(['services.openai.key' => 'test-key']);
