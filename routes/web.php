@@ -4,8 +4,11 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CaptureController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\SetupController;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/', function () {
+    return response()->file(public_path('index.html'));
+})->name('roi.index');
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [LoginController::class, 'create'])->name('login');
@@ -14,12 +17,6 @@ Route::middleware('guest')->group(function (): void {
 
 Route::middleware('auth')->group(function (): void {
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
-
-    Route::get('/', function (Request $request) {
-        return $request->session()->has('current_event_id')
-            ? redirect()->route('captures.create')
-            : redirect()->route('setup.state');
-    });
 
     Route::get('/setup/state', [SetupController::class, 'state'])->name('setup.state');
     Route::post('/setup/state', [SetupController::class, 'storeState'])->name('setup.state.store');
