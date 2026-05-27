@@ -47,17 +47,6 @@
         </section>
     @endif
 
-    <div class="row hero-actions review-nav-actions">
-        <a class="button secondary" href="{{ route('events.show', $capture->event) }}">Back to Event</a>
-        <a class="button secondary" href="{{ route('captures.index') }}">Back to Log</a>
-        <form method="post" action="{{ route('captures.destroy', $capture) }}" onsubmit="return confirm('Delete this lead from the local capture log? This will not remove any HubSpot records.');">
-            @csrf
-            @method('delete')
-            <input type="hidden" name="return_to" value="event">
-            <button class="button danger" type="submit" data-busy-label="Deleting...">Delete Lead</button>
-        </form>
-    </div>
-
     <div class="review-layout">
         <section class="panel review-panel">
             <form method="post" action="{{ route('captures.update', $capture) }}" class="stack">
@@ -156,6 +145,17 @@
                 @csrf
                 <button class="button accent" type="submit" @disabled(! $capture->readyForHubSpot())>Add to HubSpot</button>
             </form>
+
+            <div class="row hero-actions review-nav-actions">
+                <a class="button secondary" href="{{ route('events.show', $capture->event) }}">Back to Event</a>
+                <a class="button secondary" href="{{ route('captures.index') }}">Back to Log</a>
+                <form method="post" action="{{ route('captures.destroy', $capture) }}" onsubmit="return confirm('Delete this lead from the local capture log? This will not remove any HubSpot records.');">
+                    @csrf
+                    @method('delete')
+                    <input type="hidden" name="return_to" value="event">
+                    <button class="button danger" type="submit" data-busy-label="Deleting...">Delete Lead</button>
+                </form>
+            </div>
         </section>
 
         <section class="stack review-media">

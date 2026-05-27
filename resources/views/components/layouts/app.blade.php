@@ -139,7 +139,7 @@
         .review-nav-actions {
             justify-content: flex-start;
             align-items: stretch;
-            margin-bottom: 16px;
+            margin-top: 14px;
         }
         h1 {
             margin: 0;

@@ -326,7 +326,7 @@ class CaptureFlowTest extends TestCase
             ->assertOk()
             ->assertSee('class="item-card insight-disclosure"', false)
             ->assertDontSee('class="item-card insight-disclosure" open', false)
-            ->assertSeeInOrder(['First Name', 'Badge Clues']);
+            ->assertSeeInOrder(['First Name', 'Save Review', 'Add to HubSpot', 'Back to Event', 'Delete Lead', 'Badge Clues']);
     }
 
     public function test_review_image_appears_before_form_when_available(): void
