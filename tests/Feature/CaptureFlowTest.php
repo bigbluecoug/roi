@@ -376,6 +376,47 @@ class CaptureFlowTest extends TestCase
         $this->assertSame('https://example.org/staff/alex-rivera', $capture->publicEnrichmentSources()[0]['url']);
     }
 
+    public function test_public_email_search_does_not_apply_masked_email(): void
+    {
+        config(['services.openai.key' => 'test-key']);
+
+        $user = User::factory()->create();
+        $event = Event::create(['name' => 'TX Math', 'state_code' => 'TX']);
+        $capture = Capture::create([
+            'user_id' => $user->id,
+            'event_id' => $event->id,
+            'status' => Capture::STATUS_NEEDS_REVIEW,
+            'full_name' => 'Amanda Dearing',
+            'organization' => 'Grapevine-Colleyville ISD',
+        ]);
+
+        $this->mock(PublicLeadEnricher::class, function ($mock): void {
+            $mock->shouldReceive('enrich')->once()->andReturn([
+                'status' => 'found',
+                'email' => 'a******d@gcisd-k12.org',
+                'confidence' => 0.91,
+                'person_match' => 'Name appears in source snippet.',
+                'organization_match' => 'Organization matches badge clues.',
+                'summary' => 'Source showed only a masked email.',
+                'sources' => [[
+                    'title' => 'Staff Directory',
+                    'url' => 'https://example.org/staff/amanda-dearing',
+                    'evidence' => 'Shows masked email a******d@gcisd-k12.org.',
+                ]],
+                'checked_at' => now()->toIso8601String(),
+            ]);
+        });
+
+        $this->actingAs($user)->post("/captures/{$capture->id}/web-enrich")
+            ->assertRedirect(route('captures.review', $capture));
+
+        $capture->refresh();
+        $this->assertNull($capture->email);
+        $this->assertNull($capture->publicEnrichmentEmail());
+        $this->assertSame('ambiguous', $capture->publicEnrichment()['status']);
+        $this->assertStringContainsString('masked email', $capture->publicEnrichment()['summary']);
+    }
+
     public function test_public_email_search_does_not_overwrite_existing_email(): void
     {
         config(['services.openai.key' => 'test-key']);

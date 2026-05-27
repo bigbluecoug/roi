@@ -26,10 +26,12 @@ class HubSpotClient
             throw new RuntimeException('Capture needs an email, organization, and confirmed district before HubSpot sync.');
         }
 
-        $company = $this->findCompany($capture->organization, $capture->email)
+        $email = $capture->usableEmail();
+
+        $company = $this->findCompany($capture->organization, $email)
             ?: $this->createCompany($capture);
 
-        $contact = $this->findContactByEmail($capture->email);
+        $contact = $this->findContactByEmail($email);
         $incomingContact = $this->contactProperties($capture);
 
         if ($contact) {
@@ -68,7 +70,7 @@ class HubSpotClient
 
     public function findContactByEmail(?string $email): ?array
     {
-        if (! $email || ! $this->configured()) {
+        if (! Capture::isUsableEmail($email) || ! $this->configured()) {
             return null;
         }
 
@@ -193,7 +195,7 @@ class HubSpotClient
     private function contactProperties(Capture $capture): array
     {
         return [
-            'email' => strtolower((string) $capture->email),
+            'email' => $capture->usableEmail(),
             'firstname' => $capture->first_name,
             'lastname' => $capture->last_name,
             'jobtitle' => $capture->title,
@@ -236,7 +238,7 @@ class HubSpotClient
 
     private function businessDomain(?string $email): ?string
     {
-        if (! $email || ! Str::contains($email, '@')) {
+        if (! Capture::isUsableEmail($email)) {
             return null;
         }
 

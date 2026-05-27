@@ -28,6 +28,15 @@
             'caveat' => 'Caveat',
         ];
         $publicEnrichment = $capture->publicEnrichment();
+        $publicEnrichmentEmail = $capture->publicEnrichmentEmail();
+        $publicEnrichmentStatus = $publicEnrichment['status'] ?? 'checked';
+        if ($publicEnrichmentStatus === 'found' && blank($publicEnrichmentEmail)) {
+            $publicEnrichmentStatus = 'ambiguous';
+        }
+        $publicEnrichmentDisplay = $publicEnrichment;
+        foreach (['summary', 'person_match', 'organization_match'] as $key) {
+            $publicEnrichmentDisplay[$key] = \App\Models\Capture::redactMaskedEmailText($publicEnrichment[$key] ?? null);
+        }
         $publicSources = $capture->publicEnrichmentSources();
     @endphp
 
@@ -59,7 +68,7 @@
                             <label for="email" style="margin-bottom: 6px;">Email</label>
                             <button class="button secondary compact" type="submit" form="web-enrich-form" data-busy-label="Searching...">Find Public Email</button>
                         </div>
-                        <input id="email" name="email" type="email" value="{{ old('email', $capture->email) }}">
+                        <input id="email" name="email" type="email" value="{{ old('email', $capture->usableEmail()) }}">
                     </div>
                     <div>
                         <label for="phone">Phone</label>
@@ -201,15 +210,15 @@
                 <article class="item-card">
                     <div class="row">
                         <h2 class="item-title">Public Email Search</h2>
-                        <span class="badge {{ ($publicEnrichment['status'] ?? null) === 'found' ? 'synced' : 'review' }}">
-                            {{ str_replace('_', ' ', $publicEnrichment['status'] ?? 'checked') }}
+                        <span class="badge {{ $publicEnrichmentStatus === 'found' ? 'synced' : 'review' }}">
+                            {{ str_replace('_', ' ', $publicEnrichmentStatus) }}
                         </span>
                     </div>
                     <ul class="insight-list">
-                        @if (filled($publicEnrichment['email'] ?? null))
+                        @if (filled($publicEnrichmentEmail))
                             <li>
                                 <strong>Email</strong>
-                                {{ $publicEnrichment['email'] }}
+                                {{ $publicEnrichmentEmail }}
                             </li>
                         @endif
                         @if (isset($publicEnrichment['confidence']))
@@ -223,19 +232,22 @@
                             'person_match' => 'Person match',
                             'organization_match' => 'Organization match',
                         ] as $key => $label)
-                            @if (filled($publicEnrichment[$key] ?? null))
+                            @if (filled($publicEnrichmentDisplay[$key] ?? null))
                                 <li>
                                     <strong>{{ $label }}</strong>
-                                    {{ $publicEnrichment[$key] }}
+                                    {{ $publicEnrichmentDisplay[$key] }}
                                 </li>
                             @endif
                         @endforeach
                         @foreach ($publicSources as $source)
+                            @php
+                                $sourceEvidence = \App\Models\Capture::redactMaskedEmailText($source['evidence'] ?? null);
+                            @endphp
                             <li>
                                 <strong>{{ $source['title'] ?? 'Public source' }}</strong>
                                 <a href="{{ $source['url'] }}" target="_blank" rel="noopener noreferrer">{{ $source['url'] }}</a>
-                                @if (filled($source['evidence'] ?? null))
-                                    <div>{{ $source['evidence'] }}</div>
+                                @if (filled($sourceEvidence))
+                                    <div>{{ $sourceEvidence }}</div>
                                 @endif
                             </li>
                         @endforeach

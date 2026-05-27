@@ -27,7 +27,7 @@
                         <tr>
                             <td>
                                 <strong>{{ $capture->displayName() }}</strong><br>
-                                <span class="meta">{{ $capture->email ?? 'No email' }}</span>
+                                <span class="meta">{{ $capture->usableEmail() ?? 'No email' }}</span>
                             </td>
                             <td>{{ $capture->organization ?? 'Needs review' }}</td>
                             <td>{{ $capture->event->state_code }} · {{ $capture->event->name }}</td>

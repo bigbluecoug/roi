@@ -2,10 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\Capture;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use RuntimeException;
 
 class OpenAiLeadExtractor
@@ -214,7 +214,7 @@ class OpenAiLeadExtractor
 
         $email = strtolower($email);
 
-        return Str::contains($email, '@') ? $email : null;
+        return Capture::isUsableEmail($email) ? $email : null;
     }
 
     private function cleanInsights(mixed $value): array

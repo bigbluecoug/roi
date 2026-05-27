@@ -40,5 +40,11 @@ class OpenAiLeadExtractorTest extends TestCase
         ]);
 
         $this->assertNull($result['email']);
+
+        $result = (new OpenAiLeadExtractor)->normalize([
+            'email' => 'a******d@example.org',
+        ]);
+
+        $this->assertNull($result['email']);
     }
 }

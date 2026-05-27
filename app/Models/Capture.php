@@ -86,7 +86,66 @@ class Capture extends Model
 
     public function readyForHubSpot(): bool
     {
-        return filled($this->email) && filled($this->organization) && $this->district_id !== null;
+        return filled($this->usableEmail()) && filled($this->organization) && $this->district_id !== null;
+    }
+
+    public function usableEmail(): ?string
+    {
+        if (! self::isUsableEmail($this->email)) {
+            return null;
+        }
+
+        return strtolower(trim((string) $this->email));
+    }
+
+    public function publicEnrichmentEmail(): ?string
+    {
+        $email = $this->publicEnrichment()['email'] ?? null;
+
+        if (! self::isUsableEmail($email)) {
+            return null;
+        }
+
+        return strtolower(trim((string) $email));
+    }
+
+    public static function isUsableEmail(mixed $value): bool
+    {
+        if (! is_scalar($value)) {
+            return false;
+        }
+
+        $email = strtolower(trim((string) $value));
+
+        return $email !== ''
+            && ! self::looksMaskedEmail($email)
+            && filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
+    }
+
+    public static function looksMaskedEmail(mixed $value): bool
+    {
+        return is_scalar($value)
+            && preg_match('/[*•●◦○□■◼◻…]/u', (string) $value) === 1;
+    }
+
+    public static function redactMaskedEmailText(mixed $value): ?string
+    {
+        if (! is_scalar($value)) {
+            return null;
+        }
+
+        $text = trim((string) $value);
+        if ($text === '') {
+            return null;
+        }
+
+        $text = preg_replace(
+            '/[A-Z0-9._%+\-]*[*•●◦○□■◼◻…]+[A-Z0-9._%+\-]*@[A-Z0-9.-]+\.[A-Z]{2,}/iu',
+            '[masked email]',
+            $text,
+        ) ?? $text;
+
+        return $text === '' ? null : $text;
     }
 
     public function aiInsights(): array
@@ -153,9 +212,9 @@ class Capture extends Model
 
         $parts = array_filter([
             filled($enrichment['status'] ?? null) ? 'Status: '.$enrichment['status'] : null,
-            filled($enrichment['email'] ?? null) ? 'Email: '.$enrichment['email'] : null,
+            filled($this->publicEnrichmentEmail()) ? 'Email: '.$this->publicEnrichmentEmail() : null,
             isset($enrichment['confidence']) ? 'Confidence: '.$enrichment['confidence'] : null,
-            filled($enrichment['summary'] ?? null) ? 'Summary: '.$enrichment['summary'] : null,
+            filled(self::redactMaskedEmailText($enrichment['summary'] ?? null)) ? 'Summary: '.self::redactMaskedEmailText($enrichment['summary'] ?? null) : null,
         ]);
 
         $sources = collect($this->publicEnrichmentSources())
@@ -183,7 +242,7 @@ class Capture extends Model
 
     public function shouldAutoFindPublicEmail(): bool
     {
-        return blank($this->email)
+        return blank($this->usableEmail())
             && $this->publicEnrichment() === []
             && $this->hasPublicEmailSearchClues();
     }

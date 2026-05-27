@@ -187,7 +187,16 @@ class CaptureController extends Controller
             'full_name' => ['nullable', 'string', 'max:255'],
             'first_name' => ['nullable', 'string', 'max:255'],
             'last_name' => ['nullable', 'string', 'max:255'],
-            'email' => ['nullable', 'email', 'max:255'],
+            'email' => [
+                'nullable',
+                'email',
+                'max:255',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (Capture::looksMaskedEmail($value)) {
+                        $fail('Enter the complete email address, not a masked directory result.');
+                    }
+                },
+            ],
             'phone' => ['nullable', 'string', 'max:255'],
             'title' => ['nullable', 'string', 'max:255'],
             'organization' => ['nullable', 'string', 'max:255'],
@@ -386,7 +395,7 @@ class CaptureController extends Controller
             return false;
         }
 
-        if (! filter_var($enrichment['email'] ?? null, FILTER_VALIDATE_EMAIL)) {
+        if (! Capture::isUsableEmail($enrichment['email'] ?? null)) {
             return false;
         }
 
@@ -399,6 +408,7 @@ class CaptureController extends Controller
 
     private function applyPublicEnrichment(Capture $capture, array $enrichment): bool
     {
+        $enrichment = $this->sanitizePublicEnrichment($enrichment);
         $payload = $capture->extracted_payload ?? [];
         $payload['public_enrichment'] = $enrichment;
 
@@ -419,6 +429,38 @@ class CaptureController extends Controller
         $capture->forceFill($updates)->save();
 
         return $emailApplied;
+    }
+
+    private function sanitizePublicEnrichment(array $enrichment): array
+    {
+        foreach (['summary', 'person_match', 'organization_match'] as $key) {
+            if (array_key_exists($key, $enrichment)) {
+                $enrichment[$key] = Capture::redactMaskedEmailText($enrichment[$key]);
+            }
+        }
+
+        $enrichment['sources'] = collect($enrichment['sources'] ?? [])
+            ->map(function ($source) {
+                if (is_array($source) && array_key_exists('evidence', $source)) {
+                    $source['evidence'] = Capture::redactMaskedEmailText($source['evidence']);
+                }
+
+                return $source;
+            })
+            ->all();
+
+        if (! Capture::looksMaskedEmail($enrichment['email'] ?? null)) {
+            return $enrichment;
+        }
+
+        $summary = trim((string) ($enrichment['summary'] ?? ''));
+        $maskedMessage = 'The source only exposed a masked email, so it was not applied.';
+
+        $enrichment['email'] = null;
+        $enrichment['status'] = ($enrichment['status'] ?? null) === 'found' ? 'ambiguous' : ($enrichment['status'] ?? 'ambiguous');
+        $enrichment['summary'] = $summary === '' ? $maskedMessage : $summary.' '.$maskedMessage;
+
+        return $enrichment;
     }
 
     private function recordPublicEnrichmentError(Capture $capture, string $message): void
@@ -456,7 +498,7 @@ class CaptureController extends Controller
             ->whereRaw('lower(organization) = ?', [strtolower($organization)])
             ->latest()
             ->get()
-            ->first(fn (Capture $candidate) => $candidate->publicEnrichmentSources() !== []);
+            ->first(fn (Capture $candidate) => $candidate->publicEnrichmentSources() !== [] && filled($candidate->usableEmail()));
 
         if (! $candidate) {
             return null;
@@ -466,7 +508,7 @@ class CaptureController extends Controller
 
         return [
             'status' => 'found',
-            'email' => $candidate->email,
+            'email' => $candidate->usableEmail(),
             'confidence' => max(0.9, (float) ($sourceEnrichment['confidence'] ?? 0)),
             'person_match' => 'Matched prior sourced capture #'.$candidate->id.' for '.$name.'.',
             'organization_match' => 'Organization matches '.$organization.'.',

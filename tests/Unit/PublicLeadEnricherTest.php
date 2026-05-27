@@ -44,12 +44,21 @@ class PublicLeadEnricherTest extends TestCase
     {
         $result = (new PublicLeadEnricher)->normalize([
             'status' => 'found',
-            'email' => 'first.last at district dot org',
+            'email' => 'a******d@district.org',
             'confidence' => 0.91,
             'sources' => [],
         ]);
 
         $this->assertNull($result['email']);
         $this->assertSame([], $result['sources']);
+
+        $result = (new PublicLeadEnricher)->normalize([
+            'status' => 'found',
+            'email' => 'first.last at district dot org',
+            'confidence' => 0.91,
+            'sources' => [],
+        ]);
+
+        $this->assertNull($result['email']);
     }
 }

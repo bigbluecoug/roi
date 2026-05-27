@@ -50,7 +50,7 @@ class PublicLeadEnricher
             ->map(fn ($source) => [
                 'title' => $this->cleanString(Arr::get($source, 'title')) ?: 'Public source',
                 'url' => $this->cleanUrl(Arr::get($source, 'url')),
-                'evidence' => $this->cleanString(Arr::get($source, 'evidence')),
+                'evidence' => Capture::redactMaskedEmailText($this->cleanString(Arr::get($source, 'evidence'))),
             ])
             ->filter(fn ($source) => filled($source['url']))
             ->values()
@@ -69,9 +69,9 @@ class PublicLeadEnricher
             'status' => $status,
             'email' => $this->cleanEmail(Arr::get($payload, 'email')),
             'confidence' => (float) min(1, max(0, round((float) Arr::get($payload, 'confidence', 0), 2))),
-            'person_match' => $this->cleanString(Arr::get($payload, 'person_match')),
-            'organization_match' => $this->cleanString(Arr::get($payload, 'organization_match')),
-            'summary' => $this->cleanString(Arr::get($payload, 'summary')),
+            'person_match' => Capture::redactMaskedEmailText($this->cleanString(Arr::get($payload, 'person_match'))),
+            'organization_match' => Capture::redactMaskedEmailText($this->cleanString(Arr::get($payload, 'organization_match'))),
+            'summary' => Capture::redactMaskedEmailText($this->cleanString(Arr::get($payload, 'summary'))),
             'sources' => $sources,
             'checked_at' => now()->toIso8601String(),
         ];
@@ -228,7 +228,7 @@ class PublicLeadEnricher
     {
         $email = strtolower((string) $this->cleanString($value));
 
-        return filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : null;
+        return Capture::isUsableEmail($email) ? $email : null;
     }
 
     private function cleanUrl(mixed $value): ?string
