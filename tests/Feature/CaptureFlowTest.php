@@ -69,6 +69,66 @@ class CaptureFlowTest extends TestCase
         Storage::disk('local')->assertExists($capture->image_path);
     }
 
+    public function test_capture_upload_automatically_runs_public_email_search_when_email_is_missing(): void
+    {
+        config(['services.openai.key' => 'test-key']);
+        Storage::fake('local');
+
+        $user = User::factory()->create();
+        $event = Event::create(['name' => 'CO Math', 'state_code' => 'CO']);
+
+        $this->mock(OpenAiLeadExtractor::class, function ($mock): void {
+            $mock->shouldReceive('extract')->once()->andReturn([
+                'full_name' => 'Alex Rivera',
+                'first_name' => 'Alex',
+                'last_name' => 'Rivera',
+                'email' => null,
+                'phone' => null,
+                'title' => 'Math Director',
+                'organization' => 'Cherry Creek School District',
+                'city' => null,
+                'state' => 'CO',
+                'raw_text' => 'Alex Rivera Cherry Creek School District',
+                'confidence' => ['overall' => 0.91],
+                'evidence' => ['Cherry Creek School District'],
+                'warnings' => [],
+                'insights' => [],
+                'ai_confidence' => 0.91,
+                'extracted_payload' => [],
+            ]);
+        });
+
+        $this->mock(PublicLeadEnricher::class, function ($mock): void {
+            $mock->shouldReceive('enrich')->once()->andReturn([
+                'status' => 'found',
+                'email' => 'alex.rivera@cherrycreekschools.org',
+                'confidence' => 0.86,
+                'person_match' => 'Name matches a public staff page.',
+                'organization_match' => 'Organization matches badge clues.',
+                'summary' => 'Email found on official staff directory.',
+                'sources' => [[
+                    'title' => 'Staff Directory',
+                    'url' => 'https://example.org/staff/alex-rivera',
+                    'evidence' => 'Lists Alex Rivera email.',
+                ]],
+                'checked_at' => now()->toIso8601String(),
+            ]);
+        });
+
+        $response = $this->actingAs($user)->post('/captures', [
+            'event_id' => $event->id,
+            'photo' => UploadedFile::fake()->image('badge.jpg', 600, 400),
+        ]);
+
+        $capture = Capture::firstOrFail();
+        $response
+            ->assertRedirect(route('captures.review', $capture))
+            ->assertSessionHas('status', 'Capture ready for review. Public email found and added for review.');
+
+        $this->assertSame('alex.rivera@cherrycreekschools.org', $capture->fresh()->email);
+        $this->assertSame('found', $capture->fresh()->publicEnrichment()['status']);
+    }
+
     public function test_capture_photo_is_required(): void
     {
         $user = User::factory()->create();

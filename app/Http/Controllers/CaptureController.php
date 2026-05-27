@@ -61,7 +61,7 @@ class CaptureController extends Controller
         ]);
     }
 
-    public function store(Request $request, CaptureImageNormalizer $normalizer, OpenAiLeadExtractor $extractor, DistrictMatcher $matcher, HubSpotClient $hubSpot): RedirectResponse
+    public function store(Request $request, CaptureImageNormalizer $normalizer, OpenAiLeadExtractor $extractor, DistrictMatcher $matcher, HubSpotClient $hubSpot, PublicLeadEnricher $publicEnricher): RedirectResponse
     {
         $data = $request->validate([
             'event_id' => ['required', 'exists:events,id'],
@@ -159,7 +159,10 @@ class CaptureController extends Controller
             'sync_error' => $syncError,
         ]);
 
-        return redirect()->route('captures.review', $capture)->with('status', 'Capture ready for review.');
+        $autoMessage = $this->runAutomaticPublicEmailSearch($capture, $publicEnricher);
+        $message = trim('Capture ready for review. '.($autoMessage ?? ''));
+
+        return redirect()->route('captures.review', $capture)->with('status', $message);
     }
 
     public function show(Capture $capture): View
@@ -262,7 +265,7 @@ class CaptureController extends Controller
         return $redirect->with('status', 'Lead deleted from the local capture log.');
     }
 
-    public function reprocess(Capture $capture, OpenAiLeadExtractor $extractor, DistrictMatcher $matcher, HubSpotClient $hubSpot): RedirectResponse
+    public function reprocess(Capture $capture, OpenAiLeadExtractor $extractor, DistrictMatcher $matcher, HubSpotClient $hubSpot, PublicLeadEnricher $publicEnricher): RedirectResponse
     {
         if (! $capture->image_path || ! Storage::disk('local')->exists($capture->image_path)) {
             return redirect()
@@ -314,7 +317,10 @@ class CaptureController extends Controller
                 'sync_error' => null,
             ])->save();
 
-            return redirect()->route('captures.review', $capture)->with('status', 'AI extraction refreshed from the stored image.');
+            $autoMessage = $this->runAutomaticPublicEmailSearch($capture, $publicEnricher);
+            $message = trim('AI extraction refreshed from the stored image. '.($autoMessage ?? ''));
+
+            return redirect()->route('captures.review', $capture)->with('status', $message);
         } catch (ConnectionException $exception) {
             report($exception);
 
@@ -404,6 +410,33 @@ class CaptureController extends Controller
         }
 
         return collect($enrichment['sources'] ?? [])->contains(fn ($source) => filled($source['url'] ?? null));
+    }
+
+    private function runAutomaticPublicEmailSearch(Capture $capture, PublicLeadEnricher $enricher): ?string
+    {
+        if (! config('services.openai.key') || ! $capture->shouldAutoFindPublicEmail()) {
+            return null;
+        }
+
+        try {
+            $capture->load(['event', 'district']);
+            $enrichment = $this->existingPublicEnrichment($capture) ?: $enricher->enrich($capture);
+            $emailApplied = $this->applyPublicEnrichment($capture, $enrichment);
+
+            return $emailApplied
+                ? 'Public email found and added for review.'
+                : 'Public email search finished. Review the source details before making changes.';
+        } catch (ConnectionException $exception) {
+            report($exception);
+            $this->recordPublicEnrichmentError($capture, 'OpenAI web search could not connect.');
+
+            return 'Public email search could not connect.';
+        } catch (Throwable $exception) {
+            report($exception);
+            $this->recordPublicEnrichmentError($capture, $exception->getMessage());
+
+            return 'Public email search could not run.';
+        }
     }
 
     private function applyPublicEnrichment(Capture $capture, array $enrichment): bool
