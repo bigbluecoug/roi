@@ -32,6 +32,8 @@
         html {
             min-height: 100%;
             background: var(--paper);
+            max-width: 100%;
+            overflow-x: hidden;
         }
         body {
             margin: 0;
@@ -47,6 +49,8 @@
             min-height: 100vh;
             min-height: 100dvh;
             padding-bottom: env(safe-area-inset-bottom);
+            max-width: 100%;
+            overflow-x: hidden;
         }
 
         a { color: inherit; }
@@ -122,6 +126,16 @@
             gap: 16px;
             margin-bottom: 18px;
         }
+        .hero-row > * {
+            min-width: 0;
+        }
+        .hero-actions {
+            justify-content: flex-end;
+            align-items: stretch;
+        }
+        .hero-actions form {
+            display: flex;
+        }
         h1 {
             margin: 0;
             font-size: clamp(26px, 5vw, 42px);
@@ -147,6 +161,17 @@
             gap: 14px;
         }
         .stack { display: grid; gap: 14px; }
+        .review-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 0.9fr) minmax(360px, 1.1fr);
+            gap: 16px;
+            align-items: start;
+        }
+        .review-layout > *,
+        .review-media,
+        .review-panel {
+            min-width: 0;
+        }
         .row {
             display: flex;
             align-items: center;
@@ -208,6 +233,7 @@
             padding: 9px 10px;
             color: var(--body);
             font-size: 13px;
+            overflow-wrap: anywhere;
         }
         .insight-list strong {
             display: block;
@@ -291,6 +317,18 @@
         }
         .button.is-loading {
             pointer-events: none;
+        }
+        .form-actions {
+            justify-content: flex-start;
+        }
+        .inline-field-action {
+            align-items: flex-start;
+        }
+        .inline-field-action label {
+            margin-bottom: 0;
+        }
+        .sync-form {
+            margin-top: 14px;
         }
         .readonly-field {
             min-height: 44px;
@@ -396,10 +434,12 @@
             margin-bottom: 16px;
             background: white;
             border: 1px solid var(--line);
+            overflow-wrap: anywhere;
         }
         .alert.ok { border-color: rgba(21, 128, 61, 0.24); color: var(--green); }
         .alert.error { border-color: rgba(185, 28, 28, 0.24); color: var(--red); }
         .capture-image {
+            display: block;
             width: 100%;
             max-height: 460px;
             object-fit: contain;
@@ -430,6 +470,15 @@
             letter-spacing: 0.04em;
         }
 
+        @media (max-width: 900px) {
+            .review-layout {
+                grid-template-columns: 1fr;
+            }
+            .capture-image {
+                max-height: min(52vh, 420px);
+            }
+        }
+
         @media (max-width: 720px) {
             .topbar-inner,
             .hero-row {
@@ -437,8 +486,50 @@
             }
             .nav { justify-content: flex-start; }
             .panel { padding: 14px; }
+            .hero-actions,
+            .hero-actions form,
+            .form-actions,
+            .sync-form {
+                width: 100%;
+            }
+            .review-layout {
+                gap: 12px;
+            }
+            .inline-field-action {
+                display: grid;
+                gap: 8px;
+            }
+            .field-grid {
+                grid-template-columns: 1fr;
+            }
             .state-grid { grid-template-columns: 1fr 1fr; }
             .button { width: 100%; }
+        }
+
+        @media (max-width: 480px) {
+            .topbar {
+                padding-left: 12px;
+                padding-right: 12px;
+            }
+            main {
+                padding: 18px 12px 42px;
+            }
+            .brand span:last-child {
+                white-space: normal;
+                line-height: 1.15;
+            }
+            .nav {
+                width: 100%;
+            }
+            .nav a,
+            .nav button {
+                min-height: 38px;
+                padding: 8px 9px;
+                text-align: center;
+            }
+            .capture-image {
+                max-height: 360px;
+            }
         }
     </style>
 </head>

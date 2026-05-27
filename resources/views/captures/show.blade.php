@@ -4,7 +4,7 @@
             <h1>{{ $capture->displayName() }}</h1>
             <p class="subhead">{{ $capture->event->state_code }} · {{ $capture->event->name }}</p>
         </div>
-        <div class="row" style="justify-content: flex-end;">
+        <div class="row hero-actions">
             <a class="button secondary" href="{{ route('events.show', $capture->event) }}">Back to Event</a>
             <a class="button secondary" href="{{ route('captures.index') }}">Back to Log</a>
             <form method="post" action="{{ route('captures.destroy', $capture) }}" onsubmit="return confirm('Delete this lead from the local capture log? This will not remove any HubSpot records.');">
@@ -16,8 +16,8 @@
         </div>
     </div>
 
-    <div class="grid" style="grid-template-columns: minmax(260px, 0.85fr) minmax(280px, 1.15fr); align-items: start;">
-        <section class="stack">
+    <div class="review-layout">
+        <section class="stack review-media">
             @if ($capture->image_path)
                 <img class="capture-image" src="{{ route('captures.image', $capture) }}" alt="Captured badge or business card">
                 <form method="post" action="{{ route('captures.reprocess', $capture) }}">
@@ -145,7 +145,7 @@
             @endif
         </section>
 
-        <section class="panel">
+        <section class="panel review-panel">
             <form method="post" action="{{ route('captures.update', $capture) }}" class="stack">
                 @csrf
                 @method('patch')
@@ -168,7 +168,7 @@
 
                 <div class="field-grid">
                     <div>
-                        <div class="row">
+                        <div class="row inline-field-action">
                             <label for="email" style="margin-bottom: 6px;">Email</label>
                             <button class="button secondary compact" type="submit" form="web-enrich-form" data-busy-label="Searching...">Find Public Email</button>
                         </div>
@@ -233,12 +233,12 @@
                     <textarea id="raw_text" name="raw_text">{{ old('raw_text', $capture->raw_text) }}</textarea>
                 </div>
 
-                <div class="row">
+                <div class="row form-actions">
                     <button class="button" type="submit">Save Review</button>
                 </div>
             </form>
 
-            <form method="post" action="{{ route('captures.sync', $capture) }}" style="margin-top: 14px;">
+            <form class="sync-form" method="post" action="{{ route('captures.sync', $capture) }}">
                 @csrf
                 <button class="button accent" type="submit" @disabled(! $capture->readyForHubSpot())>Add to HubSpot</button>
             </form>

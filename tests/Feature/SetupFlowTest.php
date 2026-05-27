@@ -228,6 +228,8 @@ class SetupFlowTest extends TestCase
             ->assertOk()
             ->assertSessionHas('current_state_code', 'CO')
             ->assertSessionHas('current_event_id', $event->id)
-            ->assertSee('Take Photo and Extract Lead');
+            ->assertSee('Choose Image and Extract Lead')
+            ->assertSee('accept="image/*,.heic,.heif"', false)
+            ->assertDontSee('capture="environment"', false);
     }
 }

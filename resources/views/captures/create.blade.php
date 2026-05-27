@@ -18,15 +18,15 @@
             </div>
             <div class="photo-picker">
                 <label for="photo">Badge or Card Photo</label>
-                <input id="photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/*" capture="environment" required>
-                <span>On iPhone, this opens the camera so you can photograph the badge or business card.</span>
+                <input id="photo" name="photo" type="file" accept="image/*,.heic,.heif" required>
+                <span>On iPhone or Android, choose Camera, Photos, or Files, then select a badge or business-card image.</span>
                 <div class="photo-status" id="photo-status" aria-live="polite"></div>
             </div>
             <div>
                 <label for="rep_notes">Rep Notes</label>
                 <textarea id="rep_notes" name="rep_notes">{{ old('rep_notes') }}</textarea>
             </div>
-            <button class="button accent capture-submit" type="submit">Take Photo and Extract Lead</button>
+            <button class="button accent capture-submit" type="submit">Choose Image and Extract Lead</button>
         </form>
     </section>
 
@@ -128,7 +128,7 @@
                 input.dataset.prepared = 'false';
 
                 if (!looksLikeImage(file)) {
-                    setStatus('Choose an image from the camera or photo library.', true);
+                    setStatus('Choose an image from Camera, Photos, or Files.', true);
                     return;
                 }
 
