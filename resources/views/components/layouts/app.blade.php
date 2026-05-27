@@ -380,6 +380,11 @@
         .sync-form {
             margin-top: 14px;
         }
+        .final-sync-form {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 16px;
+        }
         .readonly-field {
             min-height: 44px;
             display: flex;

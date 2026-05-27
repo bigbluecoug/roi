@@ -147,11 +147,6 @@
                 </div>
             </form>
 
-            <form class="sync-form" method="post" action="{{ route('captures.sync', $capture) }}">
-                @csrf
-                <button class="button accent" type="submit" @disabled(! $capture->readyForHubSpot())>Add to HubSpot</button>
-            </form>
-
             <div class="row hero-actions review-nav-actions">
                 <a class="button secondary" href="{{ route('events.show', $capture->event) }}">Back to Event</a>
                 <a class="button secondary" href="{{ route('captures.index') }}">Back to Log</a>
@@ -268,4 +263,9 @@
             @endif
         </section>
     </div>
+
+    <form class="sync-form final-sync-form" method="post" action="{{ route('captures.sync', $capture) }}">
+        @csrf
+        <button class="button accent" type="submit" @disabled(! $capture->readyForHubSpot())>Add to HubSpot</button>
+    </form>
 </x-layouts.app>
