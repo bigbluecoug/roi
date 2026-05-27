@@ -205,6 +205,40 @@
             font-size: 17px;
             line-height: 1.25;
         }
+        .insight-disclosure {
+            display: block;
+            padding: 0;
+            overflow: hidden;
+        }
+        .insight-summary {
+            cursor: pointer;
+            list-style: none;
+            padding: 16px;
+        }
+        .insight-summary::-webkit-details-marker {
+            display: none;
+        }
+        .insight-summary::after {
+            content: "Show";
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            color: var(--ink);
+            font-size: 12px;
+            font-weight: 800;
+            padding: 4px 9px;
+        }
+        .insight-disclosure[open] .insight-summary {
+            border-bottom: 1px solid var(--line);
+        }
+        .insight-disclosure[open] .insight-summary::after {
+            content: "Hide";
+        }
+        .insight-disclosure .badge {
+            margin-left: auto;
+        }
+        .insight-disclosure .insight-list {
+            padding: 14px 16px 16px;
+        }
         .event-card,
         .capture-card {
             color: inherit;

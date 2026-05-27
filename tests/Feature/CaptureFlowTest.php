@@ -324,6 +324,8 @@ class CaptureFlowTest extends TestCase
         $this->actingAs($user)
             ->get(route('captures.review', $capture))
             ->assertOk()
+            ->assertSee('class="item-card insight-disclosure"', false)
+            ->assertDontSee('class="item-card insight-disclosure" open', false)
             ->assertSeeInOrder(['First Name', 'Badge Clues']);
     }
 

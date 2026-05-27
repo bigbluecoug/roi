@@ -183,11 +183,14 @@
             </article>
 
             @if ($insights)
-                <article class="item-card">
-                    <div class="row">
-                        <h2 class="item-title">Badge Clues</h2>
+                <details class="item-card insight-disclosure">
+                    <summary class="row insight-summary">
+                        <span>
+                            <h2 class="item-title">Badge Clues</h2>
+                            <span class="meta">Tap to view AI clues</span>
+                        </span>
                         <span class="badge">AI</span>
-                    </div>
+                    </summary>
                     <ul class="insight-list">
                         @foreach ($scalarInsights as $key => $label)
                             @if (filled($insights[$key] ?? null))
@@ -206,7 +209,7 @@
                             @endif
                         @endforeach
                     </ul>
-                </article>
+                </details>
             @endif
 
             @if ($publicEnrichment)
