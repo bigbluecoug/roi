@@ -185,8 +185,16 @@ class CaptureController extends Controller
 
     public function update(Request $request, Capture $capture): RedirectResponse
     {
-        $data = $request->validate([
-            'district_id' => ['required', 'exists:districts,id'],
+        $data = $this->validateReviewData($request);
+        $this->applyReviewData($capture, $data, markReviewed: true);
+
+        return redirect()->route('captures.review', $capture)->with('status', 'Capture updated.');
+    }
+
+    private function validateReviewData(Request $request, bool $requireDistrict = true): array
+    {
+        return $request->validate([
+            'district_id' => [$requireDistrict ? 'required' : 'nullable', 'exists:districts,id'],
             'full_name' => ['nullable', 'string', 'max:255'],
             'first_name' => ['nullable', 'string', 'max:255'],
             'last_name' => ['nullable', 'string', 'max:255'],
@@ -207,20 +215,27 @@ class CaptureController extends Controller
             'state' => ['nullable', 'string', 'max:255'],
             'raw_text' => ['nullable', 'string'],
             'rep_notes' => ['nullable', 'string', 'max:4000'],
-            'follow_up_status' => ['required', 'string', 'in:new,follow_up,meeting,not_fit'],
+            'follow_up_status' => [$requireDistrict ? 'required' : 'nullable', 'string', 'in:new,follow_up,meeting,not_fit'],
         ]);
+    }
 
-        if (blank($data['full_name'] ?? null)) {
+    private function applyReviewData(Capture $capture, array $data, bool $markReviewed): void
+    {
+        if (array_key_exists('full_name', $data) && blank($data['full_name'] ?? null)) {
             $data['full_name'] = trim(($data['first_name'] ?? '').' '.($data['last_name'] ?? '')) ?: null;
         }
 
-        $data['email'] = isset($data['email']) ? strtolower($data['email']) : null;
-        $data['status'] = $capture->status === Capture::STATUS_SYNCED ? Capture::STATUS_SYNCED : Capture::STATUS_REVIEWED;
+        if (array_key_exists('email', $data)) {
+            $data['email'] = isset($data['email']) ? strtolower($data['email']) : null;
+        }
+
+        if ($markReviewed) {
+            $data['status'] = $capture->status === Capture::STATUS_SYNCED ? Capture::STATUS_SYNCED : Capture::STATUS_REVIEWED;
+        }
+
         $data['sync_error'] = null;
 
         $capture->update($data);
-
-        return redirect()->route('captures.review', $capture)->with('status', 'Capture updated.');
     }
 
     public function sync(Capture $capture, HubSpotClient $hubSpot): RedirectResponse
@@ -336,8 +351,12 @@ class CaptureController extends Controller
         }
     }
 
-    public function webEnrich(Capture $capture, PublicLeadEnricher $enricher): RedirectResponse
+    public function webEnrich(Request $request, Capture $capture, PublicLeadEnricher $enricher): RedirectResponse
     {
+        if ($this->requestHasReviewContext($request)) {
+            $this->applyReviewData($capture, $this->validateReviewData($request, requireDistrict: false), markReviewed: false);
+        }
+
         if (! config('services.openai.key')) {
             $this->recordPublicEnrichmentError($capture, 'OpenAI API key is not configured.');
 
@@ -371,6 +390,31 @@ class CaptureController extends Controller
                 ->route('captures.review', $capture)
                 ->withErrors(['web_enrichment' => 'Public email search could not run: '.$exception->getMessage()]);
         }
+    }
+
+    private function requestHasReviewContext(Request $request): bool
+    {
+        foreach ([
+            'district_id',
+            'full_name',
+            'first_name',
+            'last_name',
+            'email',
+            'phone',
+            'title',
+            'organization',
+            'city',
+            'state',
+            'raw_text',
+            'rep_notes',
+            'follow_up_status',
+        ] as $field) {
+            if ($request->exists($field)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function image(Capture $capture)

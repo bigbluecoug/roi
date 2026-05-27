@@ -55,7 +55,7 @@
 
     <div class="review-layout">
         <section class="panel review-panel">
-            <form method="post" action="{{ route('captures.update', $capture) }}" class="stack">
+            <form id="review-form" method="post" action="{{ route('captures.update', $capture) }}" class="stack">
                 @csrf
                 @method('patch')
 
@@ -79,7 +79,7 @@
                     <div>
                         <div class="row inline-field-action">
                             <label for="email" style="margin-bottom: 6px;">Email</label>
-                            <button class="button secondary compact" type="submit" form="web-enrich-form" data-busy-label="Searching...">Find Public Email</button>
+                            <button class="button secondary compact" type="submit" formaction="{{ route('captures.web-enrich', $capture) }}" data-busy-label="Saving and Searching...">Find Public Email</button>
                         </div>
                         <input id="email" name="email" type="email" value="{{ old('email', $capture->usableEmail()) }}">
                     </div>
@@ -167,7 +167,7 @@
                 @if ($capture->shouldAutoFindPublicEmail()) data-auto-web-enrich="true" data-testid="auto-public-email-enabled" @endif
             >
                 @csrf
-                <button class="button secondary" type="submit" data-busy-label="Searching...">Find Public Email</button>
+                <button class="button secondary" type="submit" form="review-form" formaction="{{ route('captures.web-enrich', $capture) }}" data-busy-label="Saving and Searching...">Find Public Email</button>
             </form>
 
             <article class="item-card">

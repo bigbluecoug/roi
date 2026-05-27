@@ -461,6 +461,67 @@ class CaptureFlowTest extends TestCase
         $this->assertSame('https://example.org/staff/alex-rivera', $capture->publicEnrichmentSources()[0]['url']);
     }
 
+    public function test_public_email_search_uses_unsaved_manual_review_context(): void
+    {
+        config(['services.openai.key' => 'test-key']);
+
+        $user = User::factory()->create();
+        $event = Event::create(['name' => 'TX Math', 'state_code' => 'TX']);
+        $capture = Capture::create([
+            'user_id' => $user->id,
+            'event_id' => $event->id,
+            'status' => Capture::STATUS_NEEDS_REVIEW,
+            'full_name' => 'Amanda',
+        ]);
+
+        $this->mock(PublicLeadEnricher::class, function ($mock): void {
+            $mock->shouldReceive('enrich')
+                ->once()
+                ->with(Mockery::on(fn (Capture $capture): bool => $capture->full_name === 'Amanda Dearing'
+                    && $capture->organization === 'Grapevine-Colleyville ISD'
+                    && $capture->title === 'High School Math Instructional Coach'
+                    && str_contains((string) $capture->rep_notes, 'LinkedIn profile')
+                    && str_contains((string) $capture->raw_text, 'TASM 2025')))
+                ->andReturn([
+                    'status' => 'found',
+                    'email' => 'amanda.dearing@gcisd.net',
+                    'confidence' => 0.9,
+                    'person_match' => 'Manual notes and badge text match.',
+                    'organization_match' => 'Organization matches manual context.',
+                    'summary' => 'Email found on official staff directory.',
+                    'sources' => [[
+                        'title' => 'Staff Directory',
+                        'url' => 'https://example.org/staff/amanda-dearing',
+                        'evidence' => 'Lists Amanda Dearing email.',
+                    ]],
+                    'checked_at' => now()->toIso8601String(),
+                ]);
+        });
+
+        $this->actingAs($user)->patch(route('captures.web-enrich', $capture), [
+            'district_id' => '',
+            'first_name' => 'Amanda',
+            'last_name' => 'Dearing',
+            'full_name' => 'Amanda Dearing',
+            'email' => '',
+            'phone' => '',
+            'title' => 'High School Math Instructional Coach',
+            'organization' => 'Grapevine-Colleyville ISD',
+            'city' => 'Grapevine',
+            'state' => 'TX',
+            'raw_text' => 'Amanda Dearing Grapevine-Colleyville ISD TASM 2025',
+            'rep_notes' => 'LinkedIn profile says high school math instructional coach.',
+            'follow_up_status' => 'new',
+        ])->assertRedirect(route('captures.review', $capture));
+
+        $capture->refresh();
+        $this->assertSame('Amanda Dearing', $capture->full_name);
+        $this->assertSame('Grapevine-Colleyville ISD', $capture->organization);
+        $this->assertSame('High School Math Instructional Coach', $capture->title);
+        $this->assertSame('amanda.dearing@gcisd.net', $capture->email);
+        $this->assertSame('found', $capture->publicEnrichment()['status']);
+    }
+
     public function test_public_email_search_does_not_apply_masked_email(): void
     {
         config(['services.openai.key' => 'test-key']);

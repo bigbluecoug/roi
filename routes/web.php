@@ -38,7 +38,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/captures/{capture}/image', [CaptureController::class, 'image'])->name('captures.image');
     Route::patch('/captures/{capture}', [CaptureController::class, 'update'])->name('captures.update');
     Route::post('/captures/{capture}/reprocess', [CaptureController::class, 'reprocess'])->name('captures.reprocess');
-    Route::post('/captures/{capture}/web-enrich', [CaptureController::class, 'webEnrich'])->name('captures.web-enrich');
+    Route::match(['post', 'patch'], '/captures/{capture}/web-enrich', [CaptureController::class, 'webEnrich'])->name('captures.web-enrich');
     Route::post('/captures/{capture}/hubspot-sync', [CaptureController::class, 'sync'])->name('captures.sync');
     Route::delete('/captures/{capture}', [CaptureController::class, 'destroy'])->name('captures.destroy');
     Route::delete('/captures/{capture}/image', [CaptureController::class, 'destroyImage'])->name('captures.image.destroy');

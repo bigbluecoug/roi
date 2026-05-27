@@ -85,8 +85,11 @@ class PublicLeadEnricher
             'Name' => $name,
             'Title' => $capture->title,
             'Organization' => $capture->organization,
+            'City' => $capture->city,
+            'State' => $capture->state,
             'District' => $capture->district?->name,
             'Event state' => $capture->event->state_code,
+            'Manual notes' => $capture->rep_notes,
             'Visible text' => $capture->raw_text,
         ] as $label => $value) {
             if (filled($value)) {
@@ -102,6 +105,7 @@ class PublicLeadEnricher
         return implode("\n", [
             'Find a publicly listed professional email address for this conference lead.',
             'Use web search. Prefer official school, district, staff directory, conference, or organization pages.',
+            'Use manually entered notes as search clues, but still require public source evidence before returning an email.',
             'Only return an email if the address is directly visible in public search/source evidence and appears to match the person and organization clues.',
             'Do not guess email patterns. Do not create synthetic addresses from a domain. If there is no directly evidenced email, return email null and status "not_found".',
             'Return JSON only. Include source URLs and short evidence notes.',
