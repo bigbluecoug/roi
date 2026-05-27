@@ -9,9 +9,9 @@ class InternalUserSeeder extends Seeder
 {
     public function run(): void
     {
-        $password = env('INTERNAL_USER_PASSWORD', 'capture');
+        $password = config('internal-users.password', 'capture');
 
-        foreach ($this->internalUsers() as $user) {
+        foreach (config('internal-users.users', []) as $user) {
             User::updateOrCreate([
                 'email' => $user['email'],
             ], [
@@ -19,13 +19,5 @@ class InternalUserSeeder extends Seeder
                 'password' => $password,
             ]);
         }
-    }
-
-    private function internalUsers(): array
-    {
-        return [
-            ['name' => 'Eric Price', 'email' => 'eric.price@derivita.com'],
-            ['name' => 'Duane', 'email' => 'duane@derivita.com'],
-        ];
     }
 }

@@ -44,6 +44,33 @@ class SetupFlowTest extends TestCase
         }
     }
 
+    public function test_internal_derivita_login_auto_creates_user_when_not_seeded(): void
+    {
+        $this->assertDatabaseMissing('users', ['email' => 'eric.price@derivita.com']);
+
+        $this->post('/login', [
+            'email' => 'eric.price@derivita.com',
+            'password' => 'capture',
+        ])->assertRedirect(route('setup.state'));
+
+        $this->assertAuthenticated();
+        $this->assertDatabaseHas('users', [
+            'email' => 'eric.price@derivita.com',
+            'name' => 'Eric Price',
+        ]);
+    }
+
+    public function test_internal_derivita_login_rejects_wrong_password(): void
+    {
+        $this->post('/login', [
+            'email' => 'duane@derivita.com',
+            'password' => 'wrong-password',
+        ])->assertSessionHasErrors('email');
+
+        $this->assertGuest();
+        $this->assertDatabaseMissing('users', ['email' => 'duane@derivita.com']);
+    }
+
     public function test_database_seeder_includes_internal_users(): void
     {
         $this->seed(DatabaseSeeder::class);
