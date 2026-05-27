@@ -16,135 +16,22 @@
         </div>
     </div>
 
+    @php
+        $insights = $capture->aiInsights();
+        $scalarInsights = [
+            'role_category' => 'Role category',
+            'seniority' => 'Seniority',
+            'organization_type' => 'Organization type',
+            'lead_priority' => 'Lead priority',
+            'buyer_relevance' => 'Buyer relevance',
+            'suggested_follow_up' => 'Suggested follow-up',
+            'caveat' => 'Caveat',
+        ];
+        $publicEnrichment = $capture->publicEnrichment();
+        $publicSources = $capture->publicEnrichmentSources();
+    @endphp
+
     <div class="review-layout">
-        <section class="stack review-media">
-            @if ($capture->image_path)
-                <img class="capture-image" src="{{ route('captures.image', $capture) }}" alt="Captured badge or business card">
-                <form method="post" action="{{ route('captures.reprocess', $capture) }}">
-                    @csrf
-                    <button class="button accent" type="submit" data-busy-label="Reading Image...">Re-run AI from Image</button>
-                </form>
-                <form method="post" action="{{ route('captures.image.destroy', $capture) }}">
-                    @csrf
-                    @method('delete')
-                    <button class="button danger" type="submit">Remove Image</button>
-                </form>
-            @else
-                <div class="empty">Image removed from capture log.</div>
-            @endif
-
-            <form
-                id="web-enrich-form"
-                method="post"
-                action="{{ route('captures.web-enrich', $capture) }}"
-                @if ($capture->shouldAutoFindPublicEmail()) data-auto-web-enrich="true" data-testid="auto-public-email-enabled" @endif
-            >
-                @csrf
-                <button class="button secondary" type="submit" data-busy-label="Searching...">Find Public Email</button>
-            </form>
-
-            <article class="item-card">
-                <div class="row">
-                    <span class="badge {{ $capture->status === 'synced' ? 'synced' : ($capture->status === 'sync_failed' ? 'failed' : 'review') }}">
-                        {{ str_replace('_', ' ', $capture->status) }}
-                    </span>
-                    <span class="meta">AI {{ number_format((float) $capture->ai_confidence, 2) }}</span>
-                </div>
-                <div class="meta">{{ $capture->match_reason ?? 'District match pending.' }}</div>
-                @if ($capture->sync_error)
-                    <div class="alert error" style="margin:0;">{{ $capture->sync_error }}</div>
-                @endif
-            </article>
-
-            @php
-                $insights = $capture->aiInsights();
-                $scalarInsights = [
-                    'role_category' => 'Role category',
-                    'seniority' => 'Seniority',
-                    'organization_type' => 'Organization type',
-                    'lead_priority' => 'Lead priority',
-                    'buyer_relevance' => 'Buyer relevance',
-                    'suggested_follow_up' => 'Suggested follow-up',
-                    'caveat' => 'Caveat',
-                ];
-                $publicEnrichment = $capture->publicEnrichment();
-                $publicSources = $capture->publicEnrichmentSources();
-            @endphp
-
-            @if ($insights)
-                <article class="item-card">
-                    <div class="row">
-                        <h2 class="item-title">Badge Clues</h2>
-                        <span class="badge">AI</span>
-                    </div>
-                    <ul class="insight-list">
-                        @foreach ($scalarInsights as $key => $label)
-                            @if (filled($insights[$key] ?? null))
-                                <li>
-                                    <strong>{{ $label }}</strong>
-                                    {{ $insights[$key] }}
-                                </li>
-                            @endif
-                        @endforeach
-                        @foreach (['district_clues' => 'District clues', 'missing_fields' => 'Missing fields'] as $key => $label)
-                            @if (! empty($insights[$key]))
-                                <li>
-                                    <strong>{{ $label }}</strong>
-                                    {{ implode('; ', (array) $insights[$key]) }}
-                                </li>
-                            @endif
-                        @endforeach
-                    </ul>
-                </article>
-            @endif
-
-            @if ($publicEnrichment)
-                <article class="item-card">
-                    <div class="row">
-                        <h2 class="item-title">Public Email Search</h2>
-                        <span class="badge {{ ($publicEnrichment['status'] ?? null) === 'found' ? 'synced' : 'review' }}">
-                            {{ str_replace('_', ' ', $publicEnrichment['status'] ?? 'checked') }}
-                        </span>
-                    </div>
-                    <ul class="insight-list">
-                        @if (filled($publicEnrichment['email'] ?? null))
-                            <li>
-                                <strong>Email</strong>
-                                {{ $publicEnrichment['email'] }}
-                            </li>
-                        @endif
-                        @if (isset($publicEnrichment['confidence']))
-                            <li>
-                                <strong>Confidence</strong>
-                                {{ number_format((float) $publicEnrichment['confidence'], 2) }}
-                            </li>
-                        @endif
-                        @foreach ([
-                            'summary' => 'Summary',
-                            'person_match' => 'Person match',
-                            'organization_match' => 'Organization match',
-                        ] as $key => $label)
-                            @if (filled($publicEnrichment[$key] ?? null))
-                                <li>
-                                    <strong>{{ $label }}</strong>
-                                    {{ $publicEnrichment[$key] }}
-                                </li>
-                            @endif
-                        @endforeach
-                        @foreach ($publicSources as $source)
-                            <li>
-                                <strong>{{ $source['title'] ?? 'Public source' }}</strong>
-                                <a href="{{ $source['url'] }}" target="_blank" rel="noopener noreferrer">{{ $source['url'] }}</a>
-                                @if (filled($source['evidence'] ?? null))
-                                    <div>{{ $source['evidence'] }}</div>
-                                @endif
-                            </li>
-                        @endforeach
-                    </ul>
-                </article>
-            @endif
-        </section>
-
         <section class="panel review-panel">
             <form method="post" action="{{ route('captures.update', $capture) }}" class="stack">
                 @csrf
@@ -242,6 +129,119 @@
                 @csrf
                 <button class="button accent" type="submit" @disabled(! $capture->readyForHubSpot())>Add to HubSpot</button>
             </form>
+        </section>
+
+        <section class="stack review-media">
+            @if ($capture->image_path)
+                <img class="capture-image" src="{{ route('captures.image', $capture) }}" alt="Captured badge or business card">
+                <form method="post" action="{{ route('captures.reprocess', $capture) }}">
+                    @csrf
+                    <button class="button accent" type="submit" data-busy-label="Reading Image...">Re-run AI from Image</button>
+                </form>
+                <form method="post" action="{{ route('captures.image.destroy', $capture) }}">
+                    @csrf
+                    @method('delete')
+                    <button class="button danger" type="submit">Remove Image</button>
+                </form>
+            @else
+                <div class="empty">Image removed from capture log.</div>
+            @endif
+
+            <form
+                id="web-enrich-form"
+                method="post"
+                action="{{ route('captures.web-enrich', $capture) }}"
+                @if ($capture->shouldAutoFindPublicEmail()) data-auto-web-enrich="true" data-testid="auto-public-email-enabled" @endif
+            >
+                @csrf
+                <button class="button secondary" type="submit" data-busy-label="Searching...">Find Public Email</button>
+            </form>
+
+            <article class="item-card">
+                <div class="row">
+                    <span class="badge {{ $capture->status === 'synced' ? 'synced' : ($capture->status === 'sync_failed' ? 'failed' : 'review') }}">
+                        {{ str_replace('_', ' ', $capture->status) }}
+                    </span>
+                    <span class="meta">AI {{ number_format((float) $capture->ai_confidence, 2) }}</span>
+                </div>
+                <div class="meta">{{ $capture->match_reason ?? 'District match pending.' }}</div>
+                @if ($capture->sync_error)
+                    <div class="alert error" style="margin:0;">{{ $capture->sync_error }}</div>
+                @endif
+            </article>
+
+            @if ($insights)
+                <article class="item-card">
+                    <div class="row">
+                        <h2 class="item-title">Badge Clues</h2>
+                        <span class="badge">AI</span>
+                    </div>
+                    <ul class="insight-list">
+                        @foreach ($scalarInsights as $key => $label)
+                            @if (filled($insights[$key] ?? null))
+                                <li>
+                                    <strong>{{ $label }}</strong>
+                                    {{ $insights[$key] }}
+                                </li>
+                            @endif
+                        @endforeach
+                        @foreach (['district_clues' => 'District clues', 'missing_fields' => 'Missing fields'] as $key => $label)
+                            @if (! empty($insights[$key]))
+                                <li>
+                                    <strong>{{ $label }}</strong>
+                                    {{ implode('; ', (array) $insights[$key]) }}
+                                </li>
+                            @endif
+                        @endforeach
+                    </ul>
+                </article>
+            @endif
+
+            @if ($publicEnrichment)
+                <article class="item-card">
+                    <div class="row">
+                        <h2 class="item-title">Public Email Search</h2>
+                        <span class="badge {{ ($publicEnrichment['status'] ?? null) === 'found' ? 'synced' : 'review' }}">
+                            {{ str_replace('_', ' ', $publicEnrichment['status'] ?? 'checked') }}
+                        </span>
+                    </div>
+                    <ul class="insight-list">
+                        @if (filled($publicEnrichment['email'] ?? null))
+                            <li>
+                                <strong>Email</strong>
+                                {{ $publicEnrichment['email'] }}
+                            </li>
+                        @endif
+                        @if (isset($publicEnrichment['confidence']))
+                            <li>
+                                <strong>Confidence</strong>
+                                {{ number_format((float) $publicEnrichment['confidence'], 2) }}
+                            </li>
+                        @endif
+                        @foreach ([
+                            'summary' => 'Summary',
+                            'person_match' => 'Person match',
+                            'organization_match' => 'Organization match',
+                        ] as $key => $label)
+                            @if (filled($publicEnrichment[$key] ?? null))
+                                <li>
+                                    <strong>{{ $label }}</strong>
+                                    {{ $publicEnrichment[$key] }}
+                                </li>
+                            @endif
+                        @endforeach
+                        @foreach ($publicSources as $source)
+                            <li>
+                                <strong>{{ $source['title'] ?? 'Public source' }}</strong>
+                                <a href="{{ $source['url'] }}" target="_blank" rel="noopener noreferrer">{{ $source['url'] }}</a>
+                                @if (filled($source['evidence'] ?? null))
+                                    <div>{{ $source['evidence'] }}</div>
+                                @endif
+                            </li>
+                        @endforeach
+                    </ul>
+                </article>
+            @endif
         </section>
     </div>
 </x-layouts.app>

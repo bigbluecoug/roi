@@ -302,6 +302,31 @@ class CaptureFlowTest extends TestCase
             ->assertSee('data-testid="auto-public-email-enabled"', false);
     }
 
+    public function test_review_form_appears_before_badge_clues(): void
+    {
+        $user = User::factory()->create();
+        $event = Event::create(['name' => 'CO Math', 'state_code' => 'CO']);
+        $capture = Capture::create([
+            'user_id' => $user->id,
+            'event_id' => $event->id,
+            'status' => Capture::STATUS_NEEDS_REVIEW,
+            'full_name' => 'Alex Rivera',
+            'first_name' => 'Alex',
+            'last_name' => 'Rivera',
+            'organization' => 'Cherry Creek School District',
+            'extracted_payload' => [
+                'insights' => [
+                    'role_category' => 'Curriculum leader',
+                ],
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('captures.review', $capture))
+            ->assertOk()
+            ->assertSeeInOrder(['First Name', 'Badge Clues']);
+    }
+
     public function test_public_email_search_fills_blank_email_when_confident_and_sourced(): void
     {
         config(['services.openai.key' => 'test-key']);

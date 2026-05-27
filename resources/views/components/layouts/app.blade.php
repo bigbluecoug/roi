@@ -163,7 +163,7 @@
         .stack { display: grid; gap: 14px; }
         .review-layout {
             display: grid;
-            grid-template-columns: minmax(0, 0.9fr) minmax(360px, 1.1fr);
+            grid-template-columns: minmax(360px, 1.08fr) minmax(0, 0.92fr);
             gap: 16px;
             align-items: start;
         }
