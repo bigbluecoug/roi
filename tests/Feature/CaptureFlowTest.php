@@ -561,6 +561,35 @@ class CaptureFlowTest extends TestCase
             ->assertDontSee('data-testid="auto-public-email-enabled"', false);
     }
 
+    public function test_review_labels_public_email_not_found_as_no_complete_email(): void
+    {
+        $user = User::factory()->create();
+        $event = Event::create(['name' => 'TX Math', 'state_code' => 'TX']);
+        $capture = Capture::create([
+            'user_id' => $user->id,
+            'event_id' => $event->id,
+            'status' => Capture::STATUS_NEEDS_REVIEW,
+            'full_name' => 'Amanda Dearing',
+            'organization' => 'Grapevine-Colleyville ISD',
+            'extracted_payload' => [
+                'public_enrichment' => [
+                    'status' => 'not_found',
+                    'email' => null,
+                    'confidence' => 0.96,
+                    'summary' => 'No directly evidenced email address was visible.',
+                    'sources' => [],
+                ],
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('captures.review', $capture))
+            ->assertOk()
+            ->assertSee('no complete email')
+            ->assertSee('Search confidence')
+            ->assertDontSee('not found');
+    }
+
     protected function tearDown(): void
     {
         Mockery::close();

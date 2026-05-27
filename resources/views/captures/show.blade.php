@@ -23,6 +23,12 @@
         if ($publicEnrichmentStatus === 'found' && blank($publicEnrichmentEmail)) {
             $publicEnrichmentStatus = 'ambiguous';
         }
+        $publicEnrichmentStatusLabel = match ($publicEnrichmentStatus) {
+            'found' => 'found',
+            'not_found' => 'no complete email',
+            'ambiguous' => 'review sources',
+            default => str_replace('_', ' ', $publicEnrichmentStatus),
+        };
         $publicEnrichmentDisplay = $publicEnrichment;
         foreach (['summary', 'person_match', 'organization_match'] as $key) {
             $publicEnrichmentDisplay[$key] = \App\Models\Capture::redactMaskedEmailText($publicEnrichment[$key] ?? null);
@@ -217,7 +223,7 @@
                     <div class="row">
                         <h2 class="item-title">Public Email Search</h2>
                         <span class="badge {{ $publicEnrichmentStatus === 'found' ? 'synced' : 'review' }}">
-                            {{ str_replace('_', ' ', $publicEnrichmentStatus) }}
+                            {{ $publicEnrichmentStatusLabel }}
                         </span>
                     </div>
                     <ul class="insight-list">
@@ -229,7 +235,7 @@
                         @endif
                         @if (isset($publicEnrichment['confidence']))
                             <li>
-                                <strong>Confidence</strong>
+                                <strong>Search confidence</strong>
                                 {{ number_format((float) $publicEnrichment['confidence'], 2) }}
                             </li>
                         @endif
