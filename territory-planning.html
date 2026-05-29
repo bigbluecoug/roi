@@ -33743,6 +33743,14 @@ function compactStrings(values) {
   return list.map(value => String(value ?? '').trim()).filter(Boolean);
 }
 
+function conciseText(value, maxChars = 130) {
+  const text = String(value ?? '').replace(/\s+/g, ' ').trim();
+  if (!text || text.length <= maxChars) return text;
+  const clipped = text.slice(0, maxChars - 1);
+  const lastSpace = clipped.lastIndexOf(' ');
+  return (lastSpace > 60 ? clipped.slice(0, lastSpace) : clipped).trim() + '…';
+}
+
 function aiEnrichmentPayload(district) {
   const details = tierScoreDetails(district, currentProfile);
   const plan = getDistrictPlan(district);
@@ -33795,7 +33803,8 @@ function aiEnrichmentPayload(district) {
       'Use public district/state sources only.',
       'Find and summarize only secondary math state-test performance, listed LMS, and adopted math curriculum.',
       'Prioritize official state report cards, district technology/help docs, board packets, curriculum pages, course guides, Canvas, Schoology, Google Classroom, Illustrative Math, Open Up Resources/OUR, and Big Ideas.',
-      'Return source URLs, confidence level, validation gaps, and concise AE-ready evidence.',
+      'Return source URLs, confidence level, validation gaps, and extremely concise AE-ready evidence.',
+      'Limit the overall summary to 35 words. Limit each evidence card to one short sentence plus status/confidence.',
       'Do not present inferred LMS/curriculum/test-score data as confirmed unless a source supports it.'
     ]
   };
@@ -33865,14 +33874,14 @@ function normalizeExternalSection(section) {
 function evidenceSectionHtml(title, section, fallback) {
   const normalized = normalizeExternalSection(section);
   const summary = normalized.summary || fallback || 'Needs validation.';
-  const meta = compactStrings([normalized.status, normalized.confidence]).map(item =>
-    '<span class="ai-brief-pill">' + escapeHtml(item) + '</span>'
+  const meta = compactStrings([normalized.status, normalized.confidence]).slice(0, 2).map(item =>
+    '<span class="ai-brief-pill">' + escapeHtml(conciseText(item, 32)) + '</span>'
   ).join('');
   const source = normalized.sourceUrl
     ? '<p><a href="' + escapeHtml(normalized.sourceUrl) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(normalized.sourceTitle || 'Source') + '</a></p>'
     : '';
   return '<div class="evidence-card"><h4>' + escapeHtml(title) + '</h4>'
-    + '<p>' + escapeHtml(summary) + (normalized.evidence ? '<br>' + escapeHtml(normalized.evidence) : '') + '</p>'
+    + '<p>' + escapeHtml(conciseText(summary, 110)) + (normalized.evidence ? '<br>' + escapeHtml(conciseText(normalized.evidence, 90)) : '') + '</p>'
     + source
     + (meta ? '<div class="evidence-meta">' + meta + '</div>' : '')
     + '</div>';
@@ -33881,10 +33890,10 @@ function evidenceSectionHtml(title, section, fallback) {
 function sourceListHtml(sources) {
   if (!sources.length) return '';
   return '<div class="ai-brief-section"><h4>Cited sources</h4><ul class="ai-source-list">'
-    + sources.map(source => {
-      const title = source.title || source.url || 'Public source';
+    + sources.slice(0, 4).map(source => {
+      const title = conciseText(source.title || source.url || 'Public source', 74);
       const category = source.category ? '[' + source.category + '] ' : '';
-      const evidence = source.evidence ? ' — ' + source.evidence : '';
+      const evidence = source.evidence ? ' — ' + conciseText(source.evidence, 80) : '';
       return '<li>' + escapeHtml(category) + (source.url ? '<a href="' + escapeHtml(source.url) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(title) + '</a>' : escapeHtml(title)) + escapeHtml(evidence) + '</li>';
     }).join('')
     + '</ul></div>';
@@ -33894,7 +33903,7 @@ function investigationQueriesHtml(payload, district) {
   const queries = compactStrings(payload.investigation_queries || []);
   if (!queries.length) return '';
   return '<div class="ai-brief-section"><h4>Additional investigation</h4><p>Use these searches if the AE wants to validate or go deeper.</p><div class="investigation-grid">'
-    + queries.slice(0, 6).map(query => '<a class="secondary-button" href="' + escapeHtml(searchUrl(query)) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(query.length > 46 ? query.slice(0, 43) + '...' : query) + '</a>').join('')
+    + queries.slice(0, 3).map(query => '<a class="secondary-button" href="' + escapeHtml(searchUrl(query)) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(query.length > 46 ? query.slice(0, 43) + '...' : query) + '</a>').join('')
     + '</div></div>';
 }
 
@@ -33904,13 +33913,13 @@ function renderExternalAiPayload(payload, district) {
   const validation = compactStrings(payload.validation_checklist || payload.validationChecklist || []);
   return '<div class="ai-output">'
     + '<strong>Source-backed evidence review</strong>'
-    + '<p>' + escapeHtml(payload.summary || 'AI enrichment returned. Validate all sources before outreach.') + '</p>'
+    + '<p>' + escapeHtml(conciseText(payload.summary || 'AI enrichment returned. Validate all sources before outreach.', 150)) + '</p>'
     + '<div class="evidence-grid">'
     + evidenceSectionHtml('Secondary math scores', payload.math_test_score || payload.mathTestScore || payload.math, 'Needs state report-card validation.')
     + evidenceSectionHtml('Listed LMS', payload.lms || payload.listed_lms || payload.listedLms, 'Needs district technology validation.')
     + evidenceSectionHtml('Math curriculum', payload.math_curriculum || payload.mathCurriculum || payload.curriculum, 'Needs curriculum adoption validation.')
     + '</div>'
-    + (validation.length ? '<div class="ai-brief-section"><h4>Validation checklist</h4><ul>' + validation.map(item => '<li>' + escapeHtml(item) + '</li>').join('') + '</ul></div>' : '')
+    + (validation.length ? '<div class="ai-brief-section"><h4>Validation checklist</h4><ul>' + validation.slice(0, 3).map(item => '<li>' + escapeHtml(conciseText(item, 90)) + '</li>').join('') + '</ul></div>' : '')
     + investigationQueriesHtml(payload, district)
     + sourceListHtml(sources)
     + '<div class="ai-brief-meta"><span class="ai-brief-pill">Confidence: ' + escapeHtml(payload.confidence || 'Needs AE validation') + '</span></div>'
@@ -33981,7 +33990,7 @@ function renderChatAnswer(payload) {
   const links = sources.length
     ? '<div class="ai-brief-meta">' + sources.map(source => source.url ? '<a class="ai-brief-pill" href="' + escapeHtml(source.url) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(source.title || 'Source') + '</a>' : '').join('') + '</div>'
     : '';
-  return escapeHtml(answer) + links;
+  return escapeHtml(conciseText(answer, 520)) + links;
 }
 
 async function runAiChat(district, question, form) {
