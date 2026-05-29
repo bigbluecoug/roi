@@ -28,6 +28,9 @@ class DistrictNeedsSummaryController extends Controller
             'currentSignals' => ['nullable', 'array'],
             'planning' => ['nullable', 'array'],
             'tierDrivers' => ['nullable', 'array'],
+            'mode' => ['nullable', 'string', 'in:evidence,secondary_schools'],
+            'question' => ['nullable', 'string', 'max:1000'],
+            'previousSummary' => ['nullable', 'array'],
         ]);
 
         if (! config('services.openai.key')) {
@@ -37,6 +40,8 @@ class DistrictNeedsSummaryController extends Controller
         }
 
         try {
+            $mode = $request->input('mode') === 'secondary_schools' ? 'secondary_schools' : 'evidence';
+
             $response = Http::withToken(config('services.openai.key'))
                 ->connectTimeout(5)
                 ->timeout(60)
@@ -48,13 +53,13 @@ class DistrictNeedsSummaryController extends Controller
                         'search_context_size' => 'medium',
                     ]],
                     'tool_choice' => 'required',
-                    'input' => $this->prompt($request->all()),
+                    'input' => $this->prompt($request->all(), $mode),
                     'text' => [
                         'format' => [
                             'type' => 'json_schema',
                             'name' => 'district_needs_summary',
                             'strict' => false,
-                            'schema' => $this->schema(),
+                            'schema' => $this->schema($mode),
                         ],
                     ],
                 ]);
@@ -63,7 +68,7 @@ class DistrictNeedsSummaryController extends Controller
                 throw new RuntimeException('OpenAI district needs summary failed: '.$response->body());
             }
 
-            return response()->json($this->normalize($this->decodeResponse($response->json()), $response->json()));
+            return response()->json($this->normalize($this->decodeResponse($response->json()), $response->json(), $mode));
         } catch (RuntimeException $exception) {
             report($exception);
 
@@ -73,23 +78,119 @@ class DistrictNeedsSummaryController extends Controller
         }
     }
 
-    private function prompt(array $payload): string
+    private function prompt(array $payload, string $mode = 'evidence'): string
     {
+        $question = $this->cleanString(Arr::get($payload, 'question'));
+
+        if ($mode === 'secondary_schools') {
+            return implode("\n", [
+                'Create a source-backed secondary school roster for the selected district.',
+                'Use web search and public sources only. Prefer NCES CCD/EDGE, state education directories, or the district official school directory.',
+                'List schools associated with the district that serve secondary grades: middle schools, junior highs, high schools, and 6-12 schools.',
+                'Exclude elementary-only, pre-K-only, adult education, virtual-only, closed, and unrelated schools unless the source clearly identifies them as serving grades 6-12 for this LEA.',
+                'For each school, include the school name, grade span if source-backed, city if available, and a source URL.',
+                'If the source-backed list cannot be completed, include the verified schools you found and say what still needs validation.',
+                'Do not invent school names. Cite source URLs in both each school row and the sources array when possible.',
+                'Return JSON only in the requested schema.',
+                '',
+                'Planner payload:',
+                json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES),
+            ]);
+        }
+
+        if ($question) {
+            return implode("\n", [
+                'Answer the AE follow-up question for Derivita using web search and public sources.',
+                'Stay focused on these evidence areas only: secondary math state-test performance, the district LMS, and the district math curriculum/adoption evidence.',
+                'Use official state report cards or state assessment pages for math scores when possible. Use district technology/help/procurement pages for LMS evidence. Use curriculum pages, board packets, course guides, or adoption documents for math curriculum evidence.',
+                'Do not guess. If a claim is not source-backed, say it needs validation.',
+                'Cite source URLs in the sources array. Keep the answer concise and useful for an Account Executive.',
+                'Return JSON only in the requested schema.',
+                '',
+                'AE question:',
+                $question,
+                '',
+                'Planner payload:',
+                json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES),
+            ]);
+        }
+
         return implode("\n", [
-            'Create a concise AE district-needs summary for Derivita.',
-            'Use web search and public sources. Prefer official state report cards, district sites, board packets, curriculum pages, technology/help docs, and procurement pages.',
-            'Focus on the context that matters for Derivita territory planning: math state-test performance, Algebra readiness, Canvas/Schoology/Google Classroom or other LMS evidence, Illustrative Math/Open Up Resources/OUR/Big Ideas or other math curriculum evidence, standards/fiscal timing, competitive risk, and what the AE should validate in HubSpot.',
-            'Do not guess. If a math-score, LMS, curriculum, or customer-status signal is not source-backed, mark it as Needs validation.',
-            'The AE chooses the final tier; provide tier rationale, not an automatic assignment.',
-            'Return JSON only in the requested schema with short source evidence and URLs.',
+            'Create a focused source-backed district evidence review for Derivita.',
+            'Use web search and public sources only.',
+            'Only cover these three areas:',
+            '1. Secondary math state-test performance from official state report cards, state assessment pages, or district accountability pages. Prefer grades 6-12, middle school math, Algebra, high school math, or district-level secondary math evidence. If only broader math evidence is available, label that limitation clearly.',
+            '2. Listed LMS evidence, especially Canvas, Schoology, Google Classroom, or another platform. Prefer district technology/help pages, login portals, board packets, procurement pages, or public documentation.',
+            '3. Math curriculum evidence, especially Illustrative Math, Open Up Resources/OUR, Big Ideas, or another adopted math curriculum. Prefer curriculum pages, board adoption documents, course guides, or public curriculum maps.',
+            'Do not include account sizing, HubSpot, outreach angle, tier recommendation, standards timing, or broad sales advice unless it directly explains one of the three evidence areas.',
+            'Do not guess. If math scores, LMS, or curriculum are not source-backed, mark that section as Needs validation and explain where the AE should investigate next.',
+            'Cite source URLs in both the relevant section and the sources array whenever possible.',
+            'Return JSON only in the requested schema.',
             '',
             'Planner payload:',
             json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES),
         ]);
     }
 
-    private function schema(): array
+    private function schema(string $mode = 'evidence'): array
     {
+        if ($mode === 'secondary_schools') {
+            return [
+                'type' => 'object',
+                'additionalProperties' => false,
+                'required' => [
+                    'summary',
+                    'secondary_schools',
+                    'confidence',
+                    'validation_checklist',
+                    'investigation_queries',
+                    'sources',
+                ],
+                'properties' => [
+                    'summary' => ['type' => ['string', 'null']],
+                    'secondary_schools' => [
+                        'type' => 'array',
+                        'items' => [
+                            'type' => 'object',
+                            'additionalProperties' => false,
+                            'required' => ['name', 'grades', 'city', 'source_title', 'source_url', 'confidence'],
+                            'properties' => [
+                                'name' => ['type' => ['string', 'null']],
+                                'grades' => ['type' => ['string', 'null']],
+                                'city' => ['type' => ['string', 'null']],
+                                'source_title' => ['type' => ['string', 'null']],
+                                'source_url' => ['type' => ['string', 'null']],
+                                'confidence' => ['type' => ['string', 'null']],
+                            ],
+                        ],
+                    ],
+                    'confidence' => ['type' => ['string', 'null']],
+                    'validation_checklist' => [
+                        'type' => 'array',
+                        'items' => ['type' => 'string'],
+                    ],
+                    'investigation_queries' => [
+                        'type' => 'array',
+                        'items' => ['type' => 'string'],
+                    ],
+                    'sources' => [
+                        'type' => 'array',
+                        'items' => [
+                            'type' => 'object',
+                            'additionalProperties' => false,
+                            'required' => ['title', 'url', 'evidence', 'category'],
+                            'properties' => [
+                                'title' => ['type' => ['string', 'null']],
+                                'url' => ['type' => ['string', 'null']],
+                                'evidence' => ['type' => ['string', 'null']],
+                                'category' => ['type' => ['string', 'null']],
+                            ],
+                        ],
+                    ],
+                ],
+            ];
+        }
+
         $section = [
             'type' => 'object',
             'additionalProperties' => false,
@@ -99,6 +200,8 @@ class DistrictNeedsSummaryController extends Controller
                 'summary' => ['type' => ['string', 'null']],
                 'evidence' => ['type' => ['string', 'null']],
                 'confidence' => ['type' => ['string', 'null']],
+                'source_title' => ['type' => ['string', 'null']],
+                'source_url' => ['type' => ['string', 'null']],
             ],
         ];
 
@@ -107,33 +210,27 @@ class DistrictNeedsSummaryController extends Controller
             'additionalProperties' => false,
             'required' => [
                 'summary',
+                'answer',
                 'math_test_score',
                 'lms',
                 'math_curriculum',
-                'hubspot',
-                'other_context',
-                'outreach_angle',
-                'tier_rationale',
-                'recommended_tier',
                 'confidence',
                 'validation_checklist',
+                'investigation_queries',
                 'sources',
             ],
             'properties' => [
                 'summary' => ['type' => ['string', 'null']],
+                'answer' => ['type' => ['string', 'null']],
                 'math_test_score' => $section,
                 'lms' => $section,
                 'math_curriculum' => $section,
-                'hubspot' => $section,
-                'other_context' => [
+                'confidence' => ['type' => ['string', 'null']],
+                'validation_checklist' => [
                     'type' => 'array',
                     'items' => ['type' => 'string'],
                 ],
-                'outreach_angle' => ['type' => ['string', 'null']],
-                'tier_rationale' => ['type' => ['string', 'null']],
-                'recommended_tier' => ['type' => ['string', 'null']],
-                'confidence' => ['type' => ['string', 'null']],
-                'validation_checklist' => [
+                'investigation_queries' => [
                     'type' => 'array',
                     'items' => ['type' => 'string'],
                 ],
@@ -142,11 +239,12 @@ class DistrictNeedsSummaryController extends Controller
                     'items' => [
                         'type' => 'object',
                         'additionalProperties' => false,
-                        'required' => ['title', 'url', 'evidence'],
+                        'required' => ['title', 'url', 'evidence', 'category'],
                         'properties' => [
                             'title' => ['type' => ['string', 'null']],
                             'url' => ['type' => ['string', 'null']],
                             'evidence' => ['type' => ['string', 'null']],
+                            'category' => ['type' => ['string', 'null']],
                         ],
                     ],
                 ],
@@ -154,13 +252,14 @@ class DistrictNeedsSummaryController extends Controller
         ];
     }
 
-    private function normalize(array $payload, array $rawResponse = []): array
+    private function normalize(array $payload, array $rawResponse = [], string $mode = 'evidence'): array
     {
         $sources = collect(Arr::wrap(Arr::get($payload, 'sources', [])))
             ->map(fn ($source) => [
                 'title' => $this->cleanString(Arr::get($source, 'title')) ?: 'Public source',
                 'url' => $this->cleanUrl(Arr::get($source, 'url')),
                 'evidence' => $this->cleanString(Arr::get($source, 'evidence')),
+                'category' => $this->cleanString(Arr::get($source, 'category')),
             ])
             ->filter(fn ($source) => filled($source['url']))
             ->values()
@@ -172,22 +271,50 @@ class DistrictNeedsSummaryController extends Controller
             }
         }
 
+        if ($mode === 'secondary_schools') {
+            return [
+                'summary' => $this->cleanString(Arr::get($payload, 'summary')) ?: 'Secondary school roster needs validation.',
+                'secondary_schools' => collect(Arr::wrap(Arr::get($payload, 'secondary_schools', [])))
+                    ->map(fn ($school) => [
+                        'name' => $this->cleanString(Arr::get($school, 'name')),
+                        'grades' => $this->cleanString(Arr::get($school, 'grades')),
+                        'city' => $this->cleanString(Arr::get($school, 'city')),
+                        'source_title' => $this->cleanString(Arr::get($school, 'source_title')),
+                        'source_url' => $this->cleanUrl(Arr::get($school, 'source_url')),
+                        'confidence' => $this->cleanString(Arr::get($school, 'confidence')) ?: 'Needs validation',
+                    ])
+                    ->filter(fn ($school) => filled($school['name']))
+                    ->values()
+                    ->all(),
+                'confidence' => $this->cleanString(Arr::get($payload, 'confidence')) ?: 'Needs AE validation',
+                'validation_checklist' => collect(Arr::wrap(Arr::get($payload, 'validation_checklist', [])))
+                    ->map(fn ($item) => $this->cleanString($item))
+                    ->filter()
+                    ->values()
+                    ->all(),
+                'investigation_queries' => collect(Arr::wrap(Arr::get($payload, 'investigation_queries', [])))
+                    ->map(fn ($item) => $this->cleanString($item))
+                    ->filter()
+                    ->values()
+                    ->all(),
+                'sources' => $sources,
+                'checked_at' => now()->toIso8601String(),
+            ];
+        }
+
         return [
             'summary' => $this->cleanString(Arr::get($payload, 'summary')) ?: 'Needs validation before outreach.',
+            'answer' => $this->cleanString(Arr::get($payload, 'answer')),
             'math_test_score' => $this->normalizeSection(Arr::get($payload, 'math_test_score')),
             'lms' => $this->normalizeSection(Arr::get($payload, 'lms')),
             'math_curriculum' => $this->normalizeSection(Arr::get($payload, 'math_curriculum')),
-            'hubspot' => $this->normalizeSection(Arr::get($payload, 'hubspot')),
-            'other_context' => collect(Arr::wrap(Arr::get($payload, 'other_context', [])))
+            'confidence' => $this->cleanString(Arr::get($payload, 'confidence')) ?: 'Needs AE validation',
+            'validation_checklist' => collect(Arr::wrap(Arr::get($payload, 'validation_checklist', [])))
                 ->map(fn ($item) => $this->cleanString($item))
                 ->filter()
                 ->values()
                 ->all(),
-            'outreach_angle' => $this->cleanString(Arr::get($payload, 'outreach_angle')),
-            'tier_rationale' => $this->cleanString(Arr::get($payload, 'tier_rationale')),
-            'recommended_tier' => $this->cleanString(Arr::get($payload, 'recommended_tier')),
-            'confidence' => $this->cleanString(Arr::get($payload, 'confidence')) ?: 'Needs AE validation',
-            'validation_checklist' => collect(Arr::wrap(Arr::get($payload, 'validation_checklist', [])))
+            'investigation_queries' => collect(Arr::wrap(Arr::get($payload, 'investigation_queries', [])))
                 ->map(fn ($item) => $this->cleanString($item))
                 ->filter()
                 ->values()
@@ -207,6 +334,8 @@ class DistrictNeedsSummaryController extends Controller
                 'summary' => $summary ?: 'Needs validation.',
                 'evidence' => null,
                 'confidence' => 'Low',
+                'source_title' => null,
+                'source_url' => null,
             ];
         }
 
@@ -215,6 +344,8 @@ class DistrictNeedsSummaryController extends Controller
             'summary' => $this->cleanString(Arr::get($value, 'summary')) ?: 'Needs validation.',
             'evidence' => $this->cleanString(Arr::get($value, 'evidence')),
             'confidence' => $this->cleanString(Arr::get($value, 'confidence')) ?: 'Low',
+            'source_title' => $this->cleanString(Arr::get($value, 'source_title')),
+            'source_url' => $this->cleanUrl(Arr::get($value, 'source_url')),
         ];
     }
 
@@ -273,6 +404,7 @@ class DistrictNeedsSummaryController extends Controller
                         'title' => $this->cleanString($citation['title'] ?? null) ?: 'Public source',
                         'url' => $url,
                         'evidence' => null,
+                        'category' => null,
                     ];
                 }
             }

@@ -383,7 +383,7 @@
   .tier-count span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; }
   .table-toolbar {
     display: grid;
-    grid-template-columns: minmax(240px, 1.4fr) repeat(4, minmax(145px, 1fr)) auto;
+    grid-template-columns: minmax(240px, 1.4fr) repeat(3, minmax(145px, 1fr)) auto;
     gap: 12px;
     padding: 18px;
     align-items: end;
@@ -397,7 +397,7 @@
     overflow-x: auto;
     box-shadow: var(--card-shadow);
   }
-  table { width: 100%; border-collapse: collapse; min-width: 1460px; }
+  table { width: 100%; border-collapse: collapse; min-width: 1060px; }
   th {
     background: rgba(10,31,68,0.04);
     color: var(--muted);
@@ -459,7 +459,32 @@
     width: 100%;
     accent-color: var(--orange);
   }
+  .district-review-actions {
+    display: grid;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .district-review-actions .needs-review-button {
+    width: 100%;
+  }
   .numeric { text-align: right; font-weight: 700; }
+  .school-count-button {
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--navy);
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+    padding: 5px 9px;
+  }
+  .school-count-button:hover,
+  .school-count-button:focus {
+    background: rgba(232,69,10,0.09);
+    border-color: rgba(232,69,10,0.24);
+    color: var(--orange);
+    outline: none;
+  }
   .tier-chip,
   .mini-pill {
     display: inline-block;
@@ -628,55 +653,6 @@
     font-size: 12px;
     line-height: 1.45;
   }
-  .rationale-score {
-    display: grid;
-    grid-template-columns: minmax(130px, 0.4fr) 1fr;
-    gap: 14px;
-    align-items: stretch;
-    margin-bottom: 18px;
-  }
-  .rationale-total {
-    border-radius: 10px;
-    background: rgba(232,69,10,0.08);
-    border: 1px solid rgba(232,69,10,0.22);
-    padding: 16px;
-  }
-  .rationale-total strong {
-    display: block;
-    color: var(--orange);
-    font-size: 36px;
-    line-height: 1;
-  }
-  .rationale-total span {
-    display: block;
-    color: var(--body);
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-top: 7px;
-  }
-  .rationale-list {
-    display: grid;
-    gap: 9px;
-  }
-  .rationale-item {
-    display: flex;
-    justify-content: space-between;
-    gap: 14px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 12px;
-    color: var(--body);
-    font-size: 12px;
-  }
-  .rationale-item b { color: var(--navy); }
-  .rationale-item .points {
-    color: var(--orange);
-    font-weight: 700;
-    max-width: 240px;
-    text-align: right;
-  }
   .needs-field-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -708,6 +684,40 @@
     background: white;
   }
   .research-links a:hover { color: var(--orange); border-color: rgba(232,69,10,0.28); }
+  .school-roster-summary {
+    color: var(--body);
+    font-size: 13px;
+    line-height: 1.55;
+    margin: 0 0 14px;
+  }
+  .school-roster-list {
+    display: grid;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .school-roster-item {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: rgba(10,31,68,0.025);
+    padding: 10px 11px;
+  }
+  .school-roster-item b {
+    display: block;
+    color: var(--navy);
+    font-size: 13px;
+  }
+  .school-roster-item span {
+    display: block;
+    color: var(--body);
+    font-size: 12px;
+    margin-top: 3px;
+  }
+  .school-roster-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
   .ai-enrichment {
     margin-top: 16px;
     border: 1px solid rgba(10,31,68,0.12);
@@ -814,6 +824,95 @@
     text-decoration: none;
   }
   .ai-source-list a:hover { color: var(--orange); }
+  .evidence-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .evidence-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: rgba(10,31,68,0.025);
+    padding: 12px;
+  }
+  .evidence-card h4 {
+    color: var(--navy);
+    font-size: 12px;
+    margin-bottom: 7px;
+  }
+  .evidence-card p {
+    color: var(--body);
+    font-size: 12px;
+    line-height: 1.55;
+    margin: 0;
+  }
+  .evidence-card a {
+    color: var(--navy);
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .evidence-card a:hover { color: var(--orange); }
+  .evidence-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 9px;
+  }
+  .investigation-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .ai-chat {
+    margin-top: 14px;
+    border-top: 1px solid rgba(10,31,68,0.08);
+    padding-top: 12px;
+  }
+  .ai-chat-title {
+    color: var(--navy);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+  .ai-chat-log {
+    display: grid;
+    gap: 8px;
+    max-height: 220px;
+    overflow: auto;
+    margin-bottom: 10px;
+  }
+  .ai-chat-message {
+    border-radius: 8px;
+    padding: 9px 11px;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .ai-chat-message.user {
+    background: rgba(232,69,10,0.08);
+    color: var(--navy);
+    border: 1px solid rgba(232,69,10,0.18);
+  }
+  .ai-chat-message.assistant {
+    background: rgba(10,31,68,0.045);
+    color: var(--body);
+    border: 1px solid var(--border);
+  }
+  .ai-chat-message a {
+    color: var(--navy);
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .ai-chat-message a:hover { color: var(--orange); }
+  .ai-chat-form {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+  }
   .ai-prompt-box {
     margin-top: 10px;
     min-height: 130px;
@@ -855,6 +954,9 @@
     .overview-cell { border-right: none; }
     .needs-field-grid,
     .ai-output-grid,
+    .evidence-grid,
+    .investigation-grid,
+    .ai-chat-form,
     .key-point-grid { grid-template-columns: 1fr; }
   }
 </style>
@@ -898,7 +1000,7 @@
       <div class="page-wrap">
         <div class="eyebrow" id="overview-eyebrow">Territory Plan</div>
         <h1 class="section-title" id="overview-title">State Territory Planning</h1>
-        <p class="section-sub" id="overview-sub">Build a full-year account plan from NCES enrollment and account notes.</p>
+        <p class="section-sub" id="overview-sub">Build a full-year account plan from NCES enrollment and district signals.</p>
 
         <div class="selector-panel">
           <div>
@@ -926,8 +1028,8 @@
         <div class="overview-grid">
           <div class="overview-cell"><div class="overview-number" id="stat-districts">—</div><div class="overview-label" id="state-count-label">NCES targets</div></div>
           <div class="overview-cell"><div class="overview-number" id="stat-secondary">—</div><div class="overview-label">Secondary students</div></div>
-          <div class="overview-cell"><div class="overview-number" id="stat-schools">—</div><div class="overview-label">Middle/high schools</div></div>
-          <div class="overview-cell"><div class="overview-number" id="stat-tam">—</div><div class="overview-label">Full profile TAM</div></div>
+          <div class="overview-cell"><div class="overview-number" id="stat-schools">—</div><div class="overview-label">Secondary schools (6-12)</div></div>
+          <div class="overview-cell"><div class="overview-number" id="stat-tam">—</div><div class="overview-label">Full secondary TAM</div></div>
           <div class="overview-cell"><div class="overview-number" id="rank-number">#— / 50</div><div class="overview-label" id="rank-title">State rank</div><div class="overview-label" id="rank-detail"></div></div>
         </div>
 
@@ -943,12 +1045,12 @@
       <div class="page-wrap">
         <div class="eyebrow">Annual Plan</div>
         <h2 class="section-title">Coverage Summary</h2>
-        <p class="section-sub">Summaries use the effective tier: AE tier when set, otherwise the suggested tier. District-level penetration overrides feed the modeled opportunity.</p>
+        <p class="section-sub">Summaries use the effective tier: AE tier when set, otherwise the suggested tier. District-level penetration overrides feed the modeled secondary-student opportunity.</p>
 
         <div class="summary-box">
           <div class="summary-top">
             <div class="summary-lead">
-              <div class="label">Modeled opportunity</div>
+              <div class="label">Modeled secondary opportunity</div>
               <div class="value" id="summary-modeled">—</div>
               <p id="stat-rate-label">At $15 per secondary student</p>
             </div>
@@ -968,7 +1070,7 @@
         <div class="table-toolbar">
           <div>
             <label class="field-label" for="district-search">Search territory</label>
-            <input class="control-input" id="district-search" type="search" placeholder="District, city, status, note, LEA type">
+            <input class="control-input" id="district-search" type="search" placeholder="District, city, tier, signal, or LEA type">
           </div>
           <div>
             <label class="field-label" for="tier-filter">Tier</label>
@@ -979,19 +1081,6 @@
               <option value="tier3">Tier 3</option>
               <option value="nurture">Nurture</option>
               <option value="notfit">Not a fit</option>
-            </select>
-          </div>
-          <div>
-            <label class="field-label" for="status-filter">Status</label>
-            <select class="control-input" id="status-filter">
-              <option value="all">All statuses</option>
-              <option value="unmarked">Unmarked</option>
-              <option value="research">Research</option>
-              <option value="outreach">Outreach</option>
-              <option value="meeting">Meeting set</option>
-              <option value="opportunity">Opportunity</option>
-              <option value="customer">Current customer</option>
-              <option value="paused">Paused</option>
             </select>
           </div>
           <div>
@@ -1025,13 +1114,8 @@
                 <th>LEA type</th>
                 <th>Total</th>
                 <th>Secondary</th>
-                <th>Schools</th>
-                <th>Needs</th>
+                <th>Secondary schools (6-12)</th>
                 <th>Signals</th>
-                <th>Quarter</th>
-                <th>Status</th>
-                <th>Next action</th>
-                <th>Note</th>
               </tr>
             </thead>
             <tbody id="district-table-body"></tbody>
@@ -1059,19 +1143,25 @@
       <div class="rationale-head">
         <div>
           <div class="rationale-title" id="rationale-title">District needs summary</div>
-          <div class="rationale-subtitle" id="rationale-subtitle">Math, platform, curriculum, and planning context</div>
+          <div class="rationale-subtitle" id="rationale-subtitle">State math scores, LMS, curriculum, and cited sources</div>
         </div>
         <button class="icon-button" id="rationale-close" type="button" aria-label="Close district needs summary">×</button>
       </div>
       <div class="district-key-summary" id="district-key-summary"></div>
-      <div class="rationale-score">
-        <div class="rationale-total">
-          <strong id="rationale-points">—</strong>
-          <span id="rationale-tier">Effective tier</span>
-        </div>
-        <div class="rationale-list" id="rationale-list"></div>
-      </div>
       <div class="rationale-note" id="rationale-note"></div>
+    </div>
+  </div>
+
+  <div class="rationale-modal" id="school-roster-modal" hidden>
+    <div class="rationale-panel" role="dialog" aria-modal="true" aria-labelledby="school-roster-title">
+      <div class="rationale-head">
+        <div>
+          <div class="rationale-title" id="school-roster-title">Secondary schools</div>
+          <div class="rationale-subtitle" id="school-roster-subtitle">Source-backed schools serving grades 6-12</div>
+        </div>
+        <button class="icon-button" id="school-roster-close" type="button" aria-label="Close secondary schools list">×</button>
+      </div>
+      <div id="school-roster-output"></div>
     </div>
   </div>
 
@@ -1084,7 +1174,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
 
 <script>
-const DISTRICT_SOURCE_NOTE = "NCES CCD 2024-25 LEA Directory + Membership v1a, School Directory v1a, and NCES EDGE 2024-25 LEA geocodes. Secondary enrollment is the NCES grade 6-12 subtotal; middle/high school count is open regular schools with NCES level Middle/High and grade span fully within 6-12.";
+const DISTRICT_SOURCE_NOTE = "NCES CCD 2024-25 LEA Directory + Membership v1a, School Directory v1a, and NCES EDGE 2024-25 LEA geocodes. Secondary enrollment is the NCES grade 6-12 subtotal; secondary school count is open regular schools with NCES level Middle/High and grade span fully within 6-12.";
 const DISTRICT_PREVIEW_LIMIT = 20;
 const CALIFORNIA_SPLIT_LAT = 35.5;
 const STATE_ALIASES = {};
@@ -1145,13 +1235,6 @@ const STATE_SECONDARY_RANKINGS = {
   "55": { stateCode: "WI", stateName: "Wisconsin", secondary: 431870, rank: 22 },
   "56": { stateCode: "WY", stateName: "Wyoming", secondary: 49593, rank: 49 }
 };
-const DISTRICT_STATUS_OPTIONS = [
-  { value: "", label: "Not marked" },
-  { value: "priority", label: "Priority" },
-  { value: "customer", label: "Current customer" },
-  { value: "watch", label: "Watch / validate" }
-];
-
 function district(name, short, total, lat, lon, city, opts = {}) {
   return { name, short, total, lat, lon, city, ...opts };
 }
@@ -32991,31 +33074,6 @@ const TIER_OPTIONS = [
   { value: 'notfit', label: 'Not a fit' }
 ];
 const SUMMARY_TIERS = ['tier1', 'tier2', 'tier3', 'nurture', 'notfit'];
-const STATUS_OPTIONS = [
-  { value: '', label: 'Not started' },
-  { value: 'research', label: 'Research' },
-  { value: 'outreach', label: 'Outreach' },
-  { value: 'meeting', label: 'Meeting set' },
-  { value: 'opportunity', label: 'Opportunity' },
-  { value: 'customer', label: 'Current customer' },
-  { value: 'paused', label: 'Paused' }
-];
-const QUARTER_OPTIONS = [
-  { value: '', label: 'Unassigned' },
-  { value: 'Q1', label: 'Q1' },
-  { value: 'Q2', label: 'Q2' },
-  { value: 'Q3', label: 'Q3' },
-  { value: 'Q4', label: 'Q4' }
-];
-const NEXT_ACTION_OPTIONS = [
-  { value: '', label: 'Choose action' },
-  { value: 'research_contacts', label: 'Research contacts' },
-  { value: 'validate_hubspot', label: 'Validate in HubSpot' },
-  { value: 'pre_event_outreach', label: 'Pre-event outreach' },
-  { value: 'book_demo', label: 'Book demo' },
-  { value: 'send_reference', label: 'Send reference story' },
-  { value: 'nurture', label: 'Nurture' }
-];
 const SIGNAL_OPTIONS = {
   mathNeed: [
     { value: '', label: 'Math need: validate', points: 0, reason: 'Math state-test performance is not validated yet.' },
@@ -33048,13 +33106,14 @@ const TIER_COLORS = {
   notfit: '#64748b'
 };
 const aiBriefCache = new Map();
+const aiBriefPayloadCache = new Map();
+const schoolRosterCache = new Map();
 
 let currentProfile = STATE_PROFILES.CO;
 let planningState = loadPlanningState();
 let focusedStateCodes = loadFocusedStateCodes();
 let searchQuery = '';
 let tierFilter = 'all';
-let statusFilter = 'all';
 let enrollmentFilter = 'all';
 let leaTypeFilter = 'all';
 let countyFeatures = null;
@@ -33388,13 +33447,9 @@ function searchableText(district, plan) {
     tierMeta(suggestedTier(district, currentProfile)).label,
     tierMeta(plan.tier).label,
     tierMeta(effectiveTier(district)).label,
-    STATUS_OPTIONS.find(o => o.value === plan.status)?.label,
-    QUARTER_OPTIONS.find(o => o.value === plan.quarter)?.label,
-    NEXT_ACTION_OPTIONS.find(o => o.value === plan.nextAction)?.label,
     signalOption('mathNeed', plan.mathNeed).label,
     signalOption('lms', plan.lms).label,
-    signalOption('curriculum', plan.curriculum).label,
-    plan.note
+    signalOption('curriculum', plan.curriculum).label
   ].join(' '));
 }
 
@@ -33407,7 +33462,6 @@ function districtMatchesFilters(district) {
     if (!terms.every(term => text.includes(term))) return false;
   }
   if (tierFilter !== 'all' && effective !== tierFilter) return false;
-  if (statusFilter !== 'all' && (statusFilter === 'unmarked' ? Boolean(plan.status) : plan.status !== statusFilter)) return false;
   if (enrollmentFilter !== 'all') {
     if (enrollmentFilter === 'gt50000' && district.secondary < 50000) return false;
     if (enrollmentFilter === '20000-49999' && (district.secondary < 20000 || district.secondary >= 50000)) return false;
@@ -33438,7 +33492,7 @@ function renderProfileCopy() {
   setText('header-coverage', profile.stateName + ' Annual Planning');
   setText('overview-eyebrow', 'Territory Plan · ' + profile.stateName);
   setText('overview-title', profile.stateName + ' Territory Planning');
-  setText('overview-sub', 'Build a full-year account plan from NCES enrollment, middle/high school counts, TAM, state rank, and local account notes. AE edits save in this browser.');
+  setText('overview-sub', 'Build a full-year account plan from NCES enrollment, secondary school counts for grades 6-12, TAM, state rank, and district signals. AE edits save in this browser.');
   setText('state-event-label', profile.eventLabel);
   setText('state-count-label', profile.countLabel);
   setText('anchor-name', anchor ? anchor.short : 'No anchor available');
@@ -33477,7 +33531,7 @@ function renderAnnualSummary() {
       coveredSecondary += district.secondary;
       focusCount += 1;
     }
-    if (plan.tier || plan.quarter || plan.status || plan.nextAction || plan.mathNeed || plan.lms || plan.curriculum || plan.note || plan.penetrationPct !== null) adjustedCount += 1;
+    if (plan.tier || plan.mathNeed || plan.lms || plan.curriculum || plan.penetrationPct !== null) adjustedCount += 1;
   });
   setText('summary-modeled', fmt(modeled));
   setText('summary-covered', fmtN(coveredSecondary));
@@ -33497,7 +33551,7 @@ function renderDistrictTable() {
   setText('total-count', fullN(currentProfile.districts.length));
   if (!tbody) return;
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="11" class="empty-state">No districts match the current filters.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No districts match the current filters.</td></tr>';
     return;
   }
   tbody.innerHTML = rows.map(district => {
@@ -33510,21 +33564,16 @@ function renderDistrictTable() {
     const anchor = district.anchor ? '<span class="mini-pill">Anchor</span>' : '';
     return '<tr data-key="' + key + '">'
       + '<td class="district-cell"><strong>' + escapeHtml(district.name) + '</strong><span>' + escapeHtml(district.city || 'Unknown city') + ' · LEA ' + escapeHtml(district.leaId || 'N/A') + '</span>' + anchor
-      + '<div class="district-penetration-quick"><label>Modeled opportunity</label><div class="quick-value">' + fmt(modeledOpportunity(district)) + '</div><div class="quick-sub">Full ' + fmt(fullOpportunity(district)) + '</div><div class="quick-row"><label>Target penetration</label><strong>' + penetration + '%</strong></div><input class="planner-penetration" data-key="' + key + '" type="range" min="0" max="100" step="5" value="' + penetration + '"></div></td>'
+      + '<div class="district-penetration-quick"><label>Modeled secondary opportunity</label><div class="quick-value">' + fmt(modeledOpportunity(district)) + '</div><div class="quick-sub">Full secondary TAM ' + fmt(fullOpportunity(district)) + '</div><div class="quick-sub">' + fullN(district.secondary) + ' secondary students @ $' + getRate() + '</div><div class="quick-row"><label>Target penetration</label><strong>' + penetration + '%</strong></div><input class="planner-penetration" data-key="' + key + '" type="range" min="0" max="100" step="5" value="' + penetration + '"><div class="district-review-actions"><a class="needs-review-button" href="' + escapeHtml(reviewHref) + '">Review needs</a><div class="suggested-mini">Suggested: ' + escapeHtml(tierMeta(suggested).label) + '<br>Effective: ' + escapeHtml(tierMeta(effective).label) + '</div></div></div></td>'
       + '<td>' + escapeHtml(district.leaType || 'Unknown') + '</td>'
       + '<td class="numeric">' + fullN(district.total) + '</td>'
       + '<td class="numeric">' + fullN(district.secondary) + '</td>'
-      + '<td class="numeric">' + fullN(district.secondarySchools || 0) + '</td>'
-      + '<td><a class="needs-review-button" href="' + escapeHtml(reviewHref) + '">Review needs</a><div class="suggested-mini">Suggested: ' + escapeHtml(tierMeta(suggested).label) + '<br>Effective: ' + escapeHtml(tierMeta(effective).label) + '</div></td>'
+      + '<td class="numeric"><button class="school-count-button" type="button" data-key="' + key + '" aria-label="List secondary schools for ' + escapeHtml(district.name) + '">' + fullN(district.secondarySchools || 0) + '</button></td>'
       + '<td><div class="signal-stack">'
       + signalSelectHtml('mathNeed', plan.mathNeed, 'planner-math', key)
       + signalSelectHtml('lms', plan.lms, 'planner-lms', key)
       + signalSelectHtml('curriculum', plan.curriculum, 'planner-curriculum', key)
       + '</div></td>'
-      + '<td><select class="planner-input planner-quarter" data-key="' + key + '">' + optionHtml(QUARTER_OPTIONS, plan.quarter) + '</select></td>'
-      + '<td><select class="planner-input planner-status" data-key="' + key + '">' + optionHtml(STATUS_OPTIONS, plan.status) + '</select></td>'
-      + '<td><select class="planner-input planner-next" data-key="' + key + '">' + optionHtml(NEXT_ACTION_OPTIONS, plan.nextAction) + '</select></td>'
-      + '<td><textarea class="planner-note" data-key="' + key + '" rows="2" placeholder="Add account note">' + escapeHtml(plan.note) + '</textarea></td>'
       + '</tr>';
   }).join('');
 }
@@ -33665,59 +33714,18 @@ function researchLinksHtml(district) {
   const stateName = currentProfile.stateName.replace(' Rural Schools', '');
   const base = `${district.name} ${stateName}`;
   const links = [
-    { label: 'Search math state test score / report card', query: `${base} math state test scores district report card` },
-    { label: 'Search LMS evidence', query: `${base} Canvas Schoology Google Classroom LMS` },
-    { label: 'Search math curriculum evidence', query: `${base} Illustrative Math Open Up Resources Big Ideas math curriculum` }
+    { label: 'Investigate state math scores', query: `${base} secondary math state test scores district report card` },
+    { label: 'Investigate LMS evidence', query: `${base} Canvas Schoology Google Classroom LMS district technology` },
+    { label: 'Investigate math curriculum', query: `${base} Illustrative Math Open Up Resources Big Ideas math curriculum adoption` }
   ];
-  return '<div class="research-links">' + links.map(link =>
-    '<a href="' + escapeHtml(searchUrl(link.query)) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(link.label) + '</a>'
-  ).join('') + '</div>';
-}
-
-function modalNeedsFieldsHtml(district) {
-  const plan = getDistrictPlan(district);
-  return '<div class="needs-field-grid">'
-    + '<div class="needs-field"><label class="field-label">AE tier</label><select class="planner-input modal-tier">' + optionHtml(TIER_OPTIONS, plan.tier) + '</select></div>'
-    + '<div class="needs-field"><label class="field-label">Math state test signal</label><select class="planner-input modal-math">' + optionHtml(SIGNAL_OPTIONS.mathNeed, plan.mathNeed) + '</select></div>'
-    + '<div class="needs-field"><label class="field-label">Listed LMS</label><select class="planner-input modal-lms">' + optionHtml(SIGNAL_OPTIONS.lms, plan.lms) + '</select></div>'
-    + '<div class="needs-field"><label class="field-label">Math curriculum</label><select class="planner-input modal-curriculum">' + optionHtml(SIGNAL_OPTIONS.curriculum, plan.curriculum) + '</select></div>'
-    + '</div>';
+  return '<div class="ai-brief-section"><h4>Additional investigation</h4><p>Use these searches if the AI result needs a second pass or the AE wants to validate a claim manually.</p><div class="investigation-grid">' + links.map(link =>
+    '<a class="secondary-button" href="' + escapeHtml(searchUrl(link.query)) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(link.label) + '</a>'
+  ).join('') + '</div></div>';
 }
 
 function districtKeySummaryHtml(district) {
-  const details = tierScoreDetails(district, currentProfile);
-  const plan = getDistrictPlan(district);
-  const effective = effectiveTier(district);
-  const rank = details.index >= 0 ? details.index + 1 : null;
-  const anchor = findAnchor(currentProfile);
-  let anchorText = 'No planning anchor is set for this profile.';
-  if (anchor && planningKey(anchor) === planningKey(district)) {
-    anchorText = 'This district is the current planning anchor for nearby account sequencing.';
-  } else if (anchor) {
-    const miles = Math.round(dist(anchor, district));
-    anchorText = Number.isFinite(miles) ? `${miles} miles from ${anchor.short}, the current planning anchor.` : `${anchor.short} is the current planning anchor.`;
-  }
-  const mathSignal = signalOption('mathNeed', plan.mathNeed).label.replace('Math need: ', '');
-  const lmsSignal = signalOption('lms', plan.lms).label.replace('LMS: ', '');
-  const curriculumSignal = signalOption('curriculum', plan.curriculum).label.replace('Curriculum: ', '');
-  const validationGaps = [
-    plan.mathNeed ? '' : 'math scores',
-    plan.lms ? '' : 'LMS',
-    plan.curriculum ? '' : 'math curriculum'
-  ].filter(Boolean);
-  const validationText = validationGaps.length
-    ? 'Needs validation for ' + validationGaps.join(', ') + '.'
-    : 'Core signals have been marked by the AE; source validation is still recommended.';
-  const intro = `${district.name} is a ${district.leaType || 'public LEA'} in ${district.city || 'the selected state'} with ${fullN(district.total)} total students, ${fullN(district.secondary)} secondary students, and ${fullN(district.secondarySchools || 0)} NCES middle/high schools.`;
-  return '<p>' + escapeHtml(intro) + '</p>'
-    + '<div class="key-point-grid">'
-    + '<div class="key-point"><b>Priority shape</b><span>' + escapeHtml((rank ? `Ranked #${rank} of ${currentProfile.districts.length} by secondary enrollment. ` : '') + `Suggested ${tierMeta(details.tier).label}; effective ${tierMeta(effective).label}.`) + '</span></div>'
-    + '<div class="key-point"><b>Opportunity</b><span>' + escapeHtml(`${fmt(modeledOpportunity(district))} modeled at ${targetPenetrationPct(district)}% target penetration; ${fmt(fullOpportunity(district))} full profile TAM.`) + '</span></div>'
-    + '<div class="key-point"><b>Coverage context</b><span>' + escapeHtml(anchorText) + '</span></div>'
-    + '<div class="key-point"><b>Math signal</b><span>' + escapeHtml(mathSignal) + '</span></div>'
-    + '<div class="key-point"><b>Platform / curriculum</b><span>' + escapeHtml(`LMS: ${lmsSignal}. Curriculum: ${curriculumSignal}.`) + '</span></div>'
-    + '<div class="key-point"><b>AE next check</b><span>' + escapeHtml(validationText) + '</span></div>'
-    + '</div>';
+  const intro = `${district.name} is a ${district.leaType || 'public LEA'} in ${district.city || 'the selected state'} with ${fullN(district.secondary)} NCES grade 6-12 students.`;
+  return '<p>' + escapeHtml(intro) + ' The evidence review below is intentionally limited to secondary math scores, LMS, and math curriculum. Treat unsourced claims as leads for validation, not facts.</p>';
 }
 
 function aiEnrichmentEndpoint() {
@@ -33728,10 +33736,6 @@ function aiEnrichmentEndpoint() {
 
 function optionLabel(options, value) {
   return (options.find(option => option.value === value) || options[0] || { label: '' }).label;
-}
-
-function optionLabelByValue(options, value) {
-  return (options.find(option => option.value === value) || { label: value || '' }).label;
 }
 
 function compactStrings(values) {
@@ -33782,12 +33786,6 @@ function aiEnrichmentPayload(district) {
       effectiveTier: tierMeta(effectiveTier(district)).label,
       score: Math.round(details.score)
     },
-    planning: {
-      focusQuarter: optionLabelByValue(QUARTER_OPTIONS, plan.quarter),
-      status: optionLabelByValue(STATUS_OPTIONS, plan.status),
-      nextAction: optionLabelByValue(NEXT_ACTION_OPTIONS, plan.nextAction),
-      aeNote: plan.note || ''
-    },
     tierDrivers: details.items.map(item => ({
       label: item.label,
       points: item.points,
@@ -33795,9 +33793,9 @@ function aiEnrichmentPayload(district) {
     })),
     instructions: [
       'Use public district/state sources only.',
-      'Find and summarize math state test performance, listed LMS, adopted math curriculum, HubSpot/contact validation needs, and other sales-relevant context.',
-      'Prioritize Canvas, Schoology, Google Classroom, Illustrative Math, Open Up Resources/OUR, Big Ideas, Algebra readiness, state standards, and implementation lift.',
-      'Return source URLs, confidence level, validation gaps, and a concise AE-ready district needs summary.',
+      'Find and summarize only secondary math state-test performance, listed LMS, and adopted math curriculum.',
+      'Prioritize official state report cards, district technology/help docs, board packets, curriculum pages, course guides, Canvas, Schoology, Google Classroom, Illustrative Math, Open Up Resources/OUR, and Big Ideas.',
+      'Return source URLs, confidence level, validation gaps, and concise AE-ready evidence.',
       'Do not present inferred LMS/curriculum/test-score data as confirmed unless a source supports it.'
     ]
   };
@@ -33806,132 +33804,116 @@ function aiEnrichmentPayload(district) {
 function aiPromptText(district) {
   const payload = aiEnrichmentPayload(district);
   return [
-    'Create an AE district needs brief for Derivita.',
+    'Create a focused district evidence review for Derivita.',
     '',
     'District context:',
     JSON.stringify(payload, null, 2),
     '',
     'Output format:',
-    '- One concise account summary for the AE.',
-    '- Math test score summary with source URL, confidence, and validation status.',
+    '- Secondary math state test score summary with source URL, confidence, and validation status.',
     '- Listed LMS signal with source URL, confidence, and validation status.',
     '- Math curriculum signal with source URL, confidence, and validation status.',
-    '- HubSpot/contact validation needs if no CRM data was supplied.',
-    '- Other pertinent information for outreach, including state standards, fiscal timing, and competitive context.',
-    '- Suggested tier rationale, while making clear the AE chooses the final tier.',
-    '- Validation checklist for anything uncertain.'
+    '- Cited sources and short evidence.',
+    '- Validation checklist for anything uncertain.',
+    '- No tier recommendation, HubSpot summary, account sizing, or broad outreach advice.'
   ].join('\n');
 }
 
 function aiLocalBriefHtml(district, note) {
-  const payload = aiEnrichmentPayload(district);
-  const signals = payload.currentSignals;
-  const planning = payload.planning;
-  const profile = payload.profile;
-  const plan = getDistrictPlan(district);
-  const validationGaps = compactStrings([
-    plan.mathNeed ? '' : 'math state-test results',
-    plan.lms ? '' : 'listed LMS',
-    plan.curriculum ? '' : 'math curriculum',
-    'HubSpot contacts / owner notes',
-    'current customer or opportunity status'
-  ]);
-  const validationItems = [
-    'Confirm current state math assessment results and grade-band gaps from the state report card.',
-    'Confirm the district LMS from district technology pages, help docs, board packets, or HubSpot notes.',
-    'Confirm adopted math curriculum from curriculum pages, board adoption documents, or public course guides.',
-    'Check HubSpot for contacts, current customer status, open opportunities, and owner notes before outreach.',
-    'Decide the AE tier after reviewing the public-source brief and local relationship context.'
-  ];
-  const outreachAngles = [
-    `${signals.effectiveTier} planning account with ${fmt(payload.district.modeledOpportunity)} modeled opportunity at ${payload.district.targetPenetrationPct}% target penetration.`,
-    `${fullN(payload.district.secondaryStudents)} secondary students across ${fullN(payload.district.middleHighSchools)} NCES middle/high schools gives this account enough scale for a district-level math workflow conversation.`,
-    signals.mathNeed.includes('validate') ? 'Lead with discovery on math priorities until state-score evidence is validated.' : `Math signal currently marked as ${signals.mathNeed}; tailor urgency and proof points accordingly.`,
-    signals.lms.includes('validate') ? 'Keep LMS claims out of outreach until validated.' : `Use ${signals.lms} as an implementation-fit angle if the source is current.`,
-    signals.curriculum.includes('validate') ? 'Keep curriculum alignment broad until validated.' : `Use ${signals.curriculum} as the curriculum-context opening if confirmed.`
-  ];
   return '<div class="ai-output">'
-    + '<strong>District needs summary</strong>'
-    + '<p>' + escapeHtml(note) + ' This uses NCES, AE-entered signals, and the state context already in the planner. Treat unsourced signals as research prompts until the API/source review confirms them.</p>'
-    + '<div class="ai-output-grid">'
-    + '<div class="ai-output-card"><b>Account size</b>' + escapeHtml(outreachAngles[0]) + '<br>' + escapeHtml(outreachAngles[1]) + '</div>'
-    + '<div class="ai-output-card"><b>Tier decision</b>Suggested ' + escapeHtml(signals.suggestedTier) + ' from size, proximity, math need, LMS, and curriculum scoring. Effective tier is ' + escapeHtml(signals.effectiveTier) + '; the AE selection remains the final call.</div>'
-    + '<div class="ai-output-card"><b>Need signals</b>' + escapeHtml(outreachAngles.slice(2).join(' ')) + '</div>'
-    + '<div class="ai-output-card"><b>Planning status</b>Quarter: ' + escapeHtml(planning.focusQuarter || 'Unassigned') + '. Status: ' + escapeHtml(planning.status || 'Not started') + '. Next action: ' + escapeHtml(planning.nextAction || 'Choose action') + '.</div>'
+    + '<strong>Evidence review pending</strong>'
+    + '<p>' + escapeHtml(note) + ' The connected API will search public sources for only three fields: secondary math scores, LMS, and math curriculum.</p>'
+    + '<div class="evidence-grid">'
+    + '<div class="evidence-card"><h4>Secondary math scores</h4><p>Needs state report-card validation.</p><div class="evidence-meta"><span class="ai-brief-pill">Needs validation</span></div></div>'
+    + '<div class="evidence-card"><h4>Listed LMS</h4><p>Needs district technology source validation.</p><div class="evidence-meta"><span class="ai-brief-pill">Needs validation</span></div></div>'
+    + '<div class="evidence-card"><h4>Math curriculum</h4><p>Needs district curriculum/adoption source validation.</p><div class="evidence-meta"><span class="ai-brief-pill">Needs validation</span></div></div>'
     + '</div>'
-    + '<div class="ai-brief-section"><h4>State and competitive context</h4><p>' + escapeHtml(compactStrings([profile.standardsNote, profile.fiscalNote, profile.competitionNote]).join(' ')) + '</p></div>'
-    + '<div class="ai-brief-section"><h4>Validation gaps</h4><p>' + escapeHtml(validationGaps.length ? validationGaps.join(', ') : 'Core fields are marked, but sources should still be checked before outreach.') + '</p></div>'
-    + (planning.aeNote ? '<div class="ai-brief-section"><h4>AE note</h4><p>' + escapeHtml(planning.aeNote) + '</p></div>' : '')
-    + '<p><strong>Validation checklist</strong></p>'
-    + '<ul>' + validationItems.map(item => '<li>' + escapeHtml(item) + '</li>').join('') + '</ul>'
     + '</div>';
 }
 
 function aiEnrichmentHtml(district) {
   return '<div class="ai-enrichment">'
     + '<div class="ai-enrichment-head">'
-    + '<div><div class="ai-enrichment-title">Needs summary</div><div class="ai-enrichment-copy">The planner summary appears immediately, then the connected API automatically refreshes it with public-source research on math performance, LMS, curriculum, and outreach context.</div></div>'
+    + '<div><div class="ai-enrichment-title">AI evidence review</div><div class="ai-enrichment-copy">The connected API automatically searches public sources for secondary math scores, the listed LMS, and math curriculum. Sources are cited when found.</div></div>'
     + '<div class="ai-enrichment-actions">'
-    + '<button class="primary-button ai-generate" type="button">Refresh API</button>'
+    + '<button class="primary-button ai-generate" type="button">Refresh evidence</button>'
     + '<button class="secondary-button ai-copy-prompt" type="button">Copy AI prompt</button>'
     + '</div></div>'
-    + '<div id="ai-enrichment-output">' + aiLocalBriefHtml(district, 'Planner summary generated.') + '</div>'
+    + '<div id="ai-enrichment-output">' + aiLocalBriefHtml(district, 'Waiting for API evidence review.') + '</div>'
+    + '<div class="ai-chat">'
+    + '<div class="ai-chat-title">Ask a follow-up</div>'
+    + '<div class="ai-chat-log" id="ai-chat-log"><div class="ai-chat-message assistant">Ask about the math score source, LMS evidence, curriculum adoption, or what to investigate next.</div></div>'
+    + '<form class="ai-chat-form" id="ai-chat-form"><input class="control-input" id="ai-chat-question" type="text" placeholder="Ask a follow-up about this district evidence"><button class="secondary-button" type="submit">Ask</button></form>'
+    + '</div>'
     + '<textarea class="ai-prompt-box" id="ai-prompt-box" readonly hidden>' + escapeHtml(aiPromptText(district)) + '</textarea>'
     + '</div>';
 }
 
 function normalizeExternalSection(section) {
-  if (!section) return { summary: '', evidence: '', confidence: '', status: '' };
-  if (typeof section === 'string') return { summary: section, evidence: '', confidence: '', status: '' };
+  if (!section) return { summary: '', evidence: '', confidence: '', status: '', sourceTitle: '', sourceUrl: '' };
+  if (typeof section === 'string') return { summary: section, evidence: '', confidence: '', status: '', sourceTitle: '', sourceUrl: '' };
   return {
     summary: section.summary || section.status || '',
     evidence: section.evidence || '',
     confidence: section.confidence || '',
-    status: section.status || ''
+    status: section.status || '',
+    sourceTitle: section.source_title || section.sourceTitle || '',
+    sourceUrl: section.source_url || section.sourceUrl || ''
   };
 }
 
-function externalSectionHtml(title, section, fallback) {
+function evidenceSectionHtml(title, section, fallback) {
   const normalized = normalizeExternalSection(section);
   const summary = normalized.summary || fallback || 'Needs validation.';
   const meta = compactStrings([normalized.status, normalized.confidence]).map(item =>
     '<span class="ai-brief-pill">' + escapeHtml(item) + '</span>'
   ).join('');
-  return '<div class="ai-brief-section"><h4>' + escapeHtml(title) + '</h4>'
+  const source = normalized.sourceUrl
+    ? '<p><a href="' + escapeHtml(normalized.sourceUrl) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(normalized.sourceTitle || 'Source') + '</a></p>'
+    : '';
+  return '<div class="evidence-card"><h4>' + escapeHtml(title) + '</h4>'
     + '<p>' + escapeHtml(summary) + (normalized.evidence ? '<br>' + escapeHtml(normalized.evidence) : '') + '</p>'
-    + (meta ? '<div class="ai-brief-meta">' + meta + '</div>' : '')
+    + source
+    + (meta ? '<div class="evidence-meta">' + meta + '</div>' : '')
     + '</div>';
 }
 
 function sourceListHtml(sources) {
   if (!sources.length) return '';
-  return '<div class="ai-brief-section"><h4>Sources</h4><ul class="ai-source-list">'
+  return '<div class="ai-brief-section"><h4>Cited sources</h4><ul class="ai-source-list">'
     + sources.map(source => {
       const title = source.title || source.url || 'Public source';
+      const category = source.category ? '[' + source.category + '] ' : '';
       const evidence = source.evidence ? ' — ' + source.evidence : '';
-      return '<li>' + (source.url ? '<a href="' + escapeHtml(source.url) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(title) + '</a>' : escapeHtml(title)) + escapeHtml(evidence) + '</li>';
+      return '<li>' + escapeHtml(category) + (source.url ? '<a href="' + escapeHtml(source.url) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(title) + '</a>' : escapeHtml(title)) + escapeHtml(evidence) + '</li>';
     }).join('')
     + '</ul></div>';
 }
 
-function renderExternalAiPayload(payload) {
+function investigationQueriesHtml(payload, district) {
+  const queries = compactStrings(payload.investigation_queries || []);
+  if (!queries.length) return '';
+  return '<div class="ai-brief-section"><h4>Additional investigation</h4><p>Use these searches if the AE wants to validate or go deeper.</p><div class="investigation-grid">'
+    + queries.slice(0, 6).map(query => '<a class="secondary-button" href="' + escapeHtml(searchUrl(query)) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(query.length > 46 ? query.slice(0, 43) + '...' : query) + '</a>').join('')
+    + '</div></div>';
+}
+
+function renderExternalAiPayload(payload, district) {
   if (!payload || typeof payload !== 'object') return '';
   const sources = Array.isArray(payload.sources) ? payload.sources : [];
-  const findings = Array.isArray(payload.findings) ? payload.findings : compactStrings(payload.other_context || []);
   const validation = compactStrings(payload.validation_checklist || payload.validationChecklist || []);
   return '<div class="ai-output">'
-    + '<strong>Source-backed district needs summary</strong>'
+    + '<strong>Source-backed evidence review</strong>'
     + '<p>' + escapeHtml(payload.summary || 'AI enrichment returned. Validate all sources before outreach.') + '</p>'
-    + externalSectionHtml('Math test score', payload.math_test_score || payload.mathTestScore || payload.math, 'Needs state report-card validation.')
-    + externalSectionHtml('Listed LMS', payload.lms || payload.listed_lms || payload.listedLms, 'Needs district technology validation.')
-    + externalSectionHtml('Math curriculum', payload.math_curriculum || payload.mathCurriculum || payload.curriculum, 'Needs curriculum adoption validation.')
-    + externalSectionHtml('HubSpot / contact check', payload.hubspot || payload.crm || 'Check HubSpot for known contacts, customer status, owner, meetings, and open opportunities.', '')
-    + (payload.outreach_angle ? externalSectionHtml('Outreach angle', payload.outreach_angle, '') : '')
-    + (payload.tier_rationale ? externalSectionHtml('Tier rationale', payload.tier_rationale, '') : '')
-    + (findings.length ? '<div class="ai-brief-section"><h4>Other pertinent context</h4><ul>' + findings.map(item => '<li>' + escapeHtml(item) + '</li>').join('') + '</ul></div>' : '')
+    + '<div class="evidence-grid">'
+    + evidenceSectionHtml('Secondary math scores', payload.math_test_score || payload.mathTestScore || payload.math, 'Needs state report-card validation.')
+    + evidenceSectionHtml('Listed LMS', payload.lms || payload.listed_lms || payload.listedLms, 'Needs district technology validation.')
+    + evidenceSectionHtml('Math curriculum', payload.math_curriculum || payload.mathCurriculum || payload.curriculum, 'Needs curriculum adoption validation.')
+    + '</div>'
     + (validation.length ? '<div class="ai-brief-section"><h4>Validation checklist</h4><ul>' + validation.map(item => '<li>' + escapeHtml(item) + '</li>').join('') + '</ul></div>' : '')
+    + investigationQueriesHtml(payload, district)
     + sourceListHtml(sources)
-    + '<div class="ai-brief-meta"><span class="ai-brief-pill">Confidence: ' + escapeHtml(payload.confidence || 'Needs AE validation') + '</span>' + (payload.recommended_tier ? '<span class="ai-brief-pill">Recommended: ' + escapeHtml(payload.recommended_tier) + '</span>' : '') + '</div>'
+    + '<div class="ai-brief-meta"><span class="ai-brief-pill">Confidence: ' + escapeHtml(payload.confidence || 'Needs AE validation') + '</span></div>'
     + '</div>';
 }
 
@@ -33940,8 +33922,7 @@ function aiBriefCacheKey(district) {
   return planningKey(district) + ':' + JSON.stringify({
     rate: getRate(),
     targetPenetrationPct: payload.district.targetPenetrationPct,
-    currentSignals: payload.currentSignals,
-    planning: payload.planning
+    currentSignals: payload.currentSignals
   });
 }
 
@@ -33959,7 +33940,7 @@ async function runAiEnrichment(district, button, force = false) {
   const cacheKey = aiBriefCacheKey(district);
   if (!force && aiBriefCache.has(cacheKey)) {
     output.innerHTML = aiBriefCache.get(cacheKey);
-    if (button) button.textContent = 'Refresh API';
+    if (button) button.textContent = 'Refresh evidence';
     return;
   }
 
@@ -33967,9 +33948,9 @@ async function runAiEnrichment(district, button, force = false) {
   output.dataset.loadingKey = cacheKey;
   if (button) {
     button.disabled = true;
-    button.textContent = 'Refreshing...';
+    button.textContent = 'Searching...';
   }
-  output.innerHTML = '<div class="ai-output"><strong>Source-backed district needs summary</strong><p>Checking public sources for math performance, LMS, curriculum, and outreach context...</p></div>';
+  output.innerHTML = '<div class="ai-output"><strong>Source-backed evidence review</strong><p>Searching public sources for secondary math scores, LMS, and math curriculum...</p></div>';
 
   try {
     const response = await fetch(endpoint, {
@@ -33979,8 +33960,9 @@ async function runAiEnrichment(district, button, force = false) {
     });
     if (!response.ok) throw new Error('AI enrichment endpoint returned ' + response.status);
     const payload = await response.json();
-    const html = renderExternalAiPayload(payload) || aiLocalBriefHtml(district, 'AI endpoint returned an unexpected response, so this local planning brief is shown instead.');
+    const html = renderExternalAiPayload(payload, district) || aiLocalBriefHtml(district, 'AI endpoint returned an unexpected response, so this local planning brief is shown instead.');
     aiBriefCache.set(cacheKey, html);
+    aiBriefPayloadCache.set(cacheKey, payload);
     output.innerHTML = html;
   } catch (err) {
     output.innerHTML = aiLocalBriefHtml(district, 'API enrichment could not be reached, so this local planning brief is shown instead.');
@@ -33988,44 +33970,204 @@ async function runAiEnrichment(district, button, force = false) {
     delete output.dataset.loadingKey;
     if (button) {
       button.disabled = false;
-      button.textContent = 'Refresh API';
+      button.textContent = 'Refresh evidence';
     }
   }
 }
 
+function renderChatAnswer(payload) {
+  const answer = payload?.answer || payload?.summary || 'No answer returned. Try a narrower question about math scores, LMS, or curriculum.';
+  const sources = Array.isArray(payload?.sources) ? payload.sources.slice(0, 4) : [];
+  const links = sources.length
+    ? '<div class="ai-brief-meta">' + sources.map(source => source.url ? '<a class="ai-brief-pill" href="' + escapeHtml(source.url) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(source.title || 'Source') + '</a>' : '').join('') + '</div>'
+    : '';
+  return escapeHtml(answer) + links;
+}
+
+async function runAiChat(district, question, form) {
+  const endpoint = aiEnrichmentEndpoint();
+  const log = document.getElementById('ai-chat-log');
+  if (!log || !question.trim()) return;
+  log.insertAdjacentHTML('beforeend', '<div class="ai-chat-message user">' + escapeHtml(question) + '</div>');
+  const pending = document.createElement('div');
+  pending.className = 'ai-chat-message assistant';
+  pending.textContent = endpoint ? 'Searching sources...' : 'API unavailable. Use the investigation links above.';
+  log.appendChild(pending);
+  log.scrollTop = log.scrollHeight;
+  if (!endpoint) return;
+
+  const cacheKey = aiBriefCacheKey(district);
+  const button = form?.querySelector('button');
+  if (button) button.disabled = true;
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...aiEnrichmentPayload(district),
+        question,
+        previousSummary: aiBriefPayloadCache.get(cacheKey) || null
+      })
+    });
+    if (!response.ok) throw new Error('AI chat endpoint returned ' + response.status);
+    const payload = await response.json();
+    pending.innerHTML = renderChatAnswer(payload);
+  } catch (err) {
+    pending.textContent = 'I could not reach the API for that follow-up. Try the investigation links or refresh the evidence review.';
+  } finally {
+    if (button) button.disabled = false;
+    log.scrollTop = log.scrollHeight;
+  }
+}
+
+function schoolRosterPayload(district) {
+  return {
+    ...aiEnrichmentPayload(district),
+    mode: 'secondary_schools'
+  };
+}
+
+function schoolRosterCacheKey(district) {
+  return planningKey(district) + ':secondary-schools';
+}
+
+function schoolRosterInvestigationHtml(district) {
+  const queries = [
+    `${district.name} ${currentProfile.stateName} NCES school directory grades 6 12`,
+    `${district.name} ${district.city || currentProfile.stateName} middle school high school directory`,
+    `site:nces.ed.gov ${district.leaId || district.name} schools grades`
+  ];
+  return '<div class="school-roster-actions">'
+    + queries.map(query => '<a class="secondary-button" href="' + escapeHtml(searchUrl(query)) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(query.length > 44 ? query.slice(0, 41) + '...' : query) + '</a>').join('')
+    + '</div>';
+}
+
+function localSchoolRosterHtml(district, note) {
+  const embedded = Array.isArray(district.secondarySchoolRoster) ? district.secondarySchoolRoster : [];
+  const source = district.secondarySchoolsSource || 'NCES school-directory source needs validation.';
+  const list = embedded.length
+    ? '<div class="school-roster-list">' + embedded.map(school =>
+      '<div class="school-roster-item"><b>' + escapeHtml(school.name || 'Unnamed school') + '</b><span>' + escapeHtml(compactStrings([school.grades, school.city]).join(' · ') || 'Grades/city need validation') + '</span></div>'
+    ).join('') + '</div>'
+    : '<p class="school-roster-summary">A named school roster is not embedded in the static page yet. When the API backend is available, this lookup searches public NCES, state, and district sources and returns only schools it can source.</p>';
+  return '<div class="ai-output">'
+    + '<strong>Secondary school roster</strong>'
+    + '<p class="school-roster-summary">' + escapeHtml(note) + '</p>'
+    + '<div class="key-point-grid">'
+    + '<div class="key-point"><b>Current count</b><span>' + fullN(district.secondarySchools || 0) + ' secondary schools</span></div>'
+    + '<div class="key-point"><b>Definition</b><span>Middle schools, junior highs, high schools, and 6-12 schools.</span></div>'
+    + '<div class="key-point"><b>Source basis</b><span>' + escapeHtml(source) + '</span></div>'
+    + '</div>'
+    + list
+    + schoolRosterInvestigationHtml(district)
+    + '</div>';
+}
+
+function renderSchoolRosterPayload(payload, district) {
+  if (!payload || typeof payload !== 'object') return '';
+  const schools = Array.isArray(payload.secondary_schools) ? payload.secondary_schools : [];
+  const sourceHtml = sourceListHtml(Array.isArray(payload.sources) ? payload.sources : []);
+  const validation = compactStrings(payload.validation_checklist || []);
+  const investigations = investigationQueriesHtml(payload, district);
+  if (!schools.length) {
+    return localSchoolRosterHtml(district, payload.summary || 'No source-backed school names were returned. Use the investigation links below to validate manually.')
+      + (validation.length ? '<div class="ai-brief-section"><h4>Validation checklist</h4><ul>' + validation.map(item => '<li>' + escapeHtml(item) + '</li>').join('') + '</ul></div>' : '')
+      + investigations
+      + sourceHtml;
+  }
+  const countNote = schools.length === Number(district.secondarySchools || 0)
+    ? 'Matches the current table count.'
+    : 'Compare with the current table count of ' + fullN(district.secondarySchools || 0) + ' and validate before relying on the count.';
+  return '<div class="ai-output">'
+    + '<strong>Source-backed secondary school roster</strong>'
+    + '<p class="school-roster-summary">' + escapeHtml(payload.summary || 'Review the sourced schools below and validate before using in outreach.') + '</p>'
+    + '<div class="key-point-grid">'
+    + '<div class="key-point"><b>Schools returned</b><span>' + fullN(schools.length) + '</span></div>'
+    + '<div class="key-point"><b>Current table count</b><span>' + fullN(district.secondarySchools || 0) + '</span></div>'
+    + '<div class="key-point"><b>Count check</b><span>' + escapeHtml(countNote) + '</span></div>'
+    + '</div>'
+    + '<div class="school-roster-list">'
+    + schools.map(school => {
+      const meta = compactStrings([school.grades, school.city, school.confidence]).join(' · ');
+      const source = school.source_url
+        ? '<span><a href="' + escapeHtml(school.source_url) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(school.source_title || 'Source') + '</a></span>'
+        : '';
+      return '<div class="school-roster-item"><b>' + escapeHtml(school.name || 'Unnamed school') + '</b><span>' + escapeHtml(meta || 'Grades/city need validation') + '</span>' + source + '</div>';
+    }).join('')
+    + '</div>'
+    + (validation.length ? '<div class="ai-brief-section"><h4>Validation checklist</h4><ul>' + validation.map(item => '<li>' + escapeHtml(item) + '</li>').join('') + '</ul></div>' : '')
+    + investigations
+    + sourceHtml
+    + '<div class="ai-brief-meta"><span class="ai-brief-pill">Confidence: ' + escapeHtml(payload.confidence || 'Needs AE validation') + '</span></div>'
+    + '</div>';
+}
+
+async function runSchoolRosterLookup(district, force = false) {
+  const output = document.getElementById('school-roster-output');
+  if (!output) return;
+  const endpoint = aiEnrichmentEndpoint();
+  if (!endpoint) {
+    output.innerHTML = localSchoolRosterHtml(district, 'The API is not available from a local file preview, so this view shows the current count and validation searches.');
+    return;
+  }
+
+  const cacheKey = schoolRosterCacheKey(district);
+  if (!force && schoolRosterCache.has(cacheKey)) {
+    output.innerHTML = schoolRosterCache.get(cacheKey);
+    return;
+  }
+
+  output.innerHTML = '<div class="ai-output"><strong>Secondary school roster</strong><p>Searching public NCES, state, and district sources for middle schools, junior highs, high schools, and 6-12 schools...</p></div>';
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(schoolRosterPayload(district))
+    });
+    if (!response.ok) throw new Error('School roster endpoint returned ' + response.status);
+    const payload = await response.json();
+    const html = renderSchoolRosterPayload(payload, district) || localSchoolRosterHtml(district, 'The API returned an unexpected response. Validate the roster manually with the links below.');
+    schoolRosterCache.set(cacheKey, html);
+    output.innerHTML = html;
+  } catch (err) {
+    output.innerHTML = localSchoolRosterHtml(district, 'The API lookup could not be reached. Validate the roster manually with the links below.');
+  }
+}
+
+function openSchoolRoster(district) {
+  if (!district) return;
+  const modal = document.getElementById('school-roster-modal');
+  setText('school-roster-title', district.name);
+  setText('school-roster-subtitle', `${district.city || 'Unknown city'} · LEA ${district.leaId || 'N/A'} · ${fullN(district.secondarySchools || 0)} secondary schools`);
+  if (modal) {
+    modal.dataset.key = planningKey(district);
+    modal.hidden = false;
+  }
+  const output = document.getElementById('school-roster-output');
+  if (output) {
+    output.innerHTML = localSchoolRosterHtml(district, 'Opening the roster lookup. Source-backed school names load from the API when available.');
+  }
+  window.setTimeout(() => runSchoolRosterLookup(district, false), 0);
+}
+
+function closeSchoolRoster() {
+  const modal = document.getElementById('school-roster-modal');
+  if (modal) modal.hidden = true;
+}
+
 function openRationale(district) {
   if (!district) return;
-  const details = tierScoreDetails(district, currentProfile);
-  const effective = effectiveTier(district);
-  const plan = getDistrictPlan(district);
   const modal = document.getElementById('rationale-modal');
   if (modal) modal.dataset.key = planningKey(district);
   setText('rationale-title', district.name);
   setText('rationale-subtitle', `${district.city || 'Unknown city'} · LEA ${district.leaId || 'N/A'} · ${currentProfile.stateName}`);
-  setText('rationale-points', Math.round(details.score));
-  setText('rationale-tier', `Suggested: ${tierMeta(details.tier).label} · Effective: ${tierMeta(effective).label}`);
   const summary = document.getElementById('district-key-summary');
   if (summary) summary.innerHTML = districtKeySummaryHtml(district);
-  const list = document.getElementById('rationale-list');
-  if (list) {
-    const sourceItems = [
-      { label: 'Math state test score', value: signalOption('mathNeed', plan.mathNeed).label.replace('Math need: ', ''), reason: signalOption('mathNeed', plan.mathNeed).reason },
-      { label: 'Listed LMS', value: signalOption('lms', plan.lms).label.replace('LMS: ', ''), reason: signalOption('lms', plan.lms).reason },
-      { label: 'Math curriculum', value: signalOption('curriculum', plan.curriculum).label.replace('Curriculum: ', ''), reason: signalOption('curriculum', plan.curriculum).reason },
-      { label: 'Scale / schools', value: `${fullN(district.secondary)} secondary students · ${fullN(district.secondarySchools || 0)} middle/high schools`, reason: `${district.leaType || 'LEA type unknown'} with ${fullN(district.total)} total NCES students.` },
-      { label: 'Opportunity model', value: `${fmt(modeledOpportunity(district))} modeled · ${fmt(fullOpportunity(district))} full`, reason: `${targetPenetrationPct(district)}% target penetration at $${getRate()} per secondary student.` }
-    ];
-    list.innerHTML = sourceItems.map(item =>
-      '<div class="rationale-item"><div><b>' + escapeHtml(item.label) + '</b><br>' + escapeHtml(item.reason) + '</div><div class="points">' + escapeHtml(item.value) + '</div></div>'
-    ).join('');
-  }
   const note = document.getElementById('rationale-note');
   if (note) {
-    note.innerHTML = '<strong>Web intelligence status:</strong> Math scores, LMS, and curriculum should be validated from public district/state sources or a future backend enrichment job. Use the research links below, then set the signals and AE tier here.'
-      + modalNeedsFieldsHtml(district)
+    note.innerHTML = '<strong>Evidence scope:</strong> This review only covers source-backed secondary math scores, LMS, and math curriculum. The AE can use the chat or investigation links for deeper validation.'
       + aiEnrichmentHtml(district)
       + researchLinksHtml(district);
-    bindNeedsModalControls(district);
     bindAiEnrichmentControls(district);
   }
   if (modal) modal.hidden = false;
@@ -34053,40 +34195,15 @@ function bindAiEnrichmentControls(district) {
   generateButton?.addEventListener('click', event => {
     runAiEnrichment(district, event.target, true);
   });
+  modal?.querySelector('#ai-chat-form')?.addEventListener('submit', event => {
+    event.preventDefault();
+    const input = modal.querySelector('#ai-chat-question');
+    const question = input?.value?.trim() || '';
+    if (!question) return;
+    if (input) input.value = '';
+    runAiChat(district, question, event.currentTarget);
+  });
   window.setTimeout(() => runAiEnrichment(district, generateButton, false), 0);
-}
-
-function bindNeedsModalControls(district) {
-  const key = planningKey(district);
-  const modal = document.getElementById('rationale-modal');
-  modal?.querySelector('.modal-tier')?.addEventListener('change', event => {
-    updateDistrictPlan(key, { tier: event.target.value });
-    renderAnnualSummary();
-    renderDistrictTable();
-    buildTerritoryMap();
-    openRationale(findDistrictByPlanKey(key));
-  });
-  modal?.querySelector('.modal-math')?.addEventListener('change', event => {
-    updateDistrictPlan(key, { mathNeed: event.target.value });
-    renderAnnualSummary();
-    renderDistrictTable();
-    buildTerritoryMap();
-    openRationale(findDistrictByPlanKey(key));
-  });
-  modal?.querySelector('.modal-lms')?.addEventListener('change', event => {
-    updateDistrictPlan(key, { lms: event.target.value });
-    renderAnnualSummary();
-    renderDistrictTable();
-    buildTerritoryMap();
-    openRationale(findDistrictByPlanKey(key));
-  });
-  modal?.querySelector('.modal-curriculum')?.addEventListener('change', event => {
-    updateDistrictPlan(key, { curriculum: event.target.value });
-    renderAnnualSummary();
-    renderDistrictTable();
-    buildTerritoryMap();
-    openRationale(findDistrictByPlanKey(key));
-  });
 }
 
 function closeRationale(updateHash = true) {
@@ -34158,10 +34275,6 @@ function bindPlannerControls() {
     tierFilter = event.target.value;
     renderDistrictTable();
   });
-  document.getElementById('status-filter')?.addEventListener('change', event => {
-    statusFilter = event.target.value;
-    renderDistrictTable();
-  });
   document.getElementById('enrollment-filter')?.addEventListener('change', event => {
     enrollmentFilter = event.target.value;
     renderDistrictTable();
@@ -34173,17 +34286,14 @@ function bindPlannerControls() {
   document.getElementById('reset-filters')?.addEventListener('click', () => {
     searchQuery = '';
     tierFilter = 'all';
-    statusFilter = 'all';
     enrollmentFilter = 'all';
     leaTypeFilter = 'all';
     const search = document.getElementById('district-search');
     if (search) search.value = '';
     const tier = document.getElementById('tier-filter');
-    const status = document.getElementById('status-filter');
     const enrollment = document.getElementById('enrollment-filter');
     const lea = document.getElementById('lea-filter');
     if (tier) tier.value = 'all';
-    if (status) status.value = 'all';
     if (enrollment) enrollment.value = 'all';
     if (lea) lea.value = 'all';
     renderDistrictTable();
@@ -34200,6 +34310,12 @@ function bindPlannerControls() {
   document.getElementById('district-table-body')?.addEventListener('input', handleTableChange);
   document.getElementById('district-table-body')?.addEventListener('change', handleTableChange);
   document.getElementById('district-table-body')?.addEventListener('click', event => {
+    const schoolButton = event.target.closest('.school-count-button');
+    if (schoolButton) {
+      const district = findDistrictByPlanKey(schoolButton.dataset.key);
+      if (district) openSchoolRoster(district);
+      return;
+    }
     const link = event.target.closest('.needs-review-button');
     if (!link) return;
     const key = link.closest('tr')?.dataset?.key;
@@ -34213,8 +34329,15 @@ function bindPlannerControls() {
   document.getElementById('rationale-modal')?.addEventListener('click', event => {
     if (event.target.id === 'rationale-modal') closeRationale();
   });
+  document.getElementById('school-roster-close')?.addEventListener('click', closeSchoolRoster);
+  document.getElementById('school-roster-modal')?.addEventListener('click', event => {
+    if (event.target.id === 'school-roster-modal') closeSchoolRoster();
+  });
   document.addEventListener('keydown', event => {
-    if (event.key === 'Escape') closeRationale();
+    if (event.key === 'Escape') {
+      closeRationale();
+      closeSchoolRoster();
+    }
   });
 }
 
@@ -34223,11 +34346,7 @@ function handleTableChange(event) {
   const key = target?.dataset?.key;
   if (!key) return;
   let affectsTier = false;
-  let needsTableRender = true;
   if (target.classList.contains('planner-tier')) updateDistrictPlan(key, { tier: target.value });
-  if (target.classList.contains('planner-quarter')) updateDistrictPlan(key, { quarter: target.value });
-  if (target.classList.contains('planner-status')) updateDistrictPlan(key, { status: target.value });
-  if (target.classList.contains('planner-next')) updateDistrictPlan(key, { nextAction: target.value });
   if (target.classList.contains('planner-math')) {
     updateDistrictPlan(key, { mathNeed: target.value });
     affectsTier = true;
@@ -34241,13 +34360,9 @@ function handleTableChange(event) {
     affectsTier = true;
   }
   if (target.classList.contains('planner-tier')) affectsTier = true;
-  if (target.classList.contains('planner-note')) {
-    updateDistrictPlan(key, { note: target.value });
-    needsTableRender = false;
-  }
   if (target.classList.contains('planner-penetration')) updateDistrictPlan(key, { penetrationPct: Number(target.value) });
   renderAnnualSummary();
-  if (needsTableRender) renderDistrictTable();
+  renderDistrictTable();
   if (affectsTier) buildTerritoryMap();
 }
 
@@ -34273,14 +34388,10 @@ function exportCsv() {
     'lms_signal',
     'curriculum_signal',
     'secondary_enrollment',
-    'middle_high_school_count',
-    'full_tam',
+    'secondary_school_6_12_count',
+    'full_secondary_tam',
     'target_penetration_pct',
-    'modeled_opportunity',
-    'focus_quarter',
-    'status',
-    'next_action',
-    'note'
+    'modeled_secondary_opportunity'
   ];
   const rows = visibleDistricts().map(district => {
     const plan = getDistrictPlan(district);
@@ -34305,11 +34416,7 @@ function exportCsv() {
       district.secondarySchools || 0,
       Math.round(fullOpportunity(district)),
       targetPenetrationPct(district),
-      Math.round(modeledOpportunity(district)),
-      plan.quarter,
-      STATUS_OPTIONS.find(o => o.value === plan.status)?.label || '',
-      NEXT_ACTION_OPTIONS.find(o => o.value === plan.nextAction)?.label || '',
-      plan.note
+      Math.round(modeledOpportunity(district))
     ];
   });
   const csv = [header, ...rows].map(row => row.map(csvEscape).join(',')).join('\n');
