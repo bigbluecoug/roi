@@ -419,6 +419,35 @@
   tr:last-child td { border-bottom: none; }
   .district-cell strong { display: block; font-size: 13px; line-height: 1.25; }
   .district-cell span { display: block; color: var(--body); margin-top: 4px; }
+  .district-penetration-quick {
+    margin-top: 12px;
+    border-top: 1px solid rgba(10,31,68,0.08);
+    padding-top: 10px;
+  }
+  .district-penetration-quick .quick-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+  .district-penetration-quick label {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .district-penetration-quick strong {
+    font-size: 13px;
+    color: var(--navy);
+    white-space: nowrap;
+  }
+  .district-penetration-quick input {
+    width: 100%;
+    accent-color: var(--orange);
+  }
   .numeric { text-align: right; font-weight: 700; }
   .tier-chip,
   .mini-pill {
@@ -33245,7 +33274,8 @@ function renderDistrictTable() {
     const key = escapeHtml(plan.key);
     const anchor = district.anchor ? '<span class="mini-pill">Anchor</span>' : '';
     return '<tr data-key="' + key + '">'
-      + '<td class="district-cell"><strong>' + escapeHtml(district.name) + '</strong><span>' + escapeHtml(district.city || 'Unknown city') + ' · LEA ' + escapeHtml(district.leaId || 'N/A') + '</span>' + anchor + '</td>'
+      + '<td class="district-cell"><strong>' + escapeHtml(district.name) + '</strong><span>' + escapeHtml(district.city || 'Unknown city') + ' · LEA ' + escapeHtml(district.leaId || 'N/A') + '</span>' + anchor
+      + '<div class="district-penetration-quick"><div class="quick-row"><label>Target penetration</label><strong>' + penetration + '%</strong></div><input class="planner-penetration" data-key="' + key + '" type="range" min="0" max="100" step="5" value="' + penetration + '"></div></td>'
       + '<td>' + escapeHtml(district.leaType || 'Unknown') + '</td>'
       + '<td class="numeric">' + fullN(district.total) + '</td>'
       + '<td class="numeric">' + fullN(district.secondary) + '</td>'
