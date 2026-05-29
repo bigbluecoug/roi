@@ -235,6 +235,74 @@
   .rank-number { color: var(--orange); font-size: 36px; font-weight: 700; line-height: 1; }
   .rank-title { font-size: 13px; font-weight: 700; color: var(--navy); line-height: 1.35; margin-top: 7px; }
   .rank-detail { font-size: 12px; color: var(--body); line-height: 1.45; margin-top: 4px; }
+  .territory-map-card {
+    position: relative;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+  }
+  .territory-map-card svg {
+    display: block;
+    width: 100%;
+    min-height: 420px;
+  }
+  .map-empty {
+    padding: 44px 24px;
+    text-align: center;
+    color: var(--body);
+    font-size: 14px;
+  }
+  .map-tooltip {
+    display: none;
+    position: absolute;
+    z-index: 20;
+    max-width: 260px;
+    pointer-events: none;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 12px 28px rgba(10,31,68,0.16);
+    padding: 12px 14px;
+    font-size: 12px;
+  }
+  .map-tooltip strong {
+    display: block;
+    font-size: 13px;
+    margin-bottom: 2px;
+  }
+  .map-tooltip span { display: block; color: var(--body); }
+  .map-tooltip .tooltip-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    border-top: 1px solid rgba(10,31,68,0.08);
+    margin-top: 7px;
+    padding-top: 7px;
+  }
+  .map-tooltip .tooltip-row b { color: var(--navy); }
+  .map-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 18px;
+    margin-top: 14px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: var(--body);
+    font-weight: 600;
+  }
+  .legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+  }
   .controls-panel {
     display: grid;
     grid-template-columns: 1fr 1fr auto;
@@ -329,7 +397,7 @@
     overflow-x: auto;
     box-shadow: var(--card-shadow);
   }
-  table { width: 100%; border-collapse: collapse; min-width: 1420px; }
+  table { width: 100%; border-collapse: collapse; min-width: 1620px; }
   th {
     background: rgba(10,31,68,0.04);
     color: var(--muted);
@@ -369,6 +437,57 @@
   .tier-tier3 { color: #075985; background: #e0f2fe; }
   .tier-nurture { color: #365314; background: #ecfccb; }
   .tier-notfit { color: #475569; background: #e2e8f0; }
+  .tier-rationale-button {
+    border: none;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+    font-family: 'Poppins', sans-serif;
+  }
+  .tier-rationale-button:focus { outline: 2px solid var(--orange); border-radius: 999px; }
+  .tier-rationale-details {
+    min-width: 170px;
+  }
+  .tier-rationale-details summary {
+    list-style: none;
+    cursor: pointer;
+    display: inline-block;
+  }
+  .tier-rationale-details summary::-webkit-details-marker { display: none; }
+  .inline-rationale {
+    margin-top: 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: rgba(10,31,68,0.025);
+    padding: 10px;
+    color: var(--body);
+    font-size: 11px;
+    line-height: 1.45;
+  }
+  .inline-rationale strong {
+    display: block;
+    color: var(--navy);
+    font-size: 12px;
+    margin-bottom: 6px;
+  }
+  .inline-rationale-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    border-top: 1px solid rgba(10,31,68,0.07);
+    padding-top: 6px;
+    margin-top: 6px;
+  }
+  .inline-rationale-row b { color: var(--orange); white-space: nowrap; }
+  .signal-stack {
+    display: grid;
+    gap: 7px;
+    min-width: 170px;
+  }
+  .signal-stack .planner-input {
+    padding: 7px 8px;
+    font-size: 11px;
+  }
   .effective-tier { color: var(--muted); font-size: 10px; margin-top: 5px; }
   .opportunity-cell { min-width: 150px; }
   .opp-value { font-size: 17px; font-weight: 700; color: var(--orange); }
@@ -376,6 +495,101 @@
   .penetration-control { display: grid; grid-template-columns: 38px 1fr; gap: 8px; align-items: center; font-weight: 700; }
   .penetration-control input { width: 100%; accent-color: var(--orange); }
   .empty-state { text-align: center; padding: 28px; color: var(--body); }
+  .rationale-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 900;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgba(10,31,68,0.58);
+  }
+  .rationale-modal[hidden] { display: none; }
+  .rationale-panel {
+    width: min(620px, 100%);
+    max-height: min(760px, calc(100vh - 48px));
+    overflow: auto;
+    background: white;
+    border-radius: 12px;
+    border-top: 4px solid var(--orange);
+    box-shadow: 0 24px 70px rgba(0,0,0,0.34);
+    padding: 24px;
+  }
+  .rationale-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: flex-start;
+    margin-bottom: 18px;
+  }
+  .rationale-title { font-size: 22px; line-height: 1.2; font-weight: 700; }
+  .rationale-subtitle { color: var(--body); font-size: 13px; margin-top: 5px; }
+  .icon-button {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: rgba(10,31,68,0.04);
+    color: var(--navy);
+    font-size: 20px;
+    cursor: pointer;
+  }
+  .rationale-score {
+    display: grid;
+    grid-template-columns: minmax(130px, 0.4fr) 1fr;
+    gap: 14px;
+    align-items: stretch;
+    margin-bottom: 18px;
+  }
+  .rationale-total {
+    border-radius: 10px;
+    background: rgba(232,69,10,0.08);
+    border: 1px solid rgba(232,69,10,0.22);
+    padding: 16px;
+  }
+  .rationale-total strong {
+    display: block;
+    color: var(--orange);
+    font-size: 36px;
+    line-height: 1;
+  }
+  .rationale-total span {
+    display: block;
+    color: var(--body);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: 7px;
+  }
+  .rationale-list {
+    display: grid;
+    gap: 9px;
+  }
+  .rationale-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--body);
+    font-size: 12px;
+  }
+  .rationale-item b { color: var(--navy); }
+  .rationale-item .points {
+    color: var(--orange);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .rationale-note {
+    border-left: 3px solid var(--orange);
+    background: rgba(232,69,10,0.05);
+    padding: 12px 14px;
+    color: var(--body);
+    font-size: 12px;
+    margin-top: 16px;
+  }
   .page-footer {
     background: var(--navy);
     color: rgba(255,255,255,0.44);
@@ -486,6 +700,19 @@
 
     <section class="section-white">
       <div class="page-wrap">
+        <div class="eyebrow">Territory Map</div>
+        <h2 class="section-title">Districts by Effective Tier</h2>
+        <p class="section-sub">Circle color follows the effective tier: AE tier when set, otherwise the suggested tier. Circle size follows secondary enrollment.</p>
+        <div class="territory-map-card" id="territory-map-card">
+          <div id="territory-map"></div>
+          <div class="map-tooltip" id="map-tooltip"></div>
+        </div>
+        <div class="map-legend" id="map-legend"></div>
+      </div>
+    </section>
+
+    <section class="section-white">
+      <div class="page-wrap">
         <div class="eyebrow">Annual Plan</div>
         <h2 class="section-title">Coverage Summary</h2>
         <p class="section-sub">Summaries use the effective tier: AE tier when set, otherwise the suggested tier. District-level penetration overrides feed the modeled opportunity.</p>
@@ -572,6 +799,7 @@
                 <th>Secondary</th>
                 <th>Schools</th>
                 <th>Suggested</th>
+                <th>Signals</th>
                 <th>AE tier</th>
                 <th>Quarter</th>
                 <th>Status</th>
@@ -587,10 +815,33 @@
     </section>
   </main>
 
+  <div class="rationale-modal" id="rationale-modal" hidden>
+    <div class="rationale-panel" role="dialog" aria-modal="true" aria-labelledby="rationale-title">
+      <div class="rationale-head">
+        <div>
+          <div class="rationale-title" id="rationale-title">Tier rationale</div>
+          <div class="rationale-subtitle" id="rationale-subtitle">District scoring details</div>
+        </div>
+        <button class="icon-button" id="rationale-close" type="button" aria-label="Close rationale">×</button>
+      </div>
+      <div class="rationale-score">
+        <div class="rationale-total">
+          <strong id="rationale-points">—</strong>
+          <span id="rationale-tier">Effective tier</span>
+        </div>
+        <div class="rationale-list" id="rationale-list"></div>
+      </div>
+      <div class="rationale-note" id="rationale-note"></div>
+    </div>
+  </div>
+
   <footer class="page-footer">
     <div class="page-wrap"><span id="footer-copy">Derivita · Territory Planner</span></div>
   </footer>
 </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
 
 <script>
 const DISTRICT_SOURCE_NOTE = "NCES CCD 2024-25 LEA Directory + Membership v1a, School Directory v1a, and NCES EDGE 2024-25 LEA geocodes. Secondary enrollment is the NCES grade 6-12 subtotal; middle/high school count is open regular schools with NCES level Middle/High and grade span fully within 6-12.";
@@ -32524,6 +32775,37 @@ const NEXT_ACTION_OPTIONS = [
   { value: 'send_reference', label: 'Send reference story' },
   { value: 'nurture', label: 'Nurture' }
 ];
+const SIGNAL_OPTIONS = {
+  mathNeed: [
+    { value: '', label: 'Math need: validate', points: 0, reason: 'Math state-test performance is not validated yet.' },
+    { value: 'low', label: 'Low math scores', points: 20, reason: 'Low math performance raises urgency for intervention, practice, and actionable reporting.' },
+    { value: 'mixed', label: 'Mixed math scores', points: 8, reason: 'Mixed performance suggests a targeted math support conversation.' },
+    { value: 'strong', label: 'Strong math scores', points: -8, reason: 'Strong performance can reduce urgency unless there is a specific assessment or workflow pain.' }
+  ],
+  lms: [
+    { value: '', label: 'LMS: validate', points: 0, reason: 'LMS usage needs validation before treating integration fit as a tier driver.' },
+    { value: 'canvas', label: 'Canvas', points: 10, reason: 'Canvas usage is a strong integration and adoption fit.' },
+    { value: 'schoology', label: 'Schoology', points: 8, reason: 'Schoology usage supports an LMS-led workflow conversation.' },
+    { value: 'google', label: 'Google Classroom', points: 6, reason: 'Google Classroom usage supports simpler teacher workflow positioning.' },
+    { value: 'other', label: 'Other LMS', points: 2, reason: 'Other LMS usage may still fit, but integration proof needs validation.' },
+    { value: 'none', label: 'No LMS known', points: -4, reason: 'No known LMS lowers implementation confidence until validated.' }
+  ],
+  curriculum: [
+    { value: '', label: 'Curriculum: validate', points: 0, reason: 'Curriculum usage needs validation before it drives tiering.' },
+    { value: 'illustrative', label: 'Illustrative Math', points: 12, reason: 'Illustrative Math usage is a strong curriculum-alignment conversation starter.' },
+    { value: 'our', label: 'Open Up Resources', points: 10, reason: 'Open Up Resources usage can align well with an IM/OUR math workflow.' },
+    { value: 'bigideas', label: 'Big Ideas', points: 8, reason: 'Big Ideas usage gives a concrete curriculum context for math practice and assessment.' },
+    { value: 'other', label: 'Other curriculum', points: 2, reason: 'Other curriculum usage keeps the opportunity open but needs alignment validation.' },
+    { value: 'unknown', label: 'Unknown / none', points: 0, reason: 'No curriculum signal is validated yet.' }
+  ]
+};
+const TIER_COLORS = {
+  tier1: '#dc2626',
+  tier2: '#f97316',
+  tier3: '#0ea5e9',
+  nurture: '#65a30d',
+  notfit: '#64748b'
+};
 
 let currentProfile = STATE_PROFILES.CO;
 let planningState = loadPlanningState();
@@ -32533,6 +32815,8 @@ let tierFilter = 'all';
 let statusFilter = 'all';
 let enrollmentFilter = 'all';
 let leaTypeFilter = 'all';
+let countyFeatures = null;
+let mapRenderToken = 0;
 
 function fmt(n) {
   const value = Number(n) || 0;
@@ -32709,6 +32993,9 @@ function getDistrictPlan(district) {
     quarter: saved.quarter || '',
     status: saved.status || '',
     nextAction: saved.nextAction || '',
+    mathNeed: saved.mathNeed || '',
+    lms: saved.lms || '',
+    curriculum: saved.curriculum || '',
     penetrationPct: Number.isFinite(Number(saved.penetrationPct)) ? Number(saved.penetrationPct) : null,
     note: saved.note || ''
   };
@@ -32717,7 +33004,7 @@ function getDistrictPlan(district) {
 function updateDistrictPlan(key, patch) {
   const current = planningState[key] || {};
   const next = { ...current, ...patch, updatedAt: new Date().toISOString() };
-  const empty = !next.tier && !next.quarter && !next.status && !next.nextAction && !next.note && (next.penetrationPct === null || next.penetrationPct === undefined || next.penetrationPct === '');
+  const empty = !next.tier && !next.quarter && !next.status && !next.nextAction && !next.mathNeed && !next.lms && !next.curriculum && !next.note && (next.penetrationPct === null || next.penetrationPct === undefined || next.penetrationPct === '');
   if (empty) delete planningState[key];
   else planningState[key] = next;
   savePlanningState();
@@ -32744,21 +33031,60 @@ function bumpTier(value) {
   return value;
 }
 
-function suggestedTier(district, profile) {
-  if (!profile.districts.length) return 'nurture';
+function signalOption(group, value) {
+  return SIGNAL_OPTIONS[group].find(option => option.value === value) || SIGNAL_OPTIONS[group][0];
+}
+
+function signalSelectHtml(group, selected, className, key) {
+  return '<select class="planner-input ' + className + '" data-key="' + key + '">' + optionHtml(SIGNAL_OPTIONS[group], selected) + '</select>';
+}
+
+function tierFromScore(score) {
+  if (score >= 78) return 'tier1';
+  if (score >= 56) return 'tier2';
+  if (score >= 34) return 'tier3';
+  return 'nurture';
+}
+
+function tierScoreDetails(district, profile) {
+  if (!profile.districts.length) return { score: 0, tier: 'nurture', items: [], plan: getDistrictPlan(district), index: -1 };
+  const plan = getDistrictPlan(district);
   const sorted = [...profile.districts].sort((a, b) => b.secondary - a.secondary);
   const index = sorted.findIndex(d => (d.leaId || d.name) === (district.leaId || district.name));
   const pctRank = (index + 1) / sorted.length;
-  let tier = 'nurture';
-  if (pctRank <= 0.12 || index < 5 || district.secondary >= 30000) tier = 'tier1';
-  else if (pctRank <= 0.35 || district.secondary >= 15000) tier = 'tier2';
-  else if (pctRank <= 0.70 || district.secondary >= 5000) tier = 'tier3';
+  let sizePoints = 14;
+  if (pctRank <= 0.12 || index < 5 || district.secondary >= 30000) sizePoints = 46;
+  else if (pctRank <= 0.35 || district.secondary >= 15000) sizePoints = 34;
+  else if (pctRank <= 0.70 || district.secondary >= 5000) sizePoints = 24;
   const anchor = findAnchor(profile);
-  if (anchor && anchor !== district && tier !== 'tier1') {
+  let proximityPoints = 0;
+  let proximityReason = 'No proximity boost from the current planning anchor.';
+  if (anchor && anchor !== district) {
     const miles = dist(anchor, district);
-    if (Number.isFinite(miles) && miles <= 35) tier = bumpTier(tier);
+    if (Number.isFinite(miles) && miles <= 35) {
+      proximityPoints = 10;
+      proximityReason = `${Math.round(miles)} miles from ${anchor.short}; near-anchor districts are easier to sequence.`;
+    } else if (Number.isFinite(miles) && miles <= 75) {
+      proximityPoints = 5;
+      proximityReason = `${Math.round(miles)} miles from ${anchor.short}; regional proximity is useful but less direct.`;
+    }
   }
-  return tier;
+  const math = signalOption('mathNeed', plan.mathNeed);
+  const lms = signalOption('lms', plan.lms);
+  const curriculum = signalOption('curriculum', plan.curriculum);
+  const items = [
+    { label: 'Scale', points: sizePoints, reason: `${fullN(district.secondary)} secondary students and NCES rank ${index + 1} of ${sorted.length} in this profile.` },
+    { label: 'Anchor proximity', points: proximityPoints, reason: proximityReason },
+    { label: 'Math need', points: math.points, reason: math.reason },
+    { label: 'LMS fit', points: lms.points, reason: lms.reason },
+    { label: 'Curriculum fit', points: curriculum.points, reason: curriculum.reason }
+  ];
+  const score = items.reduce((sum, item) => sum + item.points, 0);
+  return { score, tier: tierFromScore(score), items, plan, index };
+}
+
+function suggestedTier(district, profile) {
+  return tierScoreDetails(district, profile).tier;
 }
 
 function effectiveTier(district) {
@@ -32802,6 +33128,9 @@ function searchableText(district, plan) {
     STATUS_OPTIONS.find(o => o.value === plan.status)?.label,
     QUARTER_OPTIONS.find(o => o.value === plan.quarter)?.label,
     NEXT_ACTION_OPTIONS.find(o => o.value === plan.nextAction)?.label,
+    signalOption('mathNeed', plan.mathNeed).label,
+    signalOption('lms', plan.lms).label,
+    signalOption('curriculum', plan.curriculum).label,
     plan.note
   ].join(' '));
 }
@@ -32885,7 +33214,7 @@ function renderAnnualSummary() {
       coveredSecondary += district.secondary;
       focusCount += 1;
     }
-    if (plan.tier || plan.quarter || plan.status || plan.nextAction || plan.note || plan.penetrationPct !== null) adjustedCount += 1;
+    if (plan.tier || plan.quarter || plan.status || plan.nextAction || plan.mathNeed || plan.lms || plan.curriculum || plan.note || plan.penetrationPct !== null) adjustedCount += 1;
   });
   setText('summary-modeled', fmt(modeled));
   setText('summary-covered', fmtN(coveredSecondary));
@@ -32905,7 +33234,7 @@ function renderDistrictTable() {
   setText('total-count', fullN(currentProfile.districts.length));
   if (!tbody) return;
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="11" class="empty-state">No districts match the current filters.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" class="empty-state">No districts match the current filters.</td></tr>';
     return;
   }
   tbody.innerHTML = rows.map(district => {
@@ -32921,7 +33250,12 @@ function renderDistrictTable() {
       + '<td class="numeric">' + fullN(district.total) + '</td>'
       + '<td class="numeric">' + fullN(district.secondary) + '</td>'
       + '<td class="numeric">' + fullN(district.secondarySchools || 0) + '</td>'
-      + '<td><span class="tier-chip tier-' + suggested + '">' + tierMeta(suggested).label + '</span></td>'
+      + '<td><details class="tier-rationale-details"><summary onclick="this.parentElement.open = !this.parentElement.open; return false;"><span class="tier-chip tier-' + suggested + '">' + tierMeta(suggested).label + '</span></summary>' + inlineRationaleHtml(district) + '</details></td>'
+      + '<td><div class="signal-stack">'
+      + signalSelectHtml('mathNeed', plan.mathNeed, 'planner-math', key)
+      + signalSelectHtml('lms', plan.lms, 'planner-lms', key)
+      + signalSelectHtml('curriculum', plan.curriculum, 'planner-curriculum', key)
+      + '</div></td>'
       + '<td><select class="planner-input planner-tier" data-key="' + key + '">' + optionHtml(TIER_OPTIONS, plan.tier) + '</select><div class="effective-tier">Effective: ' + escapeHtml(tierMeta(effective).label) + '</div></td>'
       + '<td><select class="planner-input planner-quarter" data-key="' + key + '">' + optionHtml(QUARTER_OPTIONS, plan.quarter) + '</select></td>'
       + '<td><select class="planner-input planner-status" data-key="' + key + '">' + optionHtml(STATUS_OPTIONS, plan.status) + '</select></td>'
@@ -32930,6 +33264,162 @@ function renderDistrictTable() {
       + '<td><textarea class="planner-note" data-key="' + key + '" rows="2" placeholder="Add account note">' + escapeHtml(plan.note) + '</textarea></td>'
       + '</tr>';
   }).join('');
+  tbody.querySelectorAll('[data-rationale-key]').forEach(button => {
+    button.addEventListener('click', () => openRationale(findDistrictByPlanKey(button.dataset.rationaleKey)));
+  });
+}
+
+function renderMapLegend() {
+  const legend = document.getElementById('map-legend');
+  if (!legend) return;
+  legend.innerHTML = SUMMARY_TIERS.map(tier =>
+    '<div class="legend-item"><span class="legend-dot" style="background:' + TIER_COLORS[tier] + '"></span><span>' + tierMeta(tier).label + '</span></div>'
+  ).join('');
+}
+
+async function loadCountyFeatures() {
+  if (countyFeatures) return countyFeatures;
+  if (!window.d3 || !window.topojson) throw new Error('Map libraries are not available.');
+  const us = await d3.json('https://cdn.jsdelivr.net/npm/us-atlas@3/counties-10m.json');
+  countyFeatures = topojson.feature(us, us.objects.counties).features;
+  return countyFeatures;
+}
+
+function profileCounties(features, profile) {
+  const counties = features.filter(d => String(d.id).padStart(5, '0').startsWith(profile.stateFips));
+  if (profile.region === 'north') return counties.filter(d => d3.geoCentroid(d)[1] >= CALIFORNIA_SPLIT_LAT);
+  if (profile.region === 'south') return counties.filter(d => d3.geoCentroid(d)[1] < CALIFORNIA_SPLIT_LAT);
+  return counties;
+}
+
+function tooltipHtml(district) {
+  const details = tierScoreDetails(district, currentProfile);
+  const effective = effectiveTier(district);
+  const plan = getDistrictPlan(district);
+  return '<strong>' + escapeHtml(district.name) + '</strong>'
+    + '<span>' + escapeHtml(district.city || 'Unknown city') + ' · ' + escapeHtml(district.leaType || 'Unknown LEA type') + '</span>'
+    + '<div class="tooltip-row"><span>Effective tier</span><b>' + escapeHtml(tierMeta(effective).label) + '</b></div>'
+    + '<div class="tooltip-row"><span>Suggested score</span><b>' + Math.round(details.score) + '</b></div>'
+    + '<div class="tooltip-row"><span>Secondary</span><b>' + fullN(district.secondary) + '</b></div>'
+    + '<div class="tooltip-row"><span>Signals</span><b>' + escapeHtml([signalOption('mathNeed', plan.mathNeed).label, signalOption('lms', plan.lms).label, signalOption('curriculum', plan.curriculum).label].join(' · ')) + '</b></div>';
+}
+
+function inlineRationaleHtml(district) {
+  const details = tierScoreDetails(district, currentProfile);
+  const effective = effectiveTier(district);
+  const plan = getDistrictPlan(district);
+  const rows = details.items.map(item =>
+    '<div class="inline-rationale-row"><span>' + escapeHtml(item.label) + '</span><b>' + (item.points > 0 ? '+' : '') + item.points + '</b></div>'
+  ).join('');
+  return '<div class="inline-rationale">'
+    + '<strong>Score ' + Math.round(details.score) + ' · Effective ' + escapeHtml(tierMeta(effective).label) + '</strong>'
+    + rows
+    + '<div class="inline-rationale-row"><span>Math</span><b>' + escapeHtml(signalOption('mathNeed', plan.mathNeed).label.replace('Math need: ', '')) + '</b></div>'
+    + '<div class="inline-rationale-row"><span>LMS</span><b>' + escapeHtml(signalOption('lms', plan.lms).label.replace('LMS: ', '')) + '</b></div>'
+    + '<div class="inline-rationale-row"><span>Curriculum</span><b>' + escapeHtml(signalOption('curriculum', plan.curriculum).label.replace('Curriculum: ', '')) + '</b></div>'
+    + '<p style="margin-top:8px;">Signals marked validate do not move the tier until they are confirmed.</p>'
+    + '</div>';
+}
+
+async function buildTerritoryMap() {
+  renderMapLegend();
+  const map = document.getElementById('territory-map');
+  const card = document.getElementById('territory-map-card');
+  const tooltip = document.getElementById('map-tooltip');
+  if (!map || !card) return;
+  const token = ++mapRenderToken;
+  if (!window.d3 || !window.topojson) {
+    map.innerHTML = '<div class="map-empty">Map libraries did not load. District tiers are still available in the planning table.</div>';
+    return;
+  }
+  map.innerHTML = '<div class="map-empty">Loading territory map…</div>';
+  try {
+    const features = await loadCountyFeatures();
+    if (token !== mapRenderToken) return;
+    const counties = profileCounties(features, currentProfile);
+    if (!counties.length) {
+      map.innerHTML = '<div class="map-empty">County geometry is unavailable for this profile.</div>';
+      return;
+    }
+    const width = 1080;
+    const height = 500;
+    const collection = { type: 'FeatureCollection', features: counties };
+    const projection = d3.geoMercator().fitExtent([[24, 24], [width - 24, height - 24]], collection);
+    const path = d3.geoPath().projection(projection);
+    const maxSecondary = Math.max(...currentProfile.districts.map(d => d.secondary), 1);
+    const radius = d3.scaleSqrt().domain([0, maxSecondary]).range([4, 24]);
+    const svg = d3.select(map).html('').append('svg')
+      .attr('viewBox', '0 0 ' + width + ' ' + height)
+      .attr('role', 'img')
+      .attr('aria-label', currentProfile.stateName + ' district tier map');
+
+    svg.append('g').selectAll('path')
+      .data(counties)
+      .join('path')
+      .attr('d', path)
+      .attr('fill', 'rgba(10,31,68,0.035)')
+      .attr('stroke', 'rgba(10,31,68,0.16)')
+      .attr('stroke-width', 0.6);
+
+    const plotted = currentProfile.districts
+      .map(d => ({ district: d, point: projection([d.lon, d.lat]) }))
+      .filter(d => Array.isArray(d.point) && Number.isFinite(d.point[0]) && Number.isFinite(d.point[1]));
+
+    svg.append('g').selectAll('circle')
+      .data(plotted)
+      .join('circle')
+      .attr('cx', d => d.point[0])
+      .attr('cy', d => d.point[1])
+      .attr('r', d => radius(d.district.secondary))
+      .attr('fill', d => TIER_COLORS[effectiveTier(d.district)] || TIER_COLORS.nurture)
+      .attr('fill-opacity', 0.72)
+      .attr('stroke', d => d.district.anchor ? '#0A1F44' : 'white')
+      .attr('stroke-width', d => d.district.anchor ? 2.4 : 1.2)
+      .style('cursor', 'pointer')
+      .on('mousemove', function(event, d) {
+        if (!tooltip) return;
+        const rect = card.getBoundingClientRect();
+        tooltip.style.display = 'block';
+        tooltip.style.left = Math.min(event.clientX - rect.left + 14, rect.width - 280) + 'px';
+        tooltip.style.top = Math.max(event.clientY - rect.top - 20, 12) + 'px';
+        tooltip.innerHTML = tooltipHtml(d.district);
+      })
+      .on('mouseleave', () => {
+        if (tooltip) tooltip.style.display = 'none';
+      })
+      .on('click', (event, d) => openRationale(d.district));
+  } catch (err) {
+    if (token === mapRenderToken) map.innerHTML = '<div class="map-empty">Map data could not be loaded. Check the network connection and try again.</div>';
+  }
+}
+
+function findDistrictByPlanKey(key) {
+  return currentProfile.districts.find(district => planningKey(district) === key);
+}
+
+function openRationale(district) {
+  if (!district) return;
+  const details = tierScoreDetails(district, currentProfile);
+  const effective = effectiveTier(district);
+  const manualTier = getDistrictPlan(district).tier;
+  const modal = document.getElementById('rationale-modal');
+  setText('rationale-title', district.name);
+  setText('rationale-subtitle', `${district.city || 'Unknown city'} · Suggested ${tierMeta(details.tier).label}${manualTier ? ` · AE override ${tierMeta(manualTier).label}` : ''}`);
+  setText('rationale-points', Math.round(details.score));
+  setText('rationale-tier', `Effective: ${tierMeta(effective).label}`);
+  const list = document.getElementById('rationale-list');
+  if (list) {
+    list.innerHTML = details.items.map(item =>
+      '<div class="rationale-item"><div><b>' + escapeHtml(item.label) + '</b><br>' + escapeHtml(item.reason) + '</div><div class="points">' + (item.points > 0 ? '+' : '') + item.points + '</div></div>'
+    ).join('');
+  }
+  setText('rationale-note', 'Scores use validated AE-entered signals when available. Math scores, LMS, and curriculum default to “Needs validation” so the tool does not invent district intelligence. Update the signal fields in the table to change the suggested tier and map color.');
+  if (modal) modal.hidden = false;
+}
+
+function closeRationale() {
+  const modal = document.getElementById('rationale-modal');
+  if (modal) modal.hidden = true;
 }
 
 function renderAll() {
@@ -32937,6 +33427,7 @@ function renderAll() {
   renderOverview();
   renderAnnualSummary();
   renderDistrictTable();
+  buildTerritoryMap();
   updateFocusedToggle();
 }
 
@@ -33010,20 +33501,51 @@ function bindPlannerControls() {
   document.getElementById('export-csv')?.addEventListener('click', exportCsv);
   document.getElementById('district-table-body')?.addEventListener('input', handleTableChange);
   document.getElementById('district-table-body')?.addEventListener('change', handleTableChange);
+  document.getElementById('district-table-body')?.addEventListener('click', event => {
+    const button = event.target.closest('[data-rationale-key]');
+    if (!button) return;
+    openRationale(findDistrictByPlanKey(button.dataset.rationaleKey));
+  });
+  document.getElementById('rationale-close')?.addEventListener('click', closeRationale);
+  document.getElementById('rationale-modal')?.addEventListener('click', event => {
+    if (event.target.id === 'rationale-modal') closeRationale();
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') closeRationale();
+  });
 }
 
 function handleTableChange(event) {
   const target = event.target;
   const key = target?.dataset?.key;
   if (!key) return;
+  let affectsTier = false;
+  let needsTableRender = true;
   if (target.classList.contains('planner-tier')) updateDistrictPlan(key, { tier: target.value });
   if (target.classList.contains('planner-quarter')) updateDistrictPlan(key, { quarter: target.value });
   if (target.classList.contains('planner-status')) updateDistrictPlan(key, { status: target.value });
   if (target.classList.contains('planner-next')) updateDistrictPlan(key, { nextAction: target.value });
-  if (target.classList.contains('planner-note')) updateDistrictPlan(key, { note: target.value });
+  if (target.classList.contains('planner-math')) {
+    updateDistrictPlan(key, { mathNeed: target.value });
+    affectsTier = true;
+  }
+  if (target.classList.contains('planner-lms')) {
+    updateDistrictPlan(key, { lms: target.value });
+    affectsTier = true;
+  }
+  if (target.classList.contains('planner-curriculum')) {
+    updateDistrictPlan(key, { curriculum: target.value });
+    affectsTier = true;
+  }
+  if (target.classList.contains('planner-tier')) affectsTier = true;
+  if (target.classList.contains('planner-note')) {
+    updateDistrictPlan(key, { note: target.value });
+    needsTableRender = false;
+  }
   if (target.classList.contains('planner-penetration')) updateDistrictPlan(key, { penetrationPct: Number(target.value) });
   renderAnnualSummary();
-  renderDistrictTable();
+  if (needsTableRender) renderDistrictTable();
+  if (affectsTier) buildTerritoryMap();
 }
 
 function csvEscape(value) {
@@ -33041,8 +33563,12 @@ function exportCsv() {
     'lea_id',
     'lea_type',
     'suggested_tier',
+    'suggested_score',
     'ae_tier',
     'effective_tier',
+    'math_need_signal',
+    'lms_signal',
+    'curriculum_signal',
     'secondary_enrollment',
     'middle_high_school_count',
     'full_tam',
@@ -33056,6 +33582,7 @@ function exportCsv() {
   const rows = visibleDistricts().map(district => {
     const plan = getDistrictPlan(district);
     const suggested = suggestedTier(district, currentProfile);
+    const details = tierScoreDetails(district, currentProfile);
     const effective = effectiveTier(district);
     return [
       currentProfile.stateName,
@@ -33065,8 +33592,12 @@ function exportCsv() {
       district.leaId || '',
       district.leaType || '',
       tierMeta(suggested).label,
+      Math.round(details.score),
       plan.tier ? tierMeta(plan.tier).label : '',
       tierMeta(effective).label,
+      signalOption('mathNeed', plan.mathNeed).label,
+      signalOption('lms', plan.lms).label,
+      signalOption('curriculum', plan.curriculum).label,
       district.secondary,
       district.secondarySchools || 0,
       Math.round(fullOpportunity(district)),
