@@ -397,7 +397,7 @@
     overflow-x: auto;
     box-shadow: var(--card-shadow);
   }
-  table { width: 100%; border-collapse: collapse; min-width: 1620px; }
+  table { width: 100%; border-collapse: collapse; min-width: 1460px; }
   th {
     background: rgba(10,31,68,0.04);
     color: var(--muted);
@@ -438,6 +438,17 @@
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--muted);
+  }
+  .district-penetration-quick .quick-value {
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--orange);
+    line-height: 1;
+  }
+  .district-penetration-quick .quick-sub {
+    font-size: 10px;
+    color: var(--muted);
+    margin: 3px 0 8px;
   }
   .district-penetration-quick strong {
     font-size: 13px;
@@ -518,11 +529,6 @@
     font-size: 11px;
   }
   .effective-tier { color: var(--muted); font-size: 10px; margin-top: 5px; }
-  .opportunity-cell { min-width: 150px; }
-  .opp-value { font-size: 17px; font-weight: 700; color: var(--orange); }
-  .opp-sub { color: var(--muted); font-size: 10px; margin-bottom: 8px; }
-  .penetration-control { display: grid; grid-template-columns: 38px 1fr; gap: 8px; align-items: center; font-weight: 700; }
-  .penetration-control input { width: 100%; accent-color: var(--orange); }
   .empty-state { text-align: center; padding: 28px; color: var(--body); }
   .rationale-modal {
     position: fixed;
@@ -833,7 +839,6 @@
                 <th>Quarter</th>
                 <th>Status</th>
                 <th>Next action</th>
-                <th>Opportunity</th>
                 <th>Note</th>
               </tr>
             </thead>
@@ -33263,7 +33268,7 @@ function renderDistrictTable() {
   setText('total-count', fullN(currentProfile.districts.length));
   if (!tbody) return;
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="12" class="empty-state">No districts match the current filters.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" class="empty-state">No districts match the current filters.</td></tr>';
     return;
   }
   tbody.innerHTML = rows.map(district => {
@@ -33275,7 +33280,7 @@ function renderDistrictTable() {
     const anchor = district.anchor ? '<span class="mini-pill">Anchor</span>' : '';
     return '<tr data-key="' + key + '">'
       + '<td class="district-cell"><strong>' + escapeHtml(district.name) + '</strong><span>' + escapeHtml(district.city || 'Unknown city') + ' · LEA ' + escapeHtml(district.leaId || 'N/A') + '</span>' + anchor
-      + '<div class="district-penetration-quick"><div class="quick-row"><label>Target penetration</label><strong>' + penetration + '%</strong></div><input class="planner-penetration" data-key="' + key + '" type="range" min="0" max="100" step="5" value="' + penetration + '"></div></td>'
+      + '<div class="district-penetration-quick"><label>Modeled opportunity</label><div class="quick-value">' + fmt(modeledOpportunity(district)) + '</div><div class="quick-sub">Full ' + fmt(fullOpportunity(district)) + '</div><div class="quick-row"><label>Target penetration</label><strong>' + penetration + '%</strong></div><input class="planner-penetration" data-key="' + key + '" type="range" min="0" max="100" step="5" value="' + penetration + '"></div></td>'
       + '<td>' + escapeHtml(district.leaType || 'Unknown') + '</td>'
       + '<td class="numeric">' + fullN(district.total) + '</td>'
       + '<td class="numeric">' + fullN(district.secondary) + '</td>'
@@ -33290,7 +33295,6 @@ function renderDistrictTable() {
       + '<td><select class="planner-input planner-quarter" data-key="' + key + '">' + optionHtml(QUARTER_OPTIONS, plan.quarter) + '</select></td>'
       + '<td><select class="planner-input planner-status" data-key="' + key + '">' + optionHtml(STATUS_OPTIONS, plan.status) + '</select></td>'
       + '<td><select class="planner-input planner-next" data-key="' + key + '">' + optionHtml(NEXT_ACTION_OPTIONS, plan.nextAction) + '</select></td>'
-      + '<td class="opportunity-cell"><div class="opp-value">' + fmt(modeledOpportunity(district)) + '</div><div class="opp-sub">Full ' + fmt(fullOpportunity(district)) + '</div><label class="penetration-control"><span>' + penetration + '%</span><input class="planner-penetration" data-key="' + key + '" type="range" min="0" max="100" step="5" value="' + penetration + '"></label></td>'
       + '<td><textarea class="planner-note" data-key="' + key + '" rows="2" placeholder="Add account note">' + escapeHtml(plan.note) + '</textarea></td>'
       + '</tr>';
   }).join('');
