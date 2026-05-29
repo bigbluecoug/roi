@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CaptureController;
+use App\Http\Controllers\DistrictNeedsSummaryController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\SetupController;
 use Illuminate\Support\Facades\Route;
@@ -9,6 +10,10 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return response()->file(public_path('index.html'));
 })->name('roi.index');
+
+Route::post('/api/district-needs-summary', DistrictNeedsSummaryController::class)
+    ->middleware('throttle:20,1')
+    ->name('api.district-needs-summary');
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [LoginController::class, 'create'])->name('login');

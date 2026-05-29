@@ -775,6 +775,45 @@
     padding: 0;
   }
   .ai-output li { margin-bottom: 5px; }
+  .ai-brief-section {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: rgba(10,31,68,0.025);
+    padding: 11px 12px;
+    margin-top: 10px;
+  }
+  .ai-brief-section h4 {
+    color: var(--navy);
+    font-size: 12px;
+    margin-bottom: 5px;
+  }
+  .ai-brief-section p {
+    margin: 0;
+    line-height: 1.55;
+  }
+  .ai-brief-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .ai-brief-pill {
+    display: inline-flex;
+    border-radius: 999px;
+    background: rgba(10,31,68,0.08);
+    color: var(--navy);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+  }
+  .ai-source-list a {
+    color: var(--navy);
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .ai-source-list a:hover { color: var(--orange); }
   .ai-prompt-box {
     margin-top: 10px;
     min-height: 130px;
@@ -33008,6 +33047,7 @@ const TIER_COLORS = {
   nurture: '#65a30d',
   notfit: '#64748b'
 };
+const aiBriefCache = new Map();
 
 let currentProfile = STATE_PROFILES.CO;
 let planningState = loadPlanningState();
@@ -33681,21 +33721,37 @@ function districtKeySummaryHtml(district) {
 }
 
 function aiEnrichmentEndpoint() {
-  return window.DERIVITA_AI_ENRICHMENT_ENDPOINT || '';
+  if (window.DERIVITA_AI_ENRICHMENT_ENDPOINT) return window.DERIVITA_AI_ENRICHMENT_ENDPOINT;
+  if (location.protocol === 'http:' || location.protocol === 'https:') return '/api/district-needs-summary';
+  return '';
 }
 
 function optionLabel(options, value) {
   return (options.find(option => option.value === value) || options[0] || { label: '' }).label;
 }
 
+function optionLabelByValue(options, value) {
+  return (options.find(option => option.value === value) || { label: value || '' }).label;
+}
+
+function compactStrings(values) {
+  const list = Array.isArray(values) ? values : [values];
+  return list.map(value => String(value ?? '').trim()).filter(Boolean);
+}
+
 function aiEnrichmentPayload(district) {
   const details = tierScoreDetails(district, currentProfile);
   const plan = getDistrictPlan(district);
+  const anchor = findAnchor(currentProfile);
   return {
     profile: {
       stateCode: currentProfile.stateCode,
       stateName: currentProfile.stateName,
-      eventLabel: currentProfile.eventLabel
+      eventLabel: currentProfile.eventLabel,
+      standardsNote: currentProfile.standardsNote || '',
+      fiscalNote: currentProfile.fiscalNote || '',
+      competitionNote: currentProfile.competitionNote || '',
+      clusterNote: currentProfile.clusterNote || ''
     },
     district: {
       name: district.name,
@@ -33707,8 +33763,16 @@ function aiEnrichmentPayload(district) {
       middleHighSchools: district.secondarySchools || 0,
       fullOpportunity: Math.round(fullOpportunity(district)),
       modeledOpportunity: Math.round(modeledOpportunity(district)),
-      targetPenetrationPct: targetPenetrationPct(district)
+      targetPenetrationPct: targetPenetrationPct(district),
+      ncesSecondarySource: district.secondarySource || '',
+      ncesSchoolCountSource: district.secondarySchoolsSource || ''
     },
+    anchor: anchor ? {
+      name: anchor.name,
+      short: anchor.short,
+      city: anchor.city || '',
+      milesAway: planningKey(anchor) === planningKey(district) ? 0 : Math.round(dist(anchor, district))
+    } : null,
     currentSignals: {
       mathNeed: optionLabel(SIGNAL_OPTIONS.mathNeed, plan.mathNeed),
       lms: optionLabel(SIGNAL_OPTIONS.lms, plan.lms),
@@ -33718,10 +33782,22 @@ function aiEnrichmentPayload(district) {
       effectiveTier: tierMeta(effectiveTier(district)).label,
       score: Math.round(details.score)
     },
+    planning: {
+      focusQuarter: optionLabelByValue(QUARTER_OPTIONS, plan.quarter),
+      status: optionLabelByValue(STATUS_OPTIONS, plan.status),
+      nextAction: optionLabelByValue(NEXT_ACTION_OPTIONS, plan.nextAction),
+      aeNote: plan.note || ''
+    },
+    tierDrivers: details.items.map(item => ({
+      label: item.label,
+      points: item.points,
+      reason: item.reason
+    })),
     instructions: [
       'Use public district/state sources only.',
-      'Find and summarize math state test performance, listed LMS, adopted math curriculum, and other sales-relevant context.',
-      'Return source URLs, confidence level, and fields that still need AE validation.',
+      'Find and summarize math state test performance, listed LMS, adopted math curriculum, HubSpot/contact validation needs, and other sales-relevant context.',
+      'Prioritize Canvas, Schoology, Google Classroom, Illustrative Math, Open Up Resources/OUR, Big Ideas, Algebra readiness, state standards, and implementation lift.',
+      'Return source URLs, confidence level, validation gaps, and a concise AE-ready district needs summary.',
       'Do not present inferred LMS/curriculum/test-score data as confirmed unless a source supports it.'
     ]
   };
@@ -33736,11 +33812,13 @@ function aiPromptText(district) {
     JSON.stringify(payload, null, 2),
     '',
     'Output format:',
-    '- Math test score summary with source URL and confidence.',
-    '- Listed LMS signal with source URL and confidence.',
-    '- Math curriculum signal with source URL and confidence.',
-    '- Other pertinent information for outreach.',
-    '- Suggested tier rationale, but make clear the AE chooses the final tier.',
+    '- One concise account summary for the AE.',
+    '- Math test score summary with source URL, confidence, and validation status.',
+    '- Listed LMS signal with source URL, confidence, and validation status.',
+    '- Math curriculum signal with source URL, confidence, and validation status.',
+    '- HubSpot/contact validation needs if no CRM data was supplied.',
+    '- Other pertinent information for outreach, including state standards, fiscal timing, and competitive context.',
+    '- Suggested tier rationale, while making clear the AE chooses the final tier.',
     '- Validation checklist for anything uncertain.'
   ].join('\n');
 }
@@ -33748,11 +33826,22 @@ function aiPromptText(district) {
 function aiLocalBriefHtml(district, note) {
   const payload = aiEnrichmentPayload(district);
   const signals = payload.currentSignals;
+  const planning = payload.planning;
+  const profile = payload.profile;
+  const plan = getDistrictPlan(district);
+  const validationGaps = compactStrings([
+    plan.mathNeed ? '' : 'math state-test results',
+    plan.lms ? '' : 'listed LMS',
+    plan.curriculum ? '' : 'math curriculum',
+    'HubSpot contacts / owner notes',
+    'current customer or opportunity status'
+  ]);
   const validationItems = [
     'Confirm current state math assessment results and grade-band gaps from the state report card.',
     'Confirm the district LMS from district technology pages, help docs, board packets, or HubSpot notes.',
     'Confirm adopted math curriculum from curriculum pages, board adoption documents, or public course guides.',
-    'Check HubSpot for contacts, current customer status, open opportunities, and owner notes before outreach.'
+    'Check HubSpot for contacts, current customer status, open opportunities, and owner notes before outreach.',
+    'Decide the AE tier after reviewing the public-source brief and local relationship context.'
   ];
   const outreachAngles = [
     `${signals.effectiveTier} planning account with ${fmt(payload.district.modeledOpportunity)} modeled opportunity at ${payload.district.targetPenetrationPct}% target penetration.`,
@@ -33762,14 +33851,17 @@ function aiLocalBriefHtml(district, note) {
     signals.curriculum.includes('validate') ? 'Keep curriculum alignment broad until validated.' : `Use ${signals.curriculum} as the curriculum-context opening if confirmed.`
   ];
   return '<div class="ai-output">'
-    + '<strong>AI-assisted AE brief</strong>'
-    + '<p>' + escapeHtml(note) + ' Treat this as a research starting point, not sourced truth.</p>'
+    + '<strong>District needs summary</strong>'
+    + '<p>' + escapeHtml(note) + ' This uses NCES, AE-entered signals, and the state context already in the planner. Treat unsourced signals as research prompts until the API/source review confirms them.</p>'
     + '<div class="ai-output-grid">'
-    + '<div class="ai-output-card"><b>Account hypothesis</b>' + escapeHtml(outreachAngles[0]) + '<br>' + escapeHtml(outreachAngles[1]) + '</div>'
-    + '<div class="ai-output-card"><b>Tier guidance</b>Suggested ' + escapeHtml(signals.suggestedTier) + ' from current scoring; effective tier is ' + escapeHtml(signals.effectiveTier) + '. AE override remains the final decision.</div>'
-    + '<div class="ai-output-card"><b>Signal posture</b>' + escapeHtml(outreachAngles.slice(2).join(' ')) + '</div>'
-    + '<div class="ai-output-card"><b>Confidence</b>Low until math, LMS, and curriculum are validated from public sources or HubSpot. NCES enrollment and school-count fields are the strongest current data.</div>'
+    + '<div class="ai-output-card"><b>Account size</b>' + escapeHtml(outreachAngles[0]) + '<br>' + escapeHtml(outreachAngles[1]) + '</div>'
+    + '<div class="ai-output-card"><b>Tier decision</b>Suggested ' + escapeHtml(signals.suggestedTier) + ' from size, proximity, math need, LMS, and curriculum scoring. Effective tier is ' + escapeHtml(signals.effectiveTier) + '; the AE selection remains the final call.</div>'
+    + '<div class="ai-output-card"><b>Need signals</b>' + escapeHtml(outreachAngles.slice(2).join(' ')) + '</div>'
+    + '<div class="ai-output-card"><b>Planning status</b>Quarter: ' + escapeHtml(planning.focusQuarter || 'Unassigned') + '. Status: ' + escapeHtml(planning.status || 'Not started') + '. Next action: ' + escapeHtml(planning.nextAction || 'Choose action') + '.</div>'
     + '</div>'
+    + '<div class="ai-brief-section"><h4>State and competitive context</h4><p>' + escapeHtml(compactStrings([profile.standardsNote, profile.fiscalNote, profile.competitionNote]).join(' ')) + '</p></div>'
+    + '<div class="ai-brief-section"><h4>Validation gaps</h4><p>' + escapeHtml(validationGaps.length ? validationGaps.join(', ') : 'Core fields are marked, but sources should still be checked before outreach.') + '</p></div>'
+    + (planning.aeNote ? '<div class="ai-brief-section"><h4>AE note</h4><p>' + escapeHtml(planning.aeNote) + '</p></div>' : '')
     + '<p><strong>Validation checklist</strong></p>'
     + '<ul>' + validationItems.map(item => '<li>' + escapeHtml(item) + '</li>').join('') + '</ul>'
     + '</div>';
@@ -33778,27 +33870,127 @@ function aiLocalBriefHtml(district, note) {
 function aiEnrichmentHtml(district) {
   return '<div class="ai-enrichment">'
     + '<div class="ai-enrichment-head">'
-    + '<div><div class="ai-enrichment-title">AI enrichment</div><div class="ai-enrichment-copy">Generate an AE research brief from NCES data and validated signals. If a secure enrichment endpoint is configured, this can call it; otherwise it creates an AI-ready local brief and prompt.</div></div>'
+    + '<div><div class="ai-enrichment-title">Needs summary</div><div class="ai-enrichment-copy">The planner summary appears immediately, then the connected API automatically refreshes it with public-source research on math performance, LMS, curriculum, and outreach context.</div></div>'
     + '<div class="ai-enrichment-actions">'
-    + '<button class="primary-button ai-generate" type="button">Generate AE brief</button>'
+    + '<button class="primary-button ai-generate" type="button">Refresh API</button>'
     + '<button class="secondary-button ai-copy-prompt" type="button">Copy AI prompt</button>'
     + '</div></div>'
-    + '<div class="ai-output" id="ai-enrichment-output">No AI brief generated yet. Use the brief as a planning aid and validate sources before outreach.</div>'
+    + '<div id="ai-enrichment-output">' + aiLocalBriefHtml(district, 'Planner summary generated.') + '</div>'
     + '<textarea class="ai-prompt-box" id="ai-prompt-box" readonly hidden>' + escapeHtml(aiPromptText(district)) + '</textarea>'
     + '</div>';
+}
+
+function normalizeExternalSection(section) {
+  if (!section) return { summary: '', evidence: '', confidence: '', status: '' };
+  if (typeof section === 'string') return { summary: section, evidence: '', confidence: '', status: '' };
+  return {
+    summary: section.summary || section.status || '',
+    evidence: section.evidence || '',
+    confidence: section.confidence || '',
+    status: section.status || ''
+  };
+}
+
+function externalSectionHtml(title, section, fallback) {
+  const normalized = normalizeExternalSection(section);
+  const summary = normalized.summary || fallback || 'Needs validation.';
+  const meta = compactStrings([normalized.status, normalized.confidence]).map(item =>
+    '<span class="ai-brief-pill">' + escapeHtml(item) + '</span>'
+  ).join('');
+  return '<div class="ai-brief-section"><h4>' + escapeHtml(title) + '</h4>'
+    + '<p>' + escapeHtml(summary) + (normalized.evidence ? '<br>' + escapeHtml(normalized.evidence) : '') + '</p>'
+    + (meta ? '<div class="ai-brief-meta">' + meta + '</div>' : '')
+    + '</div>';
+}
+
+function sourceListHtml(sources) {
+  if (!sources.length) return '';
+  return '<div class="ai-brief-section"><h4>Sources</h4><ul class="ai-source-list">'
+    + sources.map(source => {
+      const title = source.title || source.url || 'Public source';
+      const evidence = source.evidence ? ' — ' + source.evidence : '';
+      return '<li>' + (source.url ? '<a href="' + escapeHtml(source.url) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(title) + '</a>' : escapeHtml(title)) + escapeHtml(evidence) + '</li>';
+    }).join('')
+    + '</ul></div>';
 }
 
 function renderExternalAiPayload(payload) {
   if (!payload || typeof payload !== 'object') return '';
   const sources = Array.isArray(payload.sources) ? payload.sources : [];
-  const findings = Array.isArray(payload.findings) ? payload.findings : [];
+  const findings = Array.isArray(payload.findings) ? payload.findings : compactStrings(payload.other_context || []);
+  const validation = compactStrings(payload.validation_checklist || payload.validationChecklist || []);
   return '<div class="ai-output">'
-    + '<strong>AI-assisted AE brief</strong>'
+    + '<strong>Source-backed district needs summary</strong>'
     + '<p>' + escapeHtml(payload.summary || 'AI enrichment returned. Validate all sources before outreach.') + '</p>'
-    + (findings.length ? '<ul>' + findings.map(item => '<li>' + escapeHtml(item) + '</li>').join('') + '</ul>' : '')
-    + (sources.length ? '<p><strong>Sources</strong></p><ul>' + sources.map(source => '<li>' + (source.url ? '<a href="' + escapeHtml(source.url) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(source.title || source.url) + '</a>' : escapeHtml(source.title || source)) + '</li>').join('') + '</ul>' : '')
-    + '<p><strong>Confidence:</strong> ' + escapeHtml(payload.confidence || 'Needs AE validation') + '</p>'
+    + externalSectionHtml('Math test score', payload.math_test_score || payload.mathTestScore || payload.math, 'Needs state report-card validation.')
+    + externalSectionHtml('Listed LMS', payload.lms || payload.listed_lms || payload.listedLms, 'Needs district technology validation.')
+    + externalSectionHtml('Math curriculum', payload.math_curriculum || payload.mathCurriculum || payload.curriculum, 'Needs curriculum adoption validation.')
+    + externalSectionHtml('HubSpot / contact check', payload.hubspot || payload.crm || 'Check HubSpot for known contacts, customer status, owner, meetings, and open opportunities.', '')
+    + (payload.outreach_angle ? externalSectionHtml('Outreach angle', payload.outreach_angle, '') : '')
+    + (payload.tier_rationale ? externalSectionHtml('Tier rationale', payload.tier_rationale, '') : '')
+    + (findings.length ? '<div class="ai-brief-section"><h4>Other pertinent context</h4><ul>' + findings.map(item => '<li>' + escapeHtml(item) + '</li>').join('') + '</ul></div>' : '')
+    + (validation.length ? '<div class="ai-brief-section"><h4>Validation checklist</h4><ul>' + validation.map(item => '<li>' + escapeHtml(item) + '</li>').join('') + '</ul></div>' : '')
+    + sourceListHtml(sources)
+    + '<div class="ai-brief-meta"><span class="ai-brief-pill">Confidence: ' + escapeHtml(payload.confidence || 'Needs AE validation') + '</span>' + (payload.recommended_tier ? '<span class="ai-brief-pill">Recommended: ' + escapeHtml(payload.recommended_tier) + '</span>' : '') + '</div>'
     + '</div>';
+}
+
+function aiBriefCacheKey(district) {
+  const payload = aiEnrichmentPayload(district);
+  return planningKey(district) + ':' + JSON.stringify({
+    rate: getRate(),
+    targetPenetrationPct: payload.district.targetPenetrationPct,
+    currentSignals: payload.currentSignals,
+    planning: payload.planning
+  });
+}
+
+async function runAiEnrichment(district, button, force = false) {
+  const modal = document.getElementById('rationale-modal');
+  const output = modal?.querySelector('#ai-enrichment-output');
+  if (!output) return;
+
+  const endpoint = aiEnrichmentEndpoint();
+  if (!endpoint) {
+    if (button) button.textContent = 'API unavailable';
+    return;
+  }
+
+  const cacheKey = aiBriefCacheKey(district);
+  if (!force && aiBriefCache.has(cacheKey)) {
+    output.innerHTML = aiBriefCache.get(cacheKey);
+    if (button) button.textContent = 'Refresh API';
+    return;
+  }
+
+  if (output.dataset.loadingKey === cacheKey) return;
+  output.dataset.loadingKey = cacheKey;
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'Refreshing...';
+  }
+  output.innerHTML = '<div class="ai-output"><strong>Source-backed district needs summary</strong><p>Checking public sources for math performance, LMS, curriculum, and outreach context...</p></div>';
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(aiEnrichmentPayload(district))
+    });
+    if (!response.ok) throw new Error('AI enrichment endpoint returned ' + response.status);
+    const payload = await response.json();
+    const html = renderExternalAiPayload(payload) || aiLocalBriefHtml(district, 'AI endpoint returned an unexpected response, so this local planning brief is shown instead.');
+    aiBriefCache.set(cacheKey, html);
+    output.innerHTML = html;
+  } catch (err) {
+    output.innerHTML = aiLocalBriefHtml(district, 'API enrichment could not be reached, so this local planning brief is shown instead.');
+  } finally {
+    delete output.dataset.loadingKey;
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'Refresh API';
+    }
+  }
 }
 
 function openRationale(district) {
@@ -33841,8 +34033,8 @@ function openRationale(district) {
 
 function bindAiEnrichmentControls(district) {
   const modal = document.getElementById('rationale-modal');
-  const output = modal?.querySelector('#ai-enrichment-output');
   const promptBox = modal?.querySelector('#ai-prompt-box');
+  const generateButton = modal?.querySelector('.ai-generate');
   modal?.querySelector('.ai-copy-prompt')?.addEventListener('click', async event => {
     const prompt = aiPromptText(district);
     try {
@@ -33858,34 +34050,10 @@ function bindAiEnrichmentControls(district) {
       event.target.textContent = 'Prompt shown';
     }
   });
-  modal?.querySelector('.ai-generate')?.addEventListener('click', async event => {
-    if (!output) return;
-    const endpoint = aiEnrichmentEndpoint();
-    event.target.disabled = true;
-    event.target.textContent = 'Generating...';
-    output.innerHTML = '<div class="ai-output">Generating district brief...</div>';
-    if (!endpoint) {
-      output.innerHTML = aiLocalBriefHtml(district, 'No secure AI endpoint is configured in this static page, so this brief uses local NCES data and current AE-entered signals.');
-      event.target.disabled = false;
-      event.target.textContent = 'Regenerate brief';
-      return;
-    }
-    try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(aiEnrichmentPayload(district))
-      });
-      if (!response.ok) throw new Error('AI enrichment endpoint returned ' + response.status);
-      const payload = await response.json();
-      output.innerHTML = renderExternalAiPayload(payload) || aiLocalBriefHtml(district, 'AI endpoint returned an unexpected response, so this local planning brief is shown instead.');
-    } catch (err) {
-      output.innerHTML = aiLocalBriefHtml(district, 'AI enrichment endpoint could not be reached, so this local planning brief is shown instead.');
-    } finally {
-      event.target.disabled = false;
-      event.target.textContent = 'Regenerate brief';
-    }
+  generateButton?.addEventListener('click', event => {
+    runAiEnrichment(district, event.target, true);
   });
+  window.setTimeout(() => runAiEnrichment(district, generateButton, false), 0);
 }
 
 function bindNeedsModalControls(district) {
