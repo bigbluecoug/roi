@@ -477,6 +477,26 @@
   .tier-tier3 { color: #075985; background: #e0f2fe; }
   .tier-nurture { color: #365314; background: #ecfccb; }
   .tier-notfit { color: #475569; background: #e2e8f0; }
+  .needs-review-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: rgba(10,31,68,0.04);
+    color: var(--navy);
+    font-size: 11px;
+    font-weight: 700;
+    text-decoration: none;
+    padding: 8px 10px;
+    white-space: nowrap;
+  }
+  .needs-review-button:hover { background: rgba(232,69,10,0.08); border-color: rgba(232,69,10,0.28); }
+  .suggested-mini {
+    color: var(--muted);
+    font-size: 10px;
+    margin-top: 6px;
+  }
   .tier-rationale-button {
     border: none;
     background: transparent;
@@ -541,7 +561,7 @@
   }
   .rationale-modal[hidden] { display: none; }
   .rationale-panel {
-    width: min(620px, 100%);
+    width: min(760px, 100%);
     max-height: min(760px, calc(100vh - 48px));
     overflow: auto;
     background: white;
@@ -568,6 +588,45 @@
     color: var(--navy);
     font-size: 20px;
     cursor: pointer;
+  }
+  .district-key-summary {
+    border: 1px solid rgba(10,31,68,0.12);
+    border-left: 4px solid var(--orange);
+    border-radius: 10px;
+    background: rgba(10,31,68,0.025);
+    padding: 14px;
+    margin-bottom: 18px;
+  }
+  .district-key-summary p {
+    color: var(--body);
+    font-size: 13px;
+    line-height: 1.55;
+    margin: 0;
+  }
+  .key-point-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .key-point {
+    border: 1px solid rgba(10,31,68,0.1);
+    border-radius: 8px;
+    background: white;
+    padding: 10px;
+  }
+  .key-point b {
+    display: block;
+    color: var(--navy);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+  }
+  .key-point span {
+    color: var(--body);
+    font-size: 12px;
+    line-height: 1.45;
   }
   .rationale-score {
     display: grid;
@@ -615,7 +674,112 @@
   .rationale-item .points {
     color: var(--orange);
     font-weight: 700;
-    white-space: nowrap;
+    max-width: 240px;
+    text-align: right;
+  }
+  .needs-field-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .needs-field {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    background: rgba(10,31,68,0.025);
+  }
+  .needs-field select {
+    margin-top: 7px;
+  }
+  .research-links {
+    display: grid;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .research-links a {
+    color: var(--navy);
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 10px;
+    background: white;
+  }
+  .research-links a:hover { color: var(--orange); border-color: rgba(232,69,10,0.28); }
+  .ai-enrichment {
+    margin-top: 16px;
+    border: 1px solid rgba(10,31,68,0.12);
+    border-radius: 10px;
+    background: white;
+    padding: 14px;
+  }
+  .ai-enrichment-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .ai-enrichment-title {
+    color: var(--navy);
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .ai-enrichment-copy {
+    color: var(--body);
+    font-size: 12px;
+    line-height: 1.55;
+    margin-top: 3px;
+    max-width: 470px;
+  }
+  .ai-enrichment-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .ai-enrichment-actions button {
+    padding: 9px 11px;
+    font-size: 12px;
+  }
+  .ai-output {
+    margin-top: 12px;
+    border-top: 1px solid rgba(10,31,68,0.08);
+    padding-top: 12px;
+    color: var(--body);
+    font-size: 12px;
+  }
+  .ai-output-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .ai-output-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: rgba(10,31,68,0.025);
+    padding: 10px 11px;
+  }
+  .ai-output-card b {
+    display: block;
+    color: var(--navy);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 5px;
+  }
+  .ai-output ul {
+    margin: 7px 0 0 18px;
+    padding: 0;
+  }
+  .ai-output li { margin-bottom: 5px; }
+  .ai-prompt-box {
+    margin-top: 10px;
+    min-height: 130px;
+    font-size: 11px;
+    line-height: 1.45;
   }
   .rationale-note {
     border-left: 3px solid var(--orange);
@@ -650,6 +814,9 @@
     .section-title { font-size: 25px; }
     .overview-grid { grid-template-columns: 1fr; }
     .overview-cell { border-right: none; }
+    .needs-field-grid,
+    .ai-output-grid,
+    .key-point-grid { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -730,19 +897,6 @@
           <h3 id="anchor-name">Anchor district</h3>
           <p id="anchor-context">Anchor context loads with the selected state.</p>
         </div>
-      </div>
-    </section>
-
-    <section class="section-white">
-      <div class="page-wrap">
-        <div class="eyebrow">Territory Map</div>
-        <h2 class="section-title">Districts by Effective Tier</h2>
-        <p class="section-sub">Circle color follows the effective tier: AE tier when set, otherwise the suggested tier. Circle size follows secondary enrollment.</p>
-        <div class="territory-map-card" id="territory-map-card">
-          <div id="territory-map"></div>
-          <div class="map-tooltip" id="map-tooltip"></div>
-        </div>
-        <div class="map-legend" id="map-legend"></div>
       </div>
     </section>
 
@@ -833,9 +987,8 @@
                 <th>Total</th>
                 <th>Secondary</th>
                 <th>Schools</th>
-                <th>Suggested</th>
+                <th>Needs</th>
                 <th>Signals</th>
-                <th>AE tier</th>
                 <th>Quarter</th>
                 <th>Status</th>
                 <th>Next action</th>
@@ -847,17 +1000,31 @@
         </div>
       </div>
     </section>
+
+    <section class="section-white">
+      <div class="page-wrap">
+        <div class="eyebrow">Territory Map</div>
+        <h2 class="section-title">Districts by Effective Tier</h2>
+        <p class="section-sub">Circle color follows the effective tier: AE tier when set, otherwise the suggested tier. Circle size follows secondary enrollment.</p>
+        <div class="territory-map-card" id="territory-map-card">
+          <div id="territory-map"></div>
+          <div class="map-tooltip" id="map-tooltip"></div>
+        </div>
+        <div class="map-legend" id="map-legend"></div>
+      </div>
+    </section>
   </main>
 
   <div class="rationale-modal" id="rationale-modal" hidden>
     <div class="rationale-panel" role="dialog" aria-modal="true" aria-labelledby="rationale-title">
       <div class="rationale-head">
         <div>
-          <div class="rationale-title" id="rationale-title">Tier rationale</div>
-          <div class="rationale-subtitle" id="rationale-subtitle">District scoring details</div>
+          <div class="rationale-title" id="rationale-title">District needs summary</div>
+          <div class="rationale-subtitle" id="rationale-subtitle">Math, platform, curriculum, and planning context</div>
         </div>
-        <button class="icon-button" id="rationale-close" type="button" aria-label="Close rationale">×</button>
+        <button class="icon-button" id="rationale-close" type="button" aria-label="Close district needs summary">×</button>
       </div>
+      <div class="district-key-summary" id="district-key-summary"></div>
       <div class="rationale-score">
         <div class="rationale-total">
           <strong id="rationale-points">—</strong>
@@ -32760,7 +32927,8 @@ function districtsForProfile(config) {
 }
 
 function normalizeStateCode(stateCode) {
-  return STATE_ALIASES[stateCode] || stateCode;
+  const normalized = String(stateCode || '').trim().toUpperCase();
+  return STATE_ALIASES[normalized] || normalized;
 }
 
 const STATE_PROFILES = Object.fromEntries(
@@ -33145,6 +33313,27 @@ function optionHtml(options, selected) {
   return options.map(option => '<option value="' + escapeHtml(option.value) + '"' + (option.value === selected ? ' selected' : '') + '>' + escapeHtml(option.label) + '</option>').join('');
 }
 
+function reviewHashForKey(key) {
+  return '#review:' + encodeURIComponent(key);
+}
+
+function reviewKeyFromHash() {
+  if (!location.hash.startsWith('#review:')) return '';
+  try {
+    return decodeURIComponent(location.hash.slice('#review:'.length));
+  } catch (err) {
+    return '';
+  }
+}
+
+function stateCodeFromPlanKey(key) {
+  return normalizeStateCode(String(key || '').split(':')[0]);
+}
+
+function searchUrl(query) {
+  return 'https://www.google.com/search?q=' + encodeURIComponent(query);
+}
+
 function normalize(value) {
   return String(value ?? '').trim().toLowerCase();
 }
@@ -33277,6 +33466,7 @@ function renderDistrictTable() {
     const effective = effectiveTier(district);
     const penetration = targetPenetrationPct(district);
     const key = escapeHtml(plan.key);
+    const reviewHref = reviewHashForKey(plan.key);
     const anchor = district.anchor ? '<span class="mini-pill">Anchor</span>' : '';
     return '<tr data-key="' + key + '">'
       + '<td class="district-cell"><strong>' + escapeHtml(district.name) + '</strong><span>' + escapeHtml(district.city || 'Unknown city') + ' · LEA ' + escapeHtml(district.leaId || 'N/A') + '</span>' + anchor
@@ -33285,22 +33475,18 @@ function renderDistrictTable() {
       + '<td class="numeric">' + fullN(district.total) + '</td>'
       + '<td class="numeric">' + fullN(district.secondary) + '</td>'
       + '<td class="numeric">' + fullN(district.secondarySchools || 0) + '</td>'
-      + '<td><details class="tier-rationale-details"><summary onclick="this.parentElement.open = !this.parentElement.open; return false;"><span class="tier-chip tier-' + suggested + '">' + tierMeta(suggested).label + '</span></summary>' + inlineRationaleHtml(district) + '</details></td>'
+      + '<td><a class="needs-review-button" href="' + escapeHtml(reviewHref) + '">Review needs</a><div class="suggested-mini">Suggested: ' + escapeHtml(tierMeta(suggested).label) + '<br>Effective: ' + escapeHtml(tierMeta(effective).label) + '</div></td>'
       + '<td><div class="signal-stack">'
       + signalSelectHtml('mathNeed', plan.mathNeed, 'planner-math', key)
       + signalSelectHtml('lms', plan.lms, 'planner-lms', key)
       + signalSelectHtml('curriculum', plan.curriculum, 'planner-curriculum', key)
       + '</div></td>'
-      + '<td><select class="planner-input planner-tier" data-key="' + key + '">' + optionHtml(TIER_OPTIONS, plan.tier) + '</select><div class="effective-tier">Effective: ' + escapeHtml(tierMeta(effective).label) + '</div></td>'
       + '<td><select class="planner-input planner-quarter" data-key="' + key + '">' + optionHtml(QUARTER_OPTIONS, plan.quarter) + '</select></td>'
       + '<td><select class="planner-input planner-status" data-key="' + key + '">' + optionHtml(STATUS_OPTIONS, plan.status) + '</select></td>'
       + '<td><select class="planner-input planner-next" data-key="' + key + '">' + optionHtml(NEXT_ACTION_OPTIONS, plan.nextAction) + '</select></td>'
       + '<td><textarea class="planner-note" data-key="' + key + '" rows="2" placeholder="Add account note">' + escapeHtml(plan.note) + '</textarea></td>'
       + '</tr>';
   }).join('');
-  tbody.querySelectorAll('[data-rationale-key]').forEach(button => {
-    button.addEventListener('click', () => openRationale(findDistrictByPlanKey(button.dataset.rationaleKey)));
-  });
 }
 
 function renderMapLegend() {
@@ -33421,7 +33607,11 @@ async function buildTerritoryMap() {
       .on('mouseleave', () => {
         if (tooltip) tooltip.style.display = 'none';
       })
-      .on('click', (event, d) => openRationale(d.district));
+      .on('click', (event, d) => {
+        const key = planningKey(d.district);
+        history.replaceState(null, '', reviewHashForKey(key));
+        openRationale(d.district);
+      });
   } catch (err) {
     if (token === mapRenderToken) map.innerHTML = '<div class="map-empty">Map data could not be loaded. Check the network connection and try again.</div>';
   }
@@ -33431,29 +33621,335 @@ function findDistrictByPlanKey(key) {
   return currentProfile.districts.find(district => planningKey(district) === key);
 }
 
+function researchLinksHtml(district) {
+  const stateName = currentProfile.stateName.replace(' Rural Schools', '');
+  const base = `${district.name} ${stateName}`;
+  const links = [
+    { label: 'Search math state test score / report card', query: `${base} math state test scores district report card` },
+    { label: 'Search LMS evidence', query: `${base} Canvas Schoology Google Classroom LMS` },
+    { label: 'Search math curriculum evidence', query: `${base} Illustrative Math Open Up Resources Big Ideas math curriculum` }
+  ];
+  return '<div class="research-links">' + links.map(link =>
+    '<a href="' + escapeHtml(searchUrl(link.query)) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(link.label) + '</a>'
+  ).join('') + '</div>';
+}
+
+function modalNeedsFieldsHtml(district) {
+  const plan = getDistrictPlan(district);
+  return '<div class="needs-field-grid">'
+    + '<div class="needs-field"><label class="field-label">AE tier</label><select class="planner-input modal-tier">' + optionHtml(TIER_OPTIONS, plan.tier) + '</select></div>'
+    + '<div class="needs-field"><label class="field-label">Math state test signal</label><select class="planner-input modal-math">' + optionHtml(SIGNAL_OPTIONS.mathNeed, plan.mathNeed) + '</select></div>'
+    + '<div class="needs-field"><label class="field-label">Listed LMS</label><select class="planner-input modal-lms">' + optionHtml(SIGNAL_OPTIONS.lms, plan.lms) + '</select></div>'
+    + '<div class="needs-field"><label class="field-label">Math curriculum</label><select class="planner-input modal-curriculum">' + optionHtml(SIGNAL_OPTIONS.curriculum, plan.curriculum) + '</select></div>'
+    + '</div>';
+}
+
+function districtKeySummaryHtml(district) {
+  const details = tierScoreDetails(district, currentProfile);
+  const plan = getDistrictPlan(district);
+  const effective = effectiveTier(district);
+  const rank = details.index >= 0 ? details.index + 1 : null;
+  const anchor = findAnchor(currentProfile);
+  let anchorText = 'No planning anchor is set for this profile.';
+  if (anchor && planningKey(anchor) === planningKey(district)) {
+    anchorText = 'This district is the current planning anchor for nearby account sequencing.';
+  } else if (anchor) {
+    const miles = Math.round(dist(anchor, district));
+    anchorText = Number.isFinite(miles) ? `${miles} miles from ${anchor.short}, the current planning anchor.` : `${anchor.short} is the current planning anchor.`;
+  }
+  const mathSignal = signalOption('mathNeed', plan.mathNeed).label.replace('Math need: ', '');
+  const lmsSignal = signalOption('lms', plan.lms).label.replace('LMS: ', '');
+  const curriculumSignal = signalOption('curriculum', plan.curriculum).label.replace('Curriculum: ', '');
+  const validationGaps = [
+    plan.mathNeed ? '' : 'math scores',
+    plan.lms ? '' : 'LMS',
+    plan.curriculum ? '' : 'math curriculum'
+  ].filter(Boolean);
+  const validationText = validationGaps.length
+    ? 'Needs validation for ' + validationGaps.join(', ') + '.'
+    : 'Core signals have been marked by the AE; source validation is still recommended.';
+  const intro = `${district.name} is a ${district.leaType || 'public LEA'} in ${district.city || 'the selected state'} with ${fullN(district.total)} total students, ${fullN(district.secondary)} secondary students, and ${fullN(district.secondarySchools || 0)} NCES middle/high schools.`;
+  return '<p>' + escapeHtml(intro) + '</p>'
+    + '<div class="key-point-grid">'
+    + '<div class="key-point"><b>Priority shape</b><span>' + escapeHtml((rank ? `Ranked #${rank} of ${currentProfile.districts.length} by secondary enrollment. ` : '') + `Suggested ${tierMeta(details.tier).label}; effective ${tierMeta(effective).label}.`) + '</span></div>'
+    + '<div class="key-point"><b>Opportunity</b><span>' + escapeHtml(`${fmt(modeledOpportunity(district))} modeled at ${targetPenetrationPct(district)}% target penetration; ${fmt(fullOpportunity(district))} full profile TAM.`) + '</span></div>'
+    + '<div class="key-point"><b>Coverage context</b><span>' + escapeHtml(anchorText) + '</span></div>'
+    + '<div class="key-point"><b>Math signal</b><span>' + escapeHtml(mathSignal) + '</span></div>'
+    + '<div class="key-point"><b>Platform / curriculum</b><span>' + escapeHtml(`LMS: ${lmsSignal}. Curriculum: ${curriculumSignal}.`) + '</span></div>'
+    + '<div class="key-point"><b>AE next check</b><span>' + escapeHtml(validationText) + '</span></div>'
+    + '</div>';
+}
+
+function aiEnrichmentEndpoint() {
+  return window.DERIVITA_AI_ENRICHMENT_ENDPOINT || '';
+}
+
+function optionLabel(options, value) {
+  return (options.find(option => option.value === value) || options[0] || { label: '' }).label;
+}
+
+function aiEnrichmentPayload(district) {
+  const details = tierScoreDetails(district, currentProfile);
+  const plan = getDistrictPlan(district);
+  return {
+    profile: {
+      stateCode: currentProfile.stateCode,
+      stateName: currentProfile.stateName,
+      eventLabel: currentProfile.eventLabel
+    },
+    district: {
+      name: district.name,
+      city: district.city,
+      leaId: district.leaId || '',
+      leaType: district.leaType || '',
+      totalStudents: district.total,
+      secondaryStudents: district.secondary,
+      middleHighSchools: district.secondarySchools || 0,
+      fullOpportunity: Math.round(fullOpportunity(district)),
+      modeledOpportunity: Math.round(modeledOpportunity(district)),
+      targetPenetrationPct: targetPenetrationPct(district)
+    },
+    currentSignals: {
+      mathNeed: optionLabel(SIGNAL_OPTIONS.mathNeed, plan.mathNeed),
+      lms: optionLabel(SIGNAL_OPTIONS.lms, plan.lms),
+      curriculum: optionLabel(SIGNAL_OPTIONS.curriculum, plan.curriculum),
+      aeTier: plan.tier ? tierMeta(plan.tier).label : '',
+      suggestedTier: tierMeta(details.tier).label,
+      effectiveTier: tierMeta(effectiveTier(district)).label,
+      score: Math.round(details.score)
+    },
+    instructions: [
+      'Use public district/state sources only.',
+      'Find and summarize math state test performance, listed LMS, adopted math curriculum, and other sales-relevant context.',
+      'Return source URLs, confidence level, and fields that still need AE validation.',
+      'Do not present inferred LMS/curriculum/test-score data as confirmed unless a source supports it.'
+    ]
+  };
+}
+
+function aiPromptText(district) {
+  const payload = aiEnrichmentPayload(district);
+  return [
+    'Create an AE district needs brief for Derivita.',
+    '',
+    'District context:',
+    JSON.stringify(payload, null, 2),
+    '',
+    'Output format:',
+    '- Math test score summary with source URL and confidence.',
+    '- Listed LMS signal with source URL and confidence.',
+    '- Math curriculum signal with source URL and confidence.',
+    '- Other pertinent information for outreach.',
+    '- Suggested tier rationale, but make clear the AE chooses the final tier.',
+    '- Validation checklist for anything uncertain.'
+  ].join('\n');
+}
+
+function aiLocalBriefHtml(district, note) {
+  const payload = aiEnrichmentPayload(district);
+  const signals = payload.currentSignals;
+  const validationItems = [
+    'Confirm current state math assessment results and grade-band gaps from the state report card.',
+    'Confirm the district LMS from district technology pages, help docs, board packets, or HubSpot notes.',
+    'Confirm adopted math curriculum from curriculum pages, board adoption documents, or public course guides.',
+    'Check HubSpot for contacts, current customer status, open opportunities, and owner notes before outreach.'
+  ];
+  const outreachAngles = [
+    `${signals.effectiveTier} planning account with ${fmt(payload.district.modeledOpportunity)} modeled opportunity at ${payload.district.targetPenetrationPct}% target penetration.`,
+    `${fullN(payload.district.secondaryStudents)} secondary students across ${fullN(payload.district.middleHighSchools)} NCES middle/high schools gives this account enough scale for a district-level math workflow conversation.`,
+    signals.mathNeed.includes('validate') ? 'Lead with discovery on math priorities until state-score evidence is validated.' : `Math signal currently marked as ${signals.mathNeed}; tailor urgency and proof points accordingly.`,
+    signals.lms.includes('validate') ? 'Keep LMS claims out of outreach until validated.' : `Use ${signals.lms} as an implementation-fit angle if the source is current.`,
+    signals.curriculum.includes('validate') ? 'Keep curriculum alignment broad until validated.' : `Use ${signals.curriculum} as the curriculum-context opening if confirmed.`
+  ];
+  return '<div class="ai-output">'
+    + '<strong>AI-assisted AE brief</strong>'
+    + '<p>' + escapeHtml(note) + ' Treat this as a research starting point, not sourced truth.</p>'
+    + '<div class="ai-output-grid">'
+    + '<div class="ai-output-card"><b>Account hypothesis</b>' + escapeHtml(outreachAngles[0]) + '<br>' + escapeHtml(outreachAngles[1]) + '</div>'
+    + '<div class="ai-output-card"><b>Tier guidance</b>Suggested ' + escapeHtml(signals.suggestedTier) + ' from current scoring; effective tier is ' + escapeHtml(signals.effectiveTier) + '. AE override remains the final decision.</div>'
+    + '<div class="ai-output-card"><b>Signal posture</b>' + escapeHtml(outreachAngles.slice(2).join(' ')) + '</div>'
+    + '<div class="ai-output-card"><b>Confidence</b>Low until math, LMS, and curriculum are validated from public sources or HubSpot. NCES enrollment and school-count fields are the strongest current data.</div>'
+    + '</div>'
+    + '<p><strong>Validation checklist</strong></p>'
+    + '<ul>' + validationItems.map(item => '<li>' + escapeHtml(item) + '</li>').join('') + '</ul>'
+    + '</div>';
+}
+
+function aiEnrichmentHtml(district) {
+  return '<div class="ai-enrichment">'
+    + '<div class="ai-enrichment-head">'
+    + '<div><div class="ai-enrichment-title">AI enrichment</div><div class="ai-enrichment-copy">Generate an AE research brief from NCES data and validated signals. If a secure enrichment endpoint is configured, this can call it; otherwise it creates an AI-ready local brief and prompt.</div></div>'
+    + '<div class="ai-enrichment-actions">'
+    + '<button class="primary-button ai-generate" type="button">Generate AE brief</button>'
+    + '<button class="secondary-button ai-copy-prompt" type="button">Copy AI prompt</button>'
+    + '</div></div>'
+    + '<div class="ai-output" id="ai-enrichment-output">No AI brief generated yet. Use the brief as a planning aid and validate sources before outreach.</div>'
+    + '<textarea class="ai-prompt-box" id="ai-prompt-box" readonly hidden>' + escapeHtml(aiPromptText(district)) + '</textarea>'
+    + '</div>';
+}
+
+function renderExternalAiPayload(payload) {
+  if (!payload || typeof payload !== 'object') return '';
+  const sources = Array.isArray(payload.sources) ? payload.sources : [];
+  const findings = Array.isArray(payload.findings) ? payload.findings : [];
+  return '<div class="ai-output">'
+    + '<strong>AI-assisted AE brief</strong>'
+    + '<p>' + escapeHtml(payload.summary || 'AI enrichment returned. Validate all sources before outreach.') + '</p>'
+    + (findings.length ? '<ul>' + findings.map(item => '<li>' + escapeHtml(item) + '</li>').join('') + '</ul>' : '')
+    + (sources.length ? '<p><strong>Sources</strong></p><ul>' + sources.map(source => '<li>' + (source.url ? '<a href="' + escapeHtml(source.url) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(source.title || source.url) + '</a>' : escapeHtml(source.title || source)) + '</li>').join('') + '</ul>' : '')
+    + '<p><strong>Confidence:</strong> ' + escapeHtml(payload.confidence || 'Needs AE validation') + '</p>'
+    + '</div>';
+}
+
 function openRationale(district) {
   if (!district) return;
   const details = tierScoreDetails(district, currentProfile);
   const effective = effectiveTier(district);
-  const manualTier = getDistrictPlan(district).tier;
+  const plan = getDistrictPlan(district);
   const modal = document.getElementById('rationale-modal');
+  if (modal) modal.dataset.key = planningKey(district);
   setText('rationale-title', district.name);
-  setText('rationale-subtitle', `${district.city || 'Unknown city'} · Suggested ${tierMeta(details.tier).label}${manualTier ? ` · AE override ${tierMeta(manualTier).label}` : ''}`);
+  setText('rationale-subtitle', `${district.city || 'Unknown city'} · LEA ${district.leaId || 'N/A'} · ${currentProfile.stateName}`);
   setText('rationale-points', Math.round(details.score));
-  setText('rationale-tier', `Effective: ${tierMeta(effective).label}`);
+  setText('rationale-tier', `Suggested: ${tierMeta(details.tier).label} · Effective: ${tierMeta(effective).label}`);
+  const summary = document.getElementById('district-key-summary');
+  if (summary) summary.innerHTML = districtKeySummaryHtml(district);
   const list = document.getElementById('rationale-list');
   if (list) {
-    list.innerHTML = details.items.map(item =>
-      '<div class="rationale-item"><div><b>' + escapeHtml(item.label) + '</b><br>' + escapeHtml(item.reason) + '</div><div class="points">' + (item.points > 0 ? '+' : '') + item.points + '</div></div>'
+    const sourceItems = [
+      { label: 'Math state test score', value: signalOption('mathNeed', plan.mathNeed).label.replace('Math need: ', ''), reason: signalOption('mathNeed', plan.mathNeed).reason },
+      { label: 'Listed LMS', value: signalOption('lms', plan.lms).label.replace('LMS: ', ''), reason: signalOption('lms', plan.lms).reason },
+      { label: 'Math curriculum', value: signalOption('curriculum', plan.curriculum).label.replace('Curriculum: ', ''), reason: signalOption('curriculum', plan.curriculum).reason },
+      { label: 'Scale / schools', value: `${fullN(district.secondary)} secondary students · ${fullN(district.secondarySchools || 0)} middle/high schools`, reason: `${district.leaType || 'LEA type unknown'} with ${fullN(district.total)} total NCES students.` },
+      { label: 'Opportunity model', value: `${fmt(modeledOpportunity(district))} modeled · ${fmt(fullOpportunity(district))} full`, reason: `${targetPenetrationPct(district)}% target penetration at $${getRate()} per secondary student.` }
+    ];
+    list.innerHTML = sourceItems.map(item =>
+      '<div class="rationale-item"><div><b>' + escapeHtml(item.label) + '</b><br>' + escapeHtml(item.reason) + '</div><div class="points">' + escapeHtml(item.value) + '</div></div>'
     ).join('');
   }
-  setText('rationale-note', 'Scores use validated AE-entered signals when available. Math scores, LMS, and curriculum default to “Needs validation” so the tool does not invent district intelligence. Update the signal fields in the table to change the suggested tier and map color.');
+  const note = document.getElementById('rationale-note');
+  if (note) {
+    note.innerHTML = '<strong>Web intelligence status:</strong> Math scores, LMS, and curriculum should be validated from public district/state sources or a future backend enrichment job. Use the research links below, then set the signals and AE tier here.'
+      + modalNeedsFieldsHtml(district)
+      + aiEnrichmentHtml(district)
+      + researchLinksHtml(district);
+    bindNeedsModalControls(district);
+    bindAiEnrichmentControls(district);
+  }
   if (modal) modal.hidden = false;
 }
 
-function closeRationale() {
+function bindAiEnrichmentControls(district) {
+  const modal = document.getElementById('rationale-modal');
+  const output = modal?.querySelector('#ai-enrichment-output');
+  const promptBox = modal?.querySelector('#ai-prompt-box');
+  modal?.querySelector('.ai-copy-prompt')?.addEventListener('click', async event => {
+    const prompt = aiPromptText(district);
+    try {
+      await navigator.clipboard.writeText(prompt);
+      event.target.textContent = 'Prompt copied';
+      if (promptBox) promptBox.hidden = true;
+    } catch (err) {
+      if (promptBox) {
+        promptBox.hidden = false;
+        promptBox.value = prompt;
+        promptBox.focus();
+      }
+      event.target.textContent = 'Prompt shown';
+    }
+  });
+  modal?.querySelector('.ai-generate')?.addEventListener('click', async event => {
+    if (!output) return;
+    const endpoint = aiEnrichmentEndpoint();
+    event.target.disabled = true;
+    event.target.textContent = 'Generating...';
+    output.innerHTML = '<div class="ai-output">Generating district brief...</div>';
+    if (!endpoint) {
+      output.innerHTML = aiLocalBriefHtml(district, 'No secure AI endpoint is configured in this static page, so this brief uses local NCES data and current AE-entered signals.');
+      event.target.disabled = false;
+      event.target.textContent = 'Regenerate brief';
+      return;
+    }
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(aiEnrichmentPayload(district))
+      });
+      if (!response.ok) throw new Error('AI enrichment endpoint returned ' + response.status);
+      const payload = await response.json();
+      output.innerHTML = renderExternalAiPayload(payload) || aiLocalBriefHtml(district, 'AI endpoint returned an unexpected response, so this local planning brief is shown instead.');
+    } catch (err) {
+      output.innerHTML = aiLocalBriefHtml(district, 'AI enrichment endpoint could not be reached, so this local planning brief is shown instead.');
+    } finally {
+      event.target.disabled = false;
+      event.target.textContent = 'Regenerate brief';
+    }
+  });
+}
+
+function bindNeedsModalControls(district) {
+  const key = planningKey(district);
+  const modal = document.getElementById('rationale-modal');
+  modal?.querySelector('.modal-tier')?.addEventListener('change', event => {
+    updateDistrictPlan(key, { tier: event.target.value });
+    renderAnnualSummary();
+    renderDistrictTable();
+    buildTerritoryMap();
+    openRationale(findDistrictByPlanKey(key));
+  });
+  modal?.querySelector('.modal-math')?.addEventListener('change', event => {
+    updateDistrictPlan(key, { mathNeed: event.target.value });
+    renderAnnualSummary();
+    renderDistrictTable();
+    buildTerritoryMap();
+    openRationale(findDistrictByPlanKey(key));
+  });
+  modal?.querySelector('.modal-lms')?.addEventListener('change', event => {
+    updateDistrictPlan(key, { lms: event.target.value });
+    renderAnnualSummary();
+    renderDistrictTable();
+    buildTerritoryMap();
+    openRationale(findDistrictByPlanKey(key));
+  });
+  modal?.querySelector('.modal-curriculum')?.addEventListener('change', event => {
+    updateDistrictPlan(key, { curriculum: event.target.value });
+    renderAnnualSummary();
+    renderDistrictTable();
+    buildTerritoryMap();
+    openRationale(findDistrictByPlanKey(key));
+  });
+}
+
+function closeRationale(updateHash = true) {
   const modal = document.getElementById('rationale-modal');
   if (modal) modal.hidden = true;
+  if (updateHash && location.hash.startsWith('#review:')) {
+    history.replaceState(null, '', '#' + currentProfile.stateCode);
+  }
+}
+
+function openReviewFromHash() {
+  const key = reviewKeyFromHash();
+  if (!key) return false;
+  const stateCode = stateCodeFromPlanKey(key);
+  if (STATE_PROFILES[stateCode] && stateCode !== currentProfile.stateCode) {
+    applyProfile(stateCode, false);
+  }
+  const district = findDistrictByPlanKey(key);
+  if (district) openRationale(district);
+  return Boolean(district);
+}
+
+function handleRouteFromHash() {
+  const reviewKey = reviewKeyFromHash();
+  if (reviewKey) {
+    openReviewFromHash();
+    return;
+  }
+  closeRationale(false);
+  const next = normalizeStateCode(location.hash.replace('#', '') || 'CO');
+  if (STATE_PROFILES[next] && next !== currentProfile.stateCode) applyProfile(next, false);
 }
 
 function renderAll() {
@@ -33536,9 +34032,14 @@ function bindPlannerControls() {
   document.getElementById('district-table-body')?.addEventListener('input', handleTableChange);
   document.getElementById('district-table-body')?.addEventListener('change', handleTableChange);
   document.getElementById('district-table-body')?.addEventListener('click', event => {
-    const button = event.target.closest('[data-rationale-key]');
-    if (!button) return;
-    openRationale(findDistrictByPlanKey(button.dataset.rationaleKey));
+    const link = event.target.closest('.needs-review-button');
+    if (!link) return;
+    const key = link.closest('tr')?.dataset?.key;
+    const district = findDistrictByPlanKey(key);
+    if (!district) return;
+    event.preventDefault();
+    history.replaceState(null, '', reviewHashForKey(key));
+    openRationale(district);
   });
   document.getElementById('rationale-close')?.addEventListener('click', closeRationale);
   document.getElementById('rationale-modal')?.addEventListener('click', event => {
@@ -33659,14 +34160,13 @@ document.addEventListener('DOMContentLoaded', () => {
   bindLoginGate();
   populateStateSelector();
   bindPlannerControls();
-  const initial = normalizeStateCode(location.hash.replace('#', '') || 'CO');
+  const reviewKey = reviewKeyFromHash();
+  const initial = reviewKey ? stateCodeFromPlanKey(reviewKey) : normalizeStateCode(location.hash.replace('#', '') || 'CO');
   applyProfile(STATE_PROFILES[initial] ? initial : 'CO', false);
+  if (reviewKey) openReviewFromHash();
 });
 
-window.addEventListener('hashchange', () => {
-  const next = normalizeStateCode(location.hash.replace('#', '') || 'CO');
-  if (STATE_PROFILES[next] && next !== currentProfile.stateCode) applyProfile(next, false);
-});
+window.addEventListener('hashchange', handleRouteFromHash);
 
 </script>
 </body>
