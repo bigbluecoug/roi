@@ -102,11 +102,10 @@ class DistrictNeedsSummaryController extends Controller
         if ($question) {
             return implode("\n", [
                 'Answer the AE follow-up question for Derivita using web search and public sources.',
-                'Stay focused on these evidence areas only: secondary math state-test performance, the district LMS, and the district math curriculum/adoption evidence.',
-                'Use official state report cards or state assessment pages for math scores when possible. Use district technology/help/procurement pages for LMS evidence. Use curriculum pages, board packets, course guides, or adoption documents for math curriculum evidence.',
+                'Keep the same simple scope: secondary math scores, district LMS, and district math curriculum.',
                 'Do not guess. If a claim is not source-backed, say it needs validation.',
-                'Cite source URLs in the sources array. Keep the answer concise and useful for an Account Executive.',
-                'Brevity rules: answer max 3 short bullets or 60 words total. Each summary/evidence field max 18 words. Each validation item max 10 words.',
+                'Cite source URLs in the sources array.',
+                'Answer in 3 short bullets or fewer.',
                 'Return JSON only in the requested schema.',
                 '',
                 'AE question:',
@@ -118,16 +117,13 @@ class DistrictNeedsSummaryController extends Controller
         }
 
         return implode("\n", [
-            'Create a focused source-backed district evidence review for Derivita.',
-            'Use web search and public sources only.',
-            'Only cover these three areas:',
-            '1. Secondary math state-test performance from official state report cards, state assessment pages, or district accountability pages. Prefer grades 6-12, middle school math, Algebra, high school math, or district-level secondary math evidence. If only broader math evidence is available, label that limitation clearly.',
-            '2. Listed LMS evidence, especially Canvas, Schoology, Google Classroom, or another platform. Prefer district technology/help pages, login portals, board packets, procurement pages, or public documentation.',
-            '3. Math curriculum evidence, especially Illustrative Math, Open Up Resources/OUR, Big Ideas, or another adopted math curriculum. Prefer curriculum pages, board adoption documents, course guides, or public curriculum maps.',
-            'Do not include account sizing, HubSpot, outreach angle, tier recommendation, standards timing, or broad sales advice unless it directly explains one of the three evidence areas.',
-            'Do not guess. If math scores, LMS, or curriculum are not source-backed, mark that section as Needs validation and explain where the AE should investigate next.',
-            'Cite source URLs in both the relevant section and the sources array whenever possible.',
-            'Brevity rules: overall summary max 35 words. Each section summary max 16 words. Each evidence field max 18 words. Validation checklist max 3 items, max 10 words each. Source evidence max 12 words.',
+            'Use web search and public sources to answer only these three questions for the district:',
+            '1. What are the secondary math scores for this district?',
+            '2. What LMS is used by this district?',
+            '3. Is there an adopted math curriculum for this district?',
+            'Do not answer anything else.',
+            'Do not guess. If a question cannot be answered from a source, say Needs validation.',
+            'Use one short sentence for each answer. Cite source URLs in the section and sources array when possible.',
             'Return JSON only in the requested schema.',
             '',
             'Planner payload:',

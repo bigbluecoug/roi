@@ -33829,12 +33829,11 @@ function aiEnrichmentPayload(district) {
       reason: item.reason
     })),
     instructions: [
-      'Use public district/state sources only.',
-      'Find and summarize only secondary math state-test performance, listed LMS, and adopted math curriculum.',
-      'Prioritize official state report cards, district technology/help docs, board packets, curriculum pages, course guides, Canvas, Schoology, Google Classroom, Illustrative Math, Open Up Resources/OUR, and Big Ideas.',
-      'Return source URLs, confidence level, validation gaps, and extremely concise AE-ready evidence.',
-      'Limit the overall summary to 35 words. Limit each evidence card to one short sentence plus status/confidence.',
-      'Do not present inferred LMS/curriculum/test-score data as confirmed unless a source supports it.'
+      'Ask only three questions.',
+      '1. What are the secondary math scores for this district?',
+      '2. What LMS is used by this district?',
+      '3. Is there an adopted math curriculum for this district?',
+      'Answer each in one short source-backed sentence. If not found, say Needs validation.'
     ]
   };
 }
@@ -33842,18 +33841,16 @@ function aiEnrichmentPayload(district) {
 function aiPromptText(district) {
   const payload = aiEnrichmentPayload(district);
   return [
-    'Create a focused district evidence review for Derivita.',
+    'Answer these three questions for Derivita using public sources.',
+    '',
+    '1. What are the secondary math scores for this district?',
+    '2. What LMS is used by this district?',
+    '3. Is there an adopted math curriculum for this district?',
+    '',
+    'Use one short sentence per answer. Cite source URLs. If a source cannot be found, say Needs validation.',
     '',
     'District context:',
-    JSON.stringify(payload, null, 2),
-    '',
-    'Output format:',
-    '- Secondary math state test score summary with source URL, confidence, and validation status.',
-    '- Listed LMS signal with source URL, confidence, and validation status.',
-    '- Math curriculum signal with source URL, confidence, and validation status.',
-    '- Cited sources and short evidence.',
-    '- Validation checklist for anything uncertain.',
-    '- No tier recommendation, HubSpot summary, account sizing, or broad outreach advice.'
+    JSON.stringify(payload, null, 2)
   ].join('\n');
 }
 
@@ -33872,7 +33869,7 @@ function aiLocalBriefHtml(district, note) {
 function aiEnrichmentHtml(district) {
   return '<div class="ai-enrichment">'
     + '<div class="ai-enrichment-head">'
-    + '<div><div class="ai-enrichment-title">AI evidence review</div><div class="ai-enrichment-copy">The connected API automatically searches public sources for secondary math scores, the listed LMS, and math curriculum. Sources are cited when found.</div></div>'
+    + '<div><div class="ai-enrichment-title">AI evidence review</div><div class="ai-enrichment-copy">The API asks three questions: secondary math scores, district LMS, and adopted math curriculum. Sources are cited when found.</div></div>'
     + '<div class="ai-enrichment-actions">'
     + '<button class="primary-button ai-generate" type="button">Refresh evidence</button>'
     + '<button class="secondary-button ai-copy-prompt" type="button">Copy AI prompt</button>'
