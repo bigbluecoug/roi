@@ -397,7 +397,7 @@
     overflow-x: auto;
     box-shadow: var(--card-shadow);
   }
-  table { width: 100%; border-collapse: collapse; min-width: 1060px; }
+  table { width: 100%; border-collapse: collapse; min-width: 1160px; }
   th {
     background: rgba(10,31,68,0.04);
     color: var(--muted);
@@ -459,14 +459,6 @@
     width: 100%;
     accent-color: var(--orange);
   }
-  .district-review-actions {
-    display: grid;
-    gap: 6px;
-    margin-top: 10px;
-  }
-  .district-review-actions .needs-review-button {
-    width: 100%;
-  }
   .numeric { text-align: right; font-weight: 700; }
   .school-count-button {
     border: 1px solid transparent;
@@ -521,6 +513,9 @@
     color: var(--muted);
     font-size: 10px;
     margin-top: 6px;
+  }
+  .needs-cell {
+    min-width: 124px;
   }
   .tier-rationale-button {
     border: none;
@@ -1115,6 +1110,7 @@
                 <th>Total</th>
                 <th>Secondary</th>
                 <th>Secondary schools (6-12)</th>
+                <th>Needs</th>
                 <th>Signals</th>
               </tr>
             </thead>
@@ -33554,7 +33550,7 @@ function renderDistrictTable() {
   setText('total-count', fullN(currentProfile.districts.length));
   if (!tbody) return;
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No districts match the current filters.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No districts match the current filters.</td></tr>';
     return;
   }
   tbody.innerHTML = rows.map(district => {
@@ -33567,11 +33563,12 @@ function renderDistrictTable() {
     const anchor = district.anchor ? '<span class="mini-pill">Anchor</span>' : '';
     return '<tr data-key="' + key + '">'
       + '<td class="district-cell"><strong>' + escapeHtml(district.name) + '</strong><span>' + escapeHtml(district.city || 'Unknown city') + ' · LEA ' + escapeHtml(district.leaId || 'N/A') + '</span>' + anchor
-      + '<div class="district-penetration-quick"><label>Modeled secondary opportunity</label><div class="quick-value">' + fmt(modeledOpportunity(district)) + '</div><div class="quick-sub">Full secondary TAM ' + fmt(fullOpportunity(district)) + '</div><div class="quick-sub">' + fullN(district.secondary) + ' secondary students @ $' + getRate() + '</div><div class="quick-row"><label>Target penetration</label><strong>' + penetration + '%</strong></div><input class="planner-penetration" data-key="' + key + '" type="range" min="0" max="100" step="5" value="' + penetration + '"><div class="district-review-actions"><a class="needs-review-button" href="' + escapeHtml(reviewHref) + '">Review needs</a><div class="suggested-mini">Suggested: ' + escapeHtml(tierMeta(suggested).label) + '<br>Effective: ' + escapeHtml(tierMeta(effective).label) + '</div></div></div></td>'
+      + '<div class="district-penetration-quick"><label>Modeled secondary opportunity</label><div class="quick-value">' + fmt(modeledOpportunity(district)) + '</div><div class="quick-sub">Full secondary TAM ' + fmt(fullOpportunity(district)) + '</div><div class="quick-sub">' + fullN(district.secondary) + ' secondary students @ $' + getRate() + '</div><div class="quick-row"><label>Target penetration</label><strong>' + penetration + '%</strong></div><input class="planner-penetration" data-key="' + key + '" type="range" min="0" max="100" step="5" value="' + penetration + '"></div></td>'
       + '<td>' + escapeHtml(district.leaType || 'Unknown') + '</td>'
       + '<td class="numeric">' + fullN(district.total) + '</td>'
       + '<td class="numeric">' + fullN(district.secondary) + '</td>'
       + '<td class="numeric"><button class="school-count-button" type="button" data-key="' + key + '" onclick="openSchoolRosterByKey(this.dataset.key)" aria-label="List secondary schools for ' + escapeHtml(district.name) + '">' + fullN(secondarySchoolCount(district)) + '</button></td>'
+      + '<td class="needs-cell"><a class="needs-review-button" href="' + escapeHtml(reviewHref) + '">Review needs</a><div class="suggested-mini">Suggested: ' + escapeHtml(tierMeta(suggested).label) + '<br>Effective: ' + escapeHtml(tierMeta(effective).label) + '</div></td>'
       + '<td><div class="signal-stack">'
       + signalSelectHtml('mathNeed', plan.mathNeed, 'planner-math', key)
       + signalSelectHtml('lms', plan.lms, 'planner-lms', key)
