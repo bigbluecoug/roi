@@ -11,6 +11,14 @@ Route::get('/', function () {
     return response()->file(public_path('index.html'));
 })->name('roi.index');
 
+Route::get('/territory-planning', function () {
+    return response()->file(public_path('territory-planning.html'));
+})->name('territory.planning');
+
+Route::get('/territory-planning.html', function () {
+    return response()->file(public_path('territory-planning.html'));
+});
+
 Route::post('/api/district-needs-summary', DistrictNeedsSummaryController::class)
     ->middleware('throttle:20,1')
     ->name('api.district-needs-summary');

@@ -226,6 +226,33 @@
   .state-event { font-size: 16px; font-weight: 700; }
   .focus-toggle { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 700; color: var(--body); }
   .focus-toggle input { width: 18px; height: 18px; accent-color: var(--orange); }
+  .source-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    border: 1px solid rgba(232,69,10,0.22);
+    border-left: 4px solid var(--orange);
+    border-radius: 10px;
+    background: rgba(232,69,10,0.045);
+    padding: 12px 16px;
+    margin: -4px 0 18px;
+    color: var(--body);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  .source-status strong {
+    display: block;
+    color: var(--navy);
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .source-status span:last-child {
+    color: var(--orange);
+    font-weight: 700;
+    white-space: nowrap;
+  }
   .rank-card {
     border-left: 4px solid var(--orange);
     background: rgba(232,69,10,0.04);
@@ -1014,6 +1041,14 @@
           </div>
           <div class="state-event" id="state-event-label">State events and district profile</div>
           <label class="focus-toggle"><input type="checkbox" id="state-focus-toggle"> Mark as focused state</label>
+        </div>
+
+        <div class="source-status" id="elsi-source-status">
+          <div>
+            <strong>ELSI roster data active</strong>
+            NCES ELSI / CCD 2024-25 school roster data is embedded for secondary schools, and the school-count buttons list the sourced middle, junior-high, high-school, and 6-12 campuses.
+          </div>
+          <span>Release: ELSI roster</span>
         </div>
 
         <div class="controls-panel">
