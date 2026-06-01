@@ -568,6 +568,16 @@
     padding: 7px 8px;
     font-size: 11px;
   }
+  .tier-select-stack {
+    display: grid;
+    gap: 6px;
+    min-width: 150px;
+  }
+  .tier-select-stack .planner-input {
+    padding: 8px 8px;
+    font-size: 12px;
+  }
+  .tier-select-stack .suggested-mini { margin-top: 0; }
   .effective-tier { color: var(--muted); font-size: 10px; margin-top: 5px; }
   .empty-state { text-align: center; padding: 28px; color: var(--body); }
   .rationale-modal {
@@ -1065,7 +1075,7 @@
         <div class="table-toolbar">
           <div>
             <label class="field-label" for="district-search">Search territory</label>
-            <input class="control-input" id="district-search" type="search" placeholder="District, city, tier, signal, or LEA type">
+            <input class="control-input" id="district-search" type="search" placeholder="District, city, tier, or LEA type">
           </div>
           <div>
             <label class="field-label" for="tier-filter">Tier</label>
@@ -1111,7 +1121,7 @@
                 <th>Secondary</th>
                 <th>Secondary schools (6-12)</th>
                 <th>Needs</th>
-                <th>Signals</th>
+                <th>AE Tier</th>
               </tr>
             </thead>
             <tbody id="district-table-body"></tbody>
@@ -33339,6 +33349,10 @@ function signalSelectHtml(group, selected, className, key) {
   return '<select class="planner-input ' + className + '" data-key="' + key + '">' + optionHtml(SIGNAL_OPTIONS[group], selected) + '</select>';
 }
 
+function tierSelectHtml(selected, key) {
+  return '<select class="planner-input planner-tier" data-key="' + key + '">' + optionHtml(TIER_OPTIONS, selected) + '</select>';
+}
+
 function tierFromScore(score) {
   if (score >= 78) return 'tier1';
   if (score >= 56) return 'tier2';
@@ -33568,11 +33582,10 @@ function renderDistrictTable() {
       + '<td class="numeric">' + fullN(district.total) + '</td>'
       + '<td class="numeric">' + fullN(district.secondary) + '</td>'
       + '<td class="numeric"><button class="school-count-button" type="button" data-key="' + key + '" onclick="openSchoolRosterByKey(this.dataset.key)" aria-label="List secondary schools for ' + escapeHtml(district.name) + '">' + fullN(secondarySchoolCount(district)) + '</button></td>'
-      + '<td class="needs-cell"><a class="needs-review-button" href="' + escapeHtml(reviewHref) + '">Review needs</a><div class="suggested-mini">Suggested: ' + escapeHtml(tierMeta(suggested).label) + '<br>Effective: ' + escapeHtml(tierMeta(effective).label) + '</div></td>'
-      + '<td><div class="signal-stack">'
-      + signalSelectHtml('mathNeed', plan.mathNeed, 'planner-math', key)
-      + signalSelectHtml('lms', plan.lms, 'planner-lms', key)
-      + signalSelectHtml('curriculum', plan.curriculum, 'planner-curriculum', key)
+      + '<td class="needs-cell"><a class="needs-review-button" href="' + escapeHtml(reviewHref) + '">Review needs</a></td>'
+      + '<td class="tier-cell"><div class="tier-select-stack">'
+      + tierSelectHtml(plan.tier, key)
+      + '<div class="suggested-mini">Suggested: ' + escapeHtml(tierMeta(suggested).label) + '<br>Effective: ' + escapeHtml(tierMeta(effective).label) + '</div>'
       + '</div></td>'
       + '</tr>';
   }).join('');
