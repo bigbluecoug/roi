@@ -6,10 +6,13 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 
 class DistrictNeedsSummaryController extends Controller
 {
+    private const CACHE_VERSION = 'v1';
+
     public function __invoke(Request $request): JsonResponse
     {
         $request->validate([
@@ -33,6 +36,14 @@ class DistrictNeedsSummaryController extends Controller
             'previousSummary' => ['nullable', 'array'],
         ]);
 
+        $mode = $request->input('mode') === 'secondary_schools' ? 'secondary_schools' : 'evidence';
+        $cacheKey = $this->cacheKey($request, $mode);
+        $cached = $this->cachedPayload($cacheKey);
+
+        if ($cached) {
+            return response()->json($this->withCacheMeta($cached, $cacheKey, true));
+        }
+
         if (! config('services.openai.key')) {
             return response()->json([
                 'message' => 'OpenAI API key is not configured.',
@@ -40,8 +51,6 @@ class DistrictNeedsSummaryController extends Controller
         }
 
         try {
-            $mode = $request->input('mode') === 'secondary_schools' ? 'secondary_schools' : 'evidence';
-
             $response = Http::withToken(config('services.openai.key'))
                 ->connectTimeout(5)
                 ->timeout(60)
@@ -68,7 +77,10 @@ class DistrictNeedsSummaryController extends Controller
                 throw new RuntimeException('OpenAI district needs summary failed: '.$response->body());
             }
 
-            return response()->json($this->normalize($this->decodeResponse($response->json()), $response->json(), $mode));
+            $payload = $this->normalize($this->decodeResponse($response->json()), $response->json(), $mode);
+            $this->storeCachedPayload($cacheKey, $payload);
+
+            return response()->json($this->withCacheMeta($payload, $cacheKey, false));
         } catch (RuntimeException $exception) {
             report($exception);
 
@@ -76,6 +88,60 @@ class DistrictNeedsSummaryController extends Controller
                 'message' => 'District needs summary could not be generated.',
             ], 502);
         }
+    }
+
+    private function cacheKey(Request $request, string $mode): string
+    {
+        $question = $this->cleanString($request->input('question')) ?: '';
+        $districtId = $this->cleanString($request->input('district.leaId'))
+            ?: $this->cleanString($request->input('district.name'))
+            ?: 'unknown-district';
+        $state = $this->cleanString($request->input('profile.stateCode'))
+            ?: $this->cleanString($request->input('profile.stateName'))
+            ?: 'unknown-state';
+
+        return hash('sha256', json_encode([
+            'version' => self::CACHE_VERSION,
+            'mode' => $mode,
+            'state' => mb_strtolower($state),
+            'district' => mb_strtolower($districtId),
+            'question' => mb_strtolower($question),
+        ], JSON_UNESCAPED_SLASHES));
+    }
+
+    private function cachePath(string $cacheKey): string
+    {
+        return 'district-needs-cache/'.$cacheKey.'.json';
+    }
+
+    private function cachedPayload(string $cacheKey): ?array
+    {
+        $path = $this->cachePath($cacheKey);
+        if (! Storage::disk('local')->exists($path)) {
+            return null;
+        }
+
+        $decoded = json_decode(Storage::disk('local')->get($path), true);
+
+        return is_array($decoded) ? $decoded : null;
+    }
+
+    private function storeCachedPayload(string $cacheKey, array $payload): void
+    {
+        Storage::disk('local')->put($this->cachePath($cacheKey), json_encode([
+            ...$payload,
+            'cache_stored_at' => now()->toIso8601String(),
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    }
+
+    private function withCacheMeta(array $payload, string $cacheKey, bool $cached): array
+    {
+        return [
+            ...$payload,
+            'cached' => $cached,
+            'cache_scope' => 'shared',
+            'cache_key' => $cacheKey,
+        ];
     }
 
     private function prompt(array $payload, string $mode = 'evidence'): string

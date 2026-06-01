@@ -33921,9 +33921,9 @@ function aiLocalBriefHtml(district, note) {
 function aiEnrichmentHtml(district) {
   return '<div class="ai-enrichment">'
     + '<div class="ai-enrichment-head">'
-    + '<div><div class="ai-enrichment-title">AI evidence review</div><div class="ai-enrichment-copy">The API asks three questions: secondary math scores, district LMS, and adopted math curriculum. Sources are cited when found.</div></div>'
+    + '<div><div class="ai-enrichment-title">AI evidence review</div><div class="ai-enrichment-copy">The API asks three questions once per district, then saves the sourced result for all users. Sources are cited when found.</div></div>'
     + '<div class="ai-enrichment-actions">'
-    + '<button class="primary-button ai-generate" type="button">Refresh evidence</button>'
+    + '<button class="primary-button ai-generate" type="button">Load saved evidence</button>'
     + '<button class="secondary-button ai-copy-prompt" type="button">Copy AI prompt</button>'
     + '</div></div>'
     + '<div id="ai-enrichment-output">' + aiLocalBriefHtml(district, 'Waiting for API evidence review.') + '</div>'
@@ -33989,6 +33989,9 @@ function renderExternalAiPayload(payload, district) {
   if (!payload || typeof payload !== 'object') return '';
   const sources = Array.isArray(payload.sources) ? payload.sources : [];
   const validation = compactStrings(payload.validation_checklist || payload.validationChecklist || []);
+  const cacheLabel = payload.cache_scope === 'shared'
+    ? (payload.cached ? 'Saved result reused for all users' : 'New result saved for all users')
+    : '';
   return '<div class="ai-output">'
     + '<strong>Source-backed evidence review</strong>'
     + '<p>' + escapeHtml(conciseText(payload.summary || 'AI enrichment returned. Validate all sources before outreach.', 150)) + '</p>'
@@ -34000,7 +34003,7 @@ function renderExternalAiPayload(payload, district) {
     + (validation.length ? '<div class="ai-brief-section"><h4>Validation checklist</h4><ul>' + validation.slice(0, 3).map(item => '<li>' + escapeHtml(conciseText(item, 90)) + '</li>').join('') + '</ul></div>' : '')
     + investigationQueriesHtml(payload, district)
     + sourceListHtml(sources)
-    + '<div class="ai-brief-meta"><span class="ai-brief-pill">Confidence: ' + escapeHtml(payload.confidence || 'Needs AE validation') + '</span></div>'
+    + '<div class="ai-brief-meta"><span class="ai-brief-pill">Confidence: ' + escapeHtml(payload.confidence || 'Needs AE validation') + '</span>' + (cacheLabel ? '<span class="ai-brief-pill">' + escapeHtml(cacheLabel) + '</span>' : '') + '</div>'
     + '</div>';
 }
 
@@ -34027,7 +34030,7 @@ async function runAiEnrichment(district, button, force = false) {
   const cacheKey = aiBriefCacheKey(district);
   if (!force && aiBriefCache.has(cacheKey)) {
     output.innerHTML = aiBriefCache.get(cacheKey);
-    if (button) button.textContent = 'Refresh evidence';
+    if (button) button.textContent = 'Load saved evidence';
     return;
   }
 
@@ -34035,9 +34038,9 @@ async function runAiEnrichment(district, button, force = false) {
   output.dataset.loadingKey = cacheKey;
   if (button) {
     button.disabled = true;
-    button.textContent = 'Searching...';
+    button.textContent = 'Checking saved...';
   }
-  output.innerHTML = '<div class="ai-output"><strong>Source-backed evidence review</strong><p>Searching public sources for secondary math scores, LMS, and math curriculum...</p></div>';
+  output.innerHTML = '<div class="ai-output"><strong>Source-backed evidence review</strong><p>Checking for saved evidence. If no shared result exists yet, the API will search public sources once and save the result for all users.</p></div>';
 
   try {
     const response = await fetch(endpoint, {
@@ -34057,7 +34060,7 @@ async function runAiEnrichment(district, button, force = false) {
     delete output.dataset.loadingKey;
     if (button) {
       button.disabled = false;
-      button.textContent = 'Refresh evidence';
+      button.textContent = 'Load saved evidence';
     }
   }
 }
