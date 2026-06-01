@@ -85,9 +85,10 @@ class DistrictNeedsSummaryController extends Controller
         if ($mode === 'secondary_schools') {
             return implode("\n", [
                 'Create a source-backed secondary school roster for the selected district.',
-                'Use web search and public sources only. Prefer NCES CCD/EDGE, state education directories, or the district official school directory.',
-                'If knownSecondarySchoolRoster is provided in the payload, return those school names first and use web search to validate/source gaps.',
-                'List schools associated with the district that serve secondary grades: middle schools, junior highs, high schools, and 6-12 schools.',
+                'Use web search and public sources only. Prefer NCES ELSI / CCD 2024-25 School Directory data first, then NCES public school search, state education directories, or the district official school directory.',
+                'Use the district LEA ID from the payload when searching ELSI/CCD records.',
+                'If knownSecondarySchoolRoster is provided in the payload, treat it as the current ELSI/CCD-derived roster, return those school names first, and use web search only to validate/source gaps.',
+                'List schools associated with the district that serve secondary grades: middle schools, junior highs, high schools, and 6-12 schools. Use grade span and NCES school level when available.',
                 'Exclude elementary-only, pre-K-only, adult education, virtual-only, closed, and unrelated schools unless the source clearly identifies them as serving grades 6-12 for this LEA.',
                 'For each school, include the school name, grade span if source-backed, city if available, and a source URL.',
                 'If the source-backed list cannot be completed, include the verified schools you found and say what still needs validation.',
