@@ -11,7 +11,7 @@ use RuntimeException;
 
 class DistrictNeedsSummaryController extends Controller
 {
-    private const CACHE_VERSION = 'v1';
+    private const CACHE_VERSION = 'v2-grade-level-math';
 
     public function __invoke(Request $request): JsonResponse
     {
@@ -169,7 +169,7 @@ class DistrictNeedsSummaryController extends Controller
         if ($question) {
             return implode("\n", [
                 'Answer the AE follow-up question for Derivita using web search and public sources.',
-                'Keep the same simple scope: secondary math scores, district LMS, and district math curriculum.',
+                'Keep the same simple scope: grade-level math scores below state average for grades 6-12, district LMS, and district math curriculum.',
                 'Do not guess. If a claim is not source-backed, say it needs validation.',
                 'Cite source URLs in the sources array.',
                 'Answer in 3 short bullets or fewer.',
@@ -185,10 +185,11 @@ class DistrictNeedsSummaryController extends Controller
 
         return implode("\n", [
             'Use web search and public sources to answer only these three questions for the district:',
-            '1. What are the secondary math scores for this district?',
+            '1. Which grade-level math scores for grades 6-12 are below the state average?',
             '2. What LMS is used by this district?',
             '3. Is there an adopted math curriculum for this district?',
             'Do not answer anything else.',
+            'For question 1, list only source-backed grade levels below state average. Include grade, district score, state average, assessment/year, and source URL when available.',
             'Do not guess. If a question cannot be answered from a source, say Needs validation.',
             'Use one short sentence for each answer. Cite source URLs in the section and sources array when possible.',
             'Return JSON only in the requested schema.',
