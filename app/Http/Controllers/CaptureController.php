@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\FindPublicEmailForCapture;
 use App\Jobs\ProcessCaptureImage;
 use App\Models\Capture;
 use App\Models\District;
@@ -15,6 +16,8 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Throwable;
@@ -109,7 +112,7 @@ class CaptureController extends Controller
                     'original_filename' => $stored['filename'],
                 ])->save();
 
-                ProcessCaptureImage::dispatch($capture->id);
+                $this->dispatchCaptureProcessing($capture);
             } catch (Throwable $exception) {
                 report($exception);
 
@@ -161,6 +164,7 @@ class CaptureController extends Controller
             ->sortBy(fn (Capture $capture) => $ids->search($capture->id))
             ->values();
 
+        $this->resumeQueuedAutomation($captures);
         $this->forgetLastBatchIfComplete($request, $captures);
 
         $captures = $captures->map(fn (Capture $capture) => [
@@ -206,6 +210,92 @@ class CaptureController extends Controller
         }
 
         return $captures;
+    }
+
+    private function dispatchCaptureProcessing(Capture $capture): void
+    {
+        ProcessCaptureImage::dispatch($capture->id)
+            ->onConnection(config('services.capture.processing_queue', 'background'));
+    }
+
+    private function dispatchPublicEmailSearch(Capture $capture): void
+    {
+        FindPublicEmailForCapture::dispatch($capture->id)
+            ->onConnection(config('services.capture.processing_queue', 'background'));
+    }
+
+    private function resumeQueuedAutomation(Collection $captures): void
+    {
+        $captures->each(function (Capture $capture): void {
+            if ($capture->image_path && $this->shouldKickCaptureProcessing($capture)) {
+                $cacheKey = 'capture-processing-kick:'.$capture->id.':'.($capture->updated_at?->timestamp ?? 0);
+                if (! Cache::add($cacheKey, now()->toIso8601String(), now()->addMinutes(3))) {
+                    return;
+                }
+
+                $this->dispatchCaptureProcessing($capture);
+
+                return;
+            }
+
+            if ($this->shouldKickPublicEmailSearch($capture)) {
+                if ($capture->publicEnrichment() === []) {
+                    $this->markPublicEmailQueued($capture);
+                }
+
+                $cacheKey = 'capture-public-email-kick:'.$capture->id.':'.($capture->updated_at?->timestamp ?? 0);
+                if (! Cache::add($cacheKey, now()->toIso8601String(), now()->addMinutes(3))) {
+                    return;
+                }
+
+                $this->dispatchPublicEmailSearch($capture);
+            }
+        });
+    }
+
+    private function shouldKickCaptureProcessing(Capture $capture): bool
+    {
+        if ($capture->status === Capture::STATUS_QUEUED) {
+            return true;
+        }
+
+        return $capture->status === Capture::STATUS_PROCESSING
+            && $capture->updated_at
+            && $capture->updated_at->lt(now()->subMinutes(3));
+    }
+
+    private function shouldKickPublicEmailSearch(Capture $capture): bool
+    {
+        if ($capture->stillProcessing() || filled($capture->usableEmail()) || ! $capture->hasPublicEmailSearchClues()) {
+            return false;
+        }
+
+        if ($capture->shouldAutoFindPublicEmail() || $capture->publicEnrichmentStatus() === 'queued') {
+            return true;
+        }
+
+        return $capture->publicEnrichmentStatus() === 'searching'
+            && $capture->updated_at
+            && $capture->updated_at->lt(now()->subMinutes(3));
+    }
+
+    private function markPublicEmailQueued(Capture $capture): void
+    {
+        $payload = $capture->extracted_payload ?? [];
+        $payload['public_enrichment'] = [
+            'status' => 'queued',
+            'email' => null,
+            'confidence' => 0,
+            'person_match' => null,
+            'organization_match' => null,
+            'summary' => 'Public email search is queued after AI extraction.',
+            'sources' => [],
+            'checked_at' => now()->toIso8601String(),
+        ];
+
+        $capture->forceFill([
+            'extracted_payload' => $payload,
+        ])->save();
     }
 
     private function forgetLastBatchIfComplete(Request $request, $captures): bool

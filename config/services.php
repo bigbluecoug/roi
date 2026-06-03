@@ -45,6 +45,10 @@ return [
         'token' => env('HUBSPOT_ACCESS_TOKEN'),
     ],
 
+    'capture' => [
+        'processing_queue' => env('CAPTURE_PROCESSING_QUEUE', 'background'),
+    ],
+
     'capture_retention_days' => env('CAPTURE_RETENTION_DAYS', 30),
 
 ];

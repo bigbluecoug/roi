@@ -116,7 +116,8 @@ class ProcessCaptureImage implements ShouldQueue
         $freshCapture = $capture->fresh();
         if ($freshCapture && $freshCapture->shouldAutoFindPublicEmail()) {
             $this->markPublicEmailQueued($freshCapture);
-            FindPublicEmailForCapture::dispatch($freshCapture->id);
+            FindPublicEmailForCapture::dispatch($freshCapture->id)
+                ->onConnection(config('services.capture.processing_queue', 'background'));
         }
     }
 

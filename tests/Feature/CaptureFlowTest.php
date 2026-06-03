@@ -47,7 +47,9 @@ class CaptureFlowTest extends TestCase
         $this->assertSame(Capture::STATUS_QUEUED, $capture->status);
         $this->assertSame('Met at booth.', $capture->rep_notes);
         Storage::disk('local')->assertExists($capture->image_path);
-        Queue::assertPushed(ProcessCaptureImage::class, 1);
+        Queue::assertPushed(ProcessCaptureImage::class, function (ProcessCaptureImage $job): bool {
+            return $job->connection === 'background';
+        });
     }
 
     public function test_capture_upload_queues_multiple_photos_for_processing(): void
@@ -76,6 +78,9 @@ class CaptureFlowTest extends TestCase
         $this->assertCount(3, $captures);
         $this->assertSame([Capture::STATUS_QUEUED, Capture::STATUS_QUEUED, Capture::STATUS_QUEUED], $captures->pluck('status')->all());
         Queue::assertPushed(ProcessCaptureImage::class, 3);
+        Queue::assertPushed(ProcessCaptureImage::class, function (ProcessCaptureImage $job): bool {
+            return $job->connection === 'background';
+        });
     }
 
     public function test_capture_upload_can_append_to_last_batch_for_split_client_uploads(): void
@@ -325,6 +330,60 @@ class CaptureFlowTest extends TestCase
             ->assertJsonPath('captures.0.automation_pending', false);
     }
 
+    public function test_capture_status_endpoint_restarts_queued_capture_processing(): void
+    {
+        Queue::fake();
+        Storage::fake('local');
+
+        $user = User::factory()->create();
+        $event = Event::create(['name' => 'CO Math', 'state_code' => 'CO']);
+        Storage::disk('local')->put('captures/incoming/badge.jpg', 'image-bytes');
+        $capture = Capture::create([
+            'user_id' => $user->id,
+            'event_id' => $event->id,
+            'status' => Capture::STATUS_QUEUED,
+            'image_path' => 'captures/incoming/badge.jpg',
+        ]);
+
+        $this->actingAs($user)
+            ->getJson(route('captures.status', ['ids' => (string) $capture->id]))
+            ->assertOk()
+            ->assertJsonPath('captures.0.automation_pending', true);
+
+        Queue::assertPushed(ProcessCaptureImage::class, function (ProcessCaptureImage $job): bool {
+            return $job->connection === 'background';
+        });
+    }
+
+    public function test_capture_status_endpoint_restarts_queued_public_email_search(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $event = Event::create(['name' => 'CO Math', 'state_code' => 'CO']);
+        $capture = Capture::create([
+            'user_id' => $user->id,
+            'event_id' => $event->id,
+            'status' => Capture::STATUS_COMPLETE,
+            'full_name' => 'Alex Rivera',
+            'organization' => 'Cherry Creek School District',
+            'raw_text' => 'Alex Rivera Cherry Creek School District',
+            'email' => null,
+            'extracted_payload' => [],
+        ]);
+
+        $this->actingAs($user)
+            ->getJson(route('captures.status', ['ids' => (string) $capture->id]))
+            ->assertOk()
+            ->assertJsonPath('captures.0.automation_pending', true)
+            ->assertJsonPath('captures.0.public_enrichment_status', 'queued');
+
+        $this->assertSame('queued', $capture->fresh()->publicEnrichmentStatus());
+        Queue::assertPushed(FindPublicEmailForCapture::class, function (FindPublicEmailForCapture $job): bool {
+            return $job->connection === 'background';
+        });
+    }
+
     public function test_capture_page_shows_last_batch_panel_and_batch_picker(): void
     {
         $user = User::factory()->create();
@@ -485,7 +544,9 @@ class CaptureFlowTest extends TestCase
         $capture->refresh();
         $this->assertSame(Capture::STATUS_COMPLETE, $capture->status);
         $this->assertSame('queued', $capture->publicEnrichment()['status']);
-        Queue::assertPushed(FindPublicEmailForCapture::class, 1);
+        Queue::assertPushed(FindPublicEmailForCapture::class, function (FindPublicEmailForCapture $job): bool {
+            return $job->connection === 'background';
+        });
     }
 
     public function test_processing_job_marks_extraction_failure_for_manual_review(): void
