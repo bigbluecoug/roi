@@ -27,8 +27,13 @@
                     <article class="batch-row" data-capture-row="{{ $capture->id }}">
                         <div>
                             <strong data-capture-name>{{ $capture->displayName() }}</strong>
+                            @php
+                                $publicEmailPending = in_array($capture->publicEnrichmentStatus(), ['queued', 'searching'], true)
+                                    ? 'Public email search '.$capture->publicEnrichmentStatus()
+                                    : null;
+                            @endphp
                             <div class="meta" data-capture-meta>
-                                {{ $capture->usableEmail() ?? $capture->organization ?? $capture->district?->name ?? 'Waiting for AI' }}
+                                {{ $capture->usableEmail() ?? $publicEmailPending ?? $capture->organization ?? $capture->district?->name ?? 'Waiting for AI' }}
                             </div>
                         </div>
                         <span class="badge {{ $capture->statusBadgeClass() }}" data-capture-status>{{ $capture->statusLabel() }}</span>
@@ -51,7 +56,7 @@
             <div class="photo-picker">
                 <label for="photos">Badge or Card Photos</label>
                 <input id="photos" name="photos[]" type="file" accept="image/*,.heic,.heif" multiple>
-                <span>Add up to 12 separate badge or business-card photos. Submit once, then keep capturing while AI processes them.</span>
+                <span>Add up to 12 separate badge or business-card photos. Submit once, then keep capturing while AI extracts details and searches public email.</span>
                 <div class="photo-status" id="photo-status" aria-live="polite"></div>
                 <div class="photo-tray" id="photo-tray" hidden></div>
             </div>
@@ -59,7 +64,7 @@
                 <label for="rep_notes">Rep Notes</label>
                 <textarea id="rep_notes" name="rep_notes">{{ old('rep_notes') }}</textarea>
             </div>
-            <button class="button accent capture-submit" type="submit" disabled>Queue Photos for AI</button>
+            <button class="button accent capture-submit" type="submit" disabled>Queue Photos for AI + Email</button>
         </form>
     </section>
 
@@ -152,7 +157,7 @@
                 const preparing = activeItems().some((item) => item.status === 'preparing');
                 const readyCount = activeItems().filter((item) => item.status === 'ready').length;
                 button.disabled = preparing || readyCount === 0;
-                button.textContent = readyCount === 1 ? 'Queue 1 Photo for AI' : `Queue ${readyCount} Photos for AI`;
+                button.textContent = readyCount === 1 ? 'Queue 1 Photo for AI + Email' : `Queue ${readyCount} Photos for AI + Email`;
             };
 
             const renderTray = () => {
@@ -265,7 +270,7 @@
                 const dataTransfer = new DataTransfer();
                 readyItems.forEach((item) => dataTransfer.items.add(item.file));
                 input.files = dataTransfer.files;
-                setStatus(`Queueing ${readyItems.length} ${readyItems.length === 1 ? 'photo' : 'photos'} for AI...`);
+                setStatus(`Queueing ${readyItems.length} ${readyItems.length === 1 ? 'photo' : 'photos'} for AI and public email search...`);
             }, { capture: true });
         })();
 
@@ -300,7 +305,10 @@
 
                     if (name instanceof HTMLElement) name.textContent = capture.display_name;
                     if (meta instanceof HTMLElement) {
-                        meta.textContent = capture.email || capture.organization || capture.district || (capture.public_enrichment_status ? `Email ${capture.public_enrichment_status}` : 'Waiting for AI');
+                        const emailPending = ['queued', 'searching'].includes(capture.public_enrichment_status)
+                            ? `Public email search ${capture.public_enrichment_status}`
+                            : null;
+                        meta.textContent = capture.email || emailPending || capture.organization || capture.district || (capture.public_enrichment_status ? `Email ${capture.public_enrichment_status}` : 'Waiting for AI');
                     }
                     if (status instanceof HTMLElement) {
                         status.textContent = capture.status_label;
@@ -310,15 +318,19 @@
                         review.href = capture.review_url;
                     }
 
-                    if (!capture.ready_for_review) {
+                    if (capture.automation_pending) {
                         pending += 1;
                     }
                 });
 
                 const total = captures.length;
                 summary.textContent = pending === 0
-                    ? `${total} ${total === 1 ? 'capture' : 'captures'} ready for review`
-                    : `${pending} processing, ${total - pending} ready`;
+                    ? `${total} ${total === 1 ? 'capture' : 'captures'} complete`
+                    : `${pending} working, ${total - pending} ready`;
+
+                if (pending === 0) {
+                    window.setTimeout(() => panel.remove(), 800);
+                }
 
                 return pending;
             };

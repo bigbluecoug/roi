@@ -55,7 +55,7 @@
                         </div>
                     </div>
                     <div>
-                        <strong>{{ $capture->organization ?? ($capture->stillProcessing() ? 'Processing capture' : 'Needs organization review') }}</strong>
+                        <strong>{{ $capture->organization ?? ($capture->stillProcessing() ? 'Processing capture' : 'Organization unconfirmed') }}</strong>
                         <div class="meta">{{ $capture->district?->name ?? 'District unconfirmed' }}</div>
                     </div>
                     <div class="row">

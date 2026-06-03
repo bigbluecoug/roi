@@ -228,7 +228,7 @@ class SetupFlowTest extends TestCase
             ->assertOk()
             ->assertSessionHas('current_state_code', 'CO')
             ->assertSessionHas('current_event_id', $event->id)
-            ->assertSee('Queue Photos for AI')
+            ->assertSee('Queue Photos for AI + Email')
             ->assertSee('accept="image/*,.heic,.heif"', false)
             ->assertDontSee('capture="environment"', false);
     }

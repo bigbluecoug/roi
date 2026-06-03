@@ -16,6 +16,8 @@ class Capture extends Model
 
     public const STATUS_NEEDS_REVIEW = 'needs_review';
 
+    public const STATUS_COMPLETE = 'complete';
+
     public const STATUS_EXTRACTION_FAILED = 'extraction_failed';
 
     public const STATUS_REVIEWED = 'reviewed';
@@ -96,6 +98,7 @@ class Capture extends Model
             self::STATUS_QUEUED => 'queued',
             self::STATUS_PROCESSING => 'processing',
             self::STATUS_NEEDS_REVIEW => 'needs review',
+            self::STATUS_COMPLETE => 'complete',
             self::STATUS_EXTRACTION_FAILED => 'needs manual entry',
             self::STATUS_REVIEWED => 'reviewed',
             self::STATUS_SYNCED => 'synced',
@@ -107,7 +110,7 @@ class Capture extends Model
     public function statusBadgeClass(): string
     {
         return match ($this->status) {
-            self::STATUS_SYNCED => 'synced',
+            self::STATUS_SYNCED, self::STATUS_COMPLETE => 'synced',
             self::STATUS_SYNC_FAILED, self::STATUS_EXTRACTION_FAILED => 'failed',
             self::STATUS_QUEUED, self::STATUS_PROCESSING => 'processing',
             default => 'review',
@@ -122,6 +125,12 @@ class Capture extends Model
     public function reviewReady(): bool
     {
         return ! $this->stillProcessing();
+    }
+
+    public function automationPending(): bool
+    {
+        return $this->stillProcessing()
+            || in_array($this->publicEnrichmentStatus(), ['queued', 'searching'], true);
     }
 
     public function readyForHubSpot(): bool

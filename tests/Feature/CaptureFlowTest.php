@@ -149,7 +149,7 @@ class CaptureFlowTest extends TestCase
         );
 
         $capture->refresh();
-        $this->assertSame(Capture::STATUS_NEEDS_REVIEW, $capture->status);
+        $this->assertSame(Capture::STATUS_COMPLETE, $capture->status);
         $this->assertSame('Jordan Ellis', $capture->full_name);
         $this->assertSame('jordan@example.org', $capture->email);
         $this->assertTrue($district->is($capture->district));
@@ -180,7 +180,7 @@ class CaptureFlowTest extends TestCase
         $capture = Capture::create([
             'user_id' => $user->id,
             'event_id' => $event->id,
-            'status' => Capture::STATUS_NEEDS_REVIEW,
+            'status' => Capture::STATUS_COMPLETE,
             'full_name' => 'Alex Rivera',
         ]);
 
@@ -209,7 +209,7 @@ class CaptureFlowTest extends TestCase
         $second = Capture::create([
             'user_id' => $user->id,
             'event_id' => $event->id,
-            'status' => Capture::STATUS_NEEDS_REVIEW,
+            'status' => Capture::STATUS_COMPLETE,
             'full_name' => 'Alex Rivera',
             'email' => 'alex@example.org',
             'organization' => 'Cherry Creek School District',
@@ -229,10 +229,65 @@ class CaptureFlowTest extends TestCase
             ->assertJsonCount(2, 'captures')
             ->assertJsonPath('captures.0.id', $first->id)
             ->assertJsonPath('captures.0.status', Capture::STATUS_QUEUED)
+            ->assertJsonPath('captures.0.automation_pending', true)
             ->assertJsonPath('captures.0.ready_for_review', false)
             ->assertJsonPath('captures.1.id', $second->id)
             ->assertJsonPath('captures.1.display_name', 'Alex Rivera')
+            ->assertJsonPath('captures.1.automation_pending', false)
             ->assertJsonMissing(['id' => $other->id]);
+    }
+
+    public function test_capture_status_endpoint_keeps_polling_while_public_email_search_runs(): void
+    {
+        $user = User::factory()->create();
+        $event = Event::create(['name' => 'CO Math', 'state_code' => 'CO']);
+        $capture = Capture::create([
+            'user_id' => $user->id,
+            'event_id' => $event->id,
+            'status' => Capture::STATUS_NEEDS_REVIEW,
+            'full_name' => 'Alex Rivera',
+            'organization' => 'Cherry Creek School District',
+            'extracted_payload' => [
+                'public_enrichment' => [
+                    'status' => 'searching',
+                    'email' => null,
+                    'confidence' => 0,
+                    'summary' => 'Public email search is running.',
+                    'sources' => [],
+                ],
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->getJson(route('captures.status', ['ids' => (string) $capture->id]))
+            ->assertOk()
+            ->assertJsonPath('captures.0.ready_for_review', true)
+            ->assertJsonPath('captures.0.automation_pending', true)
+            ->assertJsonPath('captures.0.public_enrichment_status', 'searching');
+    }
+
+    public function test_capture_status_endpoint_clears_last_batch_session_after_batch_is_complete(): void
+    {
+        $user = User::factory()->create();
+        $event = Event::create(['name' => 'CO Math', 'state_code' => 'CO']);
+        $capture = Capture::create([
+            'user_id' => $user->id,
+            'event_id' => $event->id,
+            'status' => Capture::STATUS_COMPLETE,
+            'full_name' => 'Alex Rivera',
+            'email' => 'alex@example.org',
+            'organization' => 'Cherry Creek School District',
+        ]);
+
+        $this->actingAs($user)
+            ->withSession([
+                'last_capture_batch_ids' => [$capture->id],
+            ])
+            ->getJson(route('captures.status', ['ids' => (string) $capture->id]))
+            ->assertOk()
+            ->assertSessionMissing('last_capture_batch_ids')
+            ->assertJsonPath('captures.0.status', Capture::STATUS_COMPLETE)
+            ->assertJsonPath('captures.0.automation_pending', false);
     }
 
     public function test_capture_page_shows_last_batch_panel_and_batch_picker(): void
@@ -256,7 +311,42 @@ class CaptureFlowTest extends TestCase
             ->assertSee('data-batch-panel', false)
             ->assertSee('data-capture-row="'.$capture->id.'"', false)
             ->assertSee('name="photos[]"', false)
-            ->assertSee('Queue Photos for AI');
+            ->assertSee('Queue Photos for AI + Email');
+    }
+
+    public function test_capture_page_hides_last_batch_panel_after_batch_is_complete(): void
+    {
+        $user = User::factory()->create();
+        $event = Event::create(['name' => 'CO Math', 'state_code' => 'CO']);
+        $capture = Capture::create([
+            'user_id' => $user->id,
+            'event_id' => $event->id,
+            'status' => Capture::STATUS_COMPLETE,
+            'full_name' => 'Alex Rivera',
+            'organization' => 'Cherry Creek School District',
+            'extracted_payload' => [
+                'public_enrichment' => [
+                    'status' => 'not_found',
+                    'email' => null,
+                    'confidence' => 0.71,
+                    'summary' => 'No directly sourced email was found.',
+                    'sources' => [],
+                ],
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->withSession([
+                'current_event_id' => $event->id,
+                'current_state_code' => 'CO',
+                'last_capture_batch_ids' => [$capture->id],
+            ])
+            ->get(route('captures.create'))
+            ->assertOk()
+            ->assertSessionMissing('last_capture_batch_ids')
+            ->assertDontSee('Last batch')
+            ->assertDontSee('data-capture-row="'.$capture->id.'"', false)
+            ->assertSee('Queue Photos for AI + Email');
     }
 
     public function test_event_and_log_pages_show_processing_statuses(): void
@@ -285,7 +375,6 @@ class CaptureFlowTest extends TestCase
     public function test_processing_job_dispatches_public_email_search_when_email_is_missing(): void
     {
         Queue::fake();
-        config(['services.openai.key' => 'test-key']);
         Storage::fake('local');
 
         $user = User::factory()->create();
@@ -341,7 +430,7 @@ class CaptureFlowTest extends TestCase
         );
 
         $capture->refresh();
-        $this->assertSame(Capture::STATUS_NEEDS_REVIEW, $capture->status);
+        $this->assertSame(Capture::STATUS_COMPLETE, $capture->status);
         $this->assertSame('queued', $capture->publicEnrichment()['status']);
         Queue::assertPushed(FindPublicEmailForCapture::class, 1);
     }
@@ -419,7 +508,7 @@ class CaptureFlowTest extends TestCase
 
         $capture->refresh();
         $this->assertSame('alex.rivera@cherrycreekschools.org', $capture->email);
-        $this->assertSame(Capture::STATUS_NEEDS_REVIEW, $capture->status);
+        $this->assertSame(Capture::STATUS_COMPLETE, $capture->status);
         $this->assertSame('found', $capture->publicEnrichment()['status']);
     }
 
@@ -752,7 +841,7 @@ class CaptureFlowTest extends TestCase
 
         $capture->refresh();
         $this->assertSame('alex.rivera@cherrycreekschools.org', $capture->email);
-        $this->assertSame(Capture::STATUS_NEEDS_REVIEW, $capture->status);
+        $this->assertSame(Capture::STATUS_COMPLETE, $capture->status);
         $this->assertSame('found', $capture->publicEnrichment()['status']);
         $this->assertSame('https://example.org/staff/alex-rivera', $capture->publicEnrichmentSources()[0]['url']);
     }

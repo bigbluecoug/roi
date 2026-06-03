@@ -126,7 +126,7 @@ class CaptureController extends Controller
 
         return redirect()
             ->route('captures.create')
-            ->with('status', $files->count().' '.($files->count() === 1 ? 'photo' : 'photos').' queued for AI processing. Keep capturing while we work.');
+            ->with('status', $files->count().' '.($files->count() === 1 ? 'photo' : 'photos').' queued for AI processing and public email search. Keep capturing while we work.');
     }
 
     public function status(Request $request): JsonResponse
@@ -148,20 +148,24 @@ class CaptureController extends Controller
             ->whereIn('id', $ids)
             ->get()
             ->sortBy(fn (Capture $capture) => $ids->search($capture->id))
-            ->values()
-            ->map(fn (Capture $capture) => [
-                'id' => $capture->id,
-                'status' => $capture->status,
-                'status_label' => $capture->statusLabel(),
-                'status_badge_class' => $capture->statusBadgeClass(),
-                'display_name' => $capture->displayName(),
-                'email' => $capture->usableEmail(),
-                'organization' => $capture->organization,
-                'district' => $capture->district?->name,
-                'public_enrichment_status' => $capture->publicEnrichmentStatus(),
-                'ready_for_review' => $capture->reviewReady(),
-                'review_url' => route('captures.review', $capture),
-            ]);
+            ->values();
+
+        $this->forgetLastBatchIfComplete($request, $captures);
+
+        $captures = $captures->map(fn (Capture $capture) => [
+            'id' => $capture->id,
+            'status' => $capture->status,
+            'status_label' => $capture->statusLabel(),
+            'status_badge_class' => $capture->statusBadgeClass(),
+            'display_name' => $capture->displayName(),
+            'email' => $capture->usableEmail(),
+            'organization' => $capture->organization,
+            'district' => $capture->district?->name,
+            'public_enrichment_status' => $capture->publicEnrichmentStatus(),
+            'automation_pending' => $capture->automationPending(),
+            'ready_for_review' => $capture->reviewReady(),
+            'review_url' => route('captures.review', $capture),
+        ]);
 
         return response()->json(['captures' => $captures]);
     }
@@ -178,13 +182,45 @@ class CaptureController extends Controller
             return collect();
         }
 
-        return Capture::query()
+        $captures = Capture::query()
             ->with(['event', 'district'])
             ->where('user_id', $request->user()->id)
             ->whereIn('id', $ids)
             ->get()
             ->sortBy(fn (Capture $capture) => $ids->search($capture->id))
             ->values();
+
+        if ($this->forgetLastBatchIfComplete($request, $captures)) {
+            return collect();
+        }
+
+        return $captures;
+    }
+
+    private function forgetLastBatchIfComplete(Request $request, $captures): bool
+    {
+        $lastBatchIds = collect((array) $request->session()->get('last_capture_batch_ids', []))
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($lastBatchIds->isEmpty()) {
+            return false;
+        }
+
+        $captureIds = $captures->pluck('id')->map(fn ($id) => (int) $id)->sort()->values();
+        if ($captureIds->all() !== $lastBatchIds->sort()->values()->all()) {
+            return false;
+        }
+
+        if ($captures->every(fn (Capture $capture) => ! $capture->automationPending())) {
+            $request->session()->forget('last_capture_batch_ids');
+
+            return true;
+        }
+
+        return false;
     }
 
     public function show(Capture $capture): View
@@ -334,7 +370,7 @@ class CaptureController extends Controller
 
             $capture->forceFill([
                 'district_id' => $match['district']?->id,
-                'status' => Capture::STATUS_NEEDS_REVIEW,
+                'status' => Capture::STATUS_COMPLETE,
                 'full_name' => $extracted['full_name'],
                 'first_name' => $extracted['first_name'],
                 'last_name' => $extracted['last_name'],
@@ -393,7 +429,7 @@ class CaptureController extends Controller
             $emailApplied = $this->applyPublicEnrichment($capture, $enrichment);
 
             $message = $emailApplied
-                ? 'Public email found and added for review.'
+                ? 'Public email found and added to the capture.'
                 : 'Public email search finished. Review the source details before making changes.';
 
             return redirect()->route('captures.review', $capture)->with('status', $message);
@@ -490,7 +526,7 @@ class CaptureController extends Controller
             $emailApplied = $this->applyPublicEnrichment($capture, $enrichment);
 
             return $emailApplied
-                ? 'Public email found and added for review.'
+                ? 'Public email found and added to the capture.'
                 : 'Public email search finished. Review the source details before making changes.';
         } catch (ConnectionException $exception) {
             report($exception);
@@ -521,7 +557,7 @@ class CaptureController extends Controller
             $updates['email'] = $enrichment['email'];
             $updates['status'] = $capture->status === Capture::STATUS_SYNCED
                 ? Capture::STATUS_SYNCED
-                : Capture::STATUS_NEEDS_REVIEW;
+                : Capture::STATUS_COMPLETE;
             $emailApplied = true;
         }
 

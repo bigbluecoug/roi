@@ -37,7 +37,7 @@
                                     @endif
                                 </span>
                             </td>
-                            <td>{{ $capture->organization ?? ($capture->stillProcessing() ? 'Processing capture' : 'Needs review') }}</td>
+                            <td>{{ $capture->organization ?? ($capture->stillProcessing() ? 'Processing capture' : 'Organization unconfirmed') }}</td>
                             <td>{{ $capture->event->state_code }} · {{ $capture->event->name }}</td>
                             <td>{{ $capture->district?->name ?? 'Unconfirmed' }}</td>
                             <td>

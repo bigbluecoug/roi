@@ -69,7 +69,7 @@ class FindPublicEmailForCapture implements ShouldQueue
             $updates['email'] = $enrichment['email'];
             $updates['status'] = $capture->status === Capture::STATUS_SYNCED
                 ? Capture::STATUS_SYNCED
-                : Capture::STATUS_NEEDS_REVIEW;
+                : Capture::STATUS_COMPLETE;
         }
 
         $payload = $capture->extracted_payload ?? [];

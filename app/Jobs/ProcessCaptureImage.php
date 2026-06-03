@@ -89,7 +89,7 @@ class ProcessCaptureImage implements ShouldQueue
 
         $capture->forceFill([
             'district_id' => $match['district']?->id,
-            'status' => Capture::STATUS_NEEDS_REVIEW,
+            'status' => Capture::STATUS_COMPLETE,
             'image_path' => $normalizedPath,
             'original_filename' => $normalized['filename'],
             'full_name' => $extracted['full_name'],
@@ -114,7 +114,7 @@ class ProcessCaptureImage implements ShouldQueue
         $this->deleteOriginalIfReplaced($originalPath, $normalizedPath);
 
         $freshCapture = $capture->fresh();
-        if ($freshCapture && config('services.openai.key') && $freshCapture->shouldAutoFindPublicEmail()) {
+        if ($freshCapture && $freshCapture->shouldAutoFindPublicEmail()) {
             $this->markPublicEmailQueued($freshCapture);
             FindPublicEmailForCapture::dispatch($freshCapture->id);
         }
@@ -137,7 +137,7 @@ class ProcessCaptureImage implements ShouldQueue
             'confidence' => 0,
             'person_match' => null,
             'organization_match' => null,
-            'summary' => 'Public email search is queued.',
+            'summary' => 'Public email search is queued after AI extraction.',
             'sources' => [],
             'checked_at' => now()->toIso8601String(),
         ];
