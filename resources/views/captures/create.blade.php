@@ -45,7 +45,7 @@
     @endif
 
     <section class="panel">
-        <form id="capture-form" method="post" action="{{ route('captures.store') }}" enctype="multipart/form-data" class="stack">
+        <form id="capture-form" method="post" action="{{ route('captures.store') }}" enctype="multipart/form-data" class="stack" data-success-url="{{ route('captures.create') }}">
             @csrf
             <input type="hidden" name="event_id" value="{{ $selectedEventId }}">
             <div class="event-context">
@@ -76,7 +76,7 @@
             const form = document.getElementById('capture-form');
             const button = form.querySelector('button[type="submit"]');
             const maxFiles = 12;
-            const maxBytes = 1600 * 1024;
+            const maxBytes = 1400 * 1024;
             const serverMaxBytes = 20 * 1024 * 1024;
             const maxDimension = 1600;
             const minDimension = 420;
@@ -268,19 +268,51 @@
                 }
             });
 
-            form.addEventListener('submit', (event) => {
+            const uploadQueuedPhotos = async (readyItems) => {
+                for (let index = 0; index < readyItems.length; index++) {
+                    const formData = new FormData(form);
+                    formData.delete('photo');
+                    formData.delete('photos[]');
+                    formData.set('append_to_last_batch', index === 0 ? '0' : '1');
+                    formData.append('photos[]', readyItems[index].file);
+
+                    setStatus(`Queueing ${index + 1} of ${readyItems.length} ${readyItems.length === 1 ? 'photo' : 'photos'} for AI and public email search...`);
+
+                    const response = await fetch(form.action, {
+                        method: 'POST',
+                        body: formData,
+                        credentials: 'same-origin',
+                        headers: { Accept: 'text/html' },
+                    });
+
+                    if (!response.ok && !response.redirected) {
+                        throw new Error(response.status === 413
+                            ? 'The server still rejected this photo as too large. Try a screenshot or crop of the badge.'
+                            : 'The upload could not finish. Check the connection and try again.');
+                    }
+                }
+            };
+
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
                 const readyItems = activeItems().filter((item) => item.status === 'ready');
 
                 if (readyItems.length === 0) {
-                    event.preventDefault();
                     setStatus('Choose at least one badge or card photo.', true);
                     return;
                 }
 
-                const dataTransfer = new DataTransfer();
-                readyItems.forEach((item) => dataTransfer.items.add(item.file));
-                input.files = dataTransfer.files;
-                setStatus(`Queueing ${readyItems.length} ${readyItems.length === 1 ? 'photo' : 'photos'} for AI and public email search...`);
+                button.disabled = true;
+                button.textContent = 'Queueing Photos...';
+
+                try {
+                    await uploadQueuedPhotos(readyItems);
+                    window.location.href = form.dataset.successUrl || '{{ route('captures.create') }}';
+                } catch (error) {
+                    button.disabled = false;
+                    syncSubmitState();
+                    setStatus(error instanceof Error ? error.message : 'The upload could not finish. Try again.', true);
+                }
             }, { capture: true });
         })();
 

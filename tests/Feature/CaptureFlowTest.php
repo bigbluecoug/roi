@@ -78,6 +78,41 @@ class CaptureFlowTest extends TestCase
         Queue::assertPushed(ProcessCaptureImage::class, 3);
     }
 
+    public function test_capture_upload_can_append_to_last_batch_for_split_client_uploads(): void
+    {
+        Queue::fake();
+        Storage::fake('local');
+
+        $user = User::factory()->create();
+        $event = Event::create(['name' => 'CO Math', 'state_code' => 'CO']);
+
+        $firstResponse = $this->actingAs($user)->post('/captures', [
+            'event_id' => $event->id,
+            'photos' => [
+                UploadedFile::fake()->image('badge-1.jpg', 600, 400),
+            ],
+        ]);
+
+        $firstCapture = Capture::firstOrFail();
+        $firstResponse->assertSessionHas('last_capture_batch_ids', [$firstCapture->id]);
+
+        $secondResponse = $this->actingAs($user)
+            ->withSession(['last_capture_batch_ids' => [$firstCapture->id]])
+            ->post('/captures', [
+                'event_id' => $event->id,
+                'append_to_last_batch' => '1',
+                'photos' => [
+                    UploadedFile::fake()->image('badge-2.jpg', 600, 400),
+                ],
+            ]);
+
+        $captures = Capture::query()->orderBy('id')->get();
+
+        $secondResponse->assertSessionHas('last_capture_batch_ids', $captures->pluck('id')->all());
+        $this->assertCount(2, $captures);
+        Queue::assertPushed(ProcessCaptureImage::class, 2);
+    }
+
     public function test_processing_job_fills_fields_and_matches_district(): void
     {
         Storage::fake('local');
@@ -327,6 +362,8 @@ class CaptureFlowTest extends TestCase
             ->get(route('captures.create'))
             ->assertOk()
             ->assertSee('Reducing ${formatBytes(file.size)} photo for upload...', false)
+            ->assertSee('append_to_last_batch', false)
+            ->assertSee('fetch(form.action', false)
             ->assertDontSee('Choose an image under', false);
     }
 

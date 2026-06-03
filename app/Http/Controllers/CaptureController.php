@@ -68,10 +68,11 @@ class CaptureController extends Controller
     {
         $data = $request->validate([
             'event_id' => ['required', 'exists:events,id'],
-            'photo' => ['nullable', 'file', 'max:20480', 'required_without:photos'],
+            'photo' => ['nullable', 'file', 'required_without:photos'],
             'photos' => ['nullable', 'array', 'max:12', 'required_without:photo'],
-            'photos.*' => ['file', 'max:20480'],
+            'photos.*' => ['file'],
             'rep_notes' => ['nullable', 'string', 'max:2000'],
+            'append_to_last_batch' => ['nullable', 'boolean'],
         ]);
 
         $event = Event::findOrFail($data['event_id']);
@@ -122,7 +123,17 @@ class CaptureController extends Controller
             $captureIds[] = $capture->id;
         }
 
-        $request->session()->put('last_capture_batch_ids', $captureIds);
+        $sessionCaptureIds = $request->boolean('append_to_last_batch')
+            ? collect((array) $request->session()->get('last_capture_batch_ids', []))
+                ->merge($captureIds)
+                ->map(fn ($id) => (int) $id)
+                ->filter()
+                ->unique()
+                ->values()
+                ->all()
+            : $captureIds;
+
+        $request->session()->put('last_capture_batch_ids', $sessionCaptureIds);
 
         return redirect()
             ->route('captures.create')

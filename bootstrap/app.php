@@ -19,14 +19,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (PostTooLargeException $exception, Request $request) {
             if ($request->expectsJson()) {
                 return response()->json([
-                    'message' => 'The photo was too large to upload. Try retaking it closer to the badge or choose a smaller image.',
+                    'message' => 'The photo was too large before the browser could shrink it. Refresh Capture and try again, or crop/screenshot the badge.',
                 ], 413);
             }
 
             return redirect()
                 ->back()
                 ->withErrors([
-                    'photo' => 'The photo was too large to upload. Try retaking it closer to the badge or choose a smaller image.',
+                    'photo' => 'The photo was too large before the browser could shrink it. Refresh Capture and try again, or crop/screenshot the badge.',
                 ]);
         });
     })->create();
