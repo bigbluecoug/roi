@@ -33,6 +33,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/capture', [CaptureController::class, 'create'])->name('captures.create');
     Route::post('/captures', [CaptureController::class, 'store'])->name('captures.store');
     Route::get('/captures', [CaptureController::class, 'index'])->name('captures.index');
+    Route::get('/captures/status', [CaptureController::class, 'status'])->name('captures.status');
     Route::get('/captures/{capture}', [CaptureController::class, 'show'])->name('captures.show');
     Route::get('/captures/{capture}/review', [CaptureController::class, 'review'])->name('captures.review');
     Route::get('/captures/{capture}/image', [CaptureController::class, 'image'])->name('captures.image');

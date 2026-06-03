@@ -2,15 +2,20 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\FindPublicEmailForCapture;
+use App\Jobs\ProcessCaptureImage;
 use App\Models\Capture;
 use App\Models\District;
 use App\Models\Event;
 use App\Models\User;
+use App\Services\CaptureImageNormalizer;
+use App\Services\DistrictMatcher;
 use App\Services\HubSpotClient;
 use App\Services\OpenAiLeadExtractor;
 use App\Services\PublicLeadEnricher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Mockery;
 use RuntimeException;
@@ -20,40 +25,13 @@ class CaptureFlowTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_capture_upload_runs_extraction_and_creates_review_record(): void
+    public function test_capture_upload_queues_single_legacy_photo_for_processing(): void
     {
+        Queue::fake();
         Storage::fake('local');
 
         $user = User::factory()->create();
         $event = Event::create(['name' => 'CO Math', 'state_code' => 'CO']);
-        $district = District::create([
-            'state_code' => 'CO',
-            'lea_id' => '0802910',
-            'name' => 'Cherry Creek SD',
-            'short_name' => 'Cherry Creek',
-            'city' => 'Greenwood Village',
-            'total_students' => 51980,
-        ]);
-
-        $this->mock(OpenAiLeadExtractor::class, function ($mock): void {
-            $mock->shouldReceive('extract')->once()->andReturn([
-                'full_name' => 'Alex Rivera',
-                'first_name' => 'Alex',
-                'last_name' => 'Rivera',
-                'email' => 'alex@cherrycreekschools.org',
-                'phone' => '555-0100',
-                'title' => 'Math Director',
-                'organization' => 'Cherry Creek School District',
-                'city' => 'Greenwood Village',
-                'state' => 'CO',
-                'raw_text' => 'Alex Rivera Cherry Creek School District',
-                'confidence' => ['overall' => 0.91],
-                'evidence' => ['Cherry Creek School District'],
-                'warnings' => [],
-                'ai_confidence' => 0.91,
-                'extracted_payload' => [],
-            ]);
-        });
 
         $response = $this->actingAs($user)->post('/captures', [
             'event_id' => $event->id,
@@ -62,14 +40,45 @@ class CaptureFlowTest extends TestCase
         ]);
 
         $capture = Capture::firstOrFail();
-        $response->assertRedirect(route('captures.review', $capture));
+        $response
+            ->assertRedirect(route('captures.create'))
+            ->assertSessionHas('last_capture_batch_ids', [$capture->id]);
 
-        $this->assertSame('Alex Rivera', $capture->full_name);
-        $this->assertTrue($district->is($capture->district));
+        $this->assertSame(Capture::STATUS_QUEUED, $capture->status);
+        $this->assertSame('Met at booth.', $capture->rep_notes);
         Storage::disk('local')->assertExists($capture->image_path);
+        Queue::assertPushed(ProcessCaptureImage::class, 1);
     }
 
-    public function test_capture_upload_uses_badge_clues_to_pick_district_when_organization_is_blank(): void
+    public function test_capture_upload_queues_multiple_photos_for_processing(): void
+    {
+        Queue::fake();
+        Storage::fake('local');
+
+        $user = User::factory()->create();
+        $event = Event::create(['name' => 'OK Math', 'state_code' => 'OK']);
+
+        $response = $this->actingAs($user)->post('/captures', [
+            'event_id' => $event->id,
+            'photos' => [
+                UploadedFile::fake()->image('badge-1.jpg', 600, 400),
+                UploadedFile::fake()->image('badge-2.jpg', 600, 400),
+                UploadedFile::fake()->image('badge-3.jpg', 600, 400),
+            ],
+        ]);
+
+        $captures = Capture::query()->orderBy('id')->get();
+
+        $response
+            ->assertRedirect(route('captures.create'))
+            ->assertSessionHas('last_capture_batch_ids', $captures->pluck('id')->all());
+
+        $this->assertCount(3, $captures);
+        $this->assertSame([Capture::STATUS_QUEUED, Capture::STATUS_QUEUED, Capture::STATUS_QUEUED], $captures->pluck('status')->all());
+        Queue::assertPushed(ProcessCaptureImage::class, 3);
+    }
+
+    public function test_processing_job_fills_fields_and_matches_district(): void
     {
         Storage::fake('local');
 
@@ -83,13 +92,28 @@ class CaptureFlowTest extends TestCase
             'city' => 'Oklahoma City',
             'total_students' => 17950,
         ]);
+        Storage::disk('local')->put('captures/incoming/badge.jpg', 'image-bytes');
+        Storage::disk('local')->put('captures/normalized.jpg', 'normalized-image-bytes');
+        $capture = Capture::create([
+            'user_id' => $user->id,
+            'event_id' => $event->id,
+            'status' => Capture::STATUS_QUEUED,
+            'image_path' => 'captures/incoming/badge.jpg',
+            'original_filename' => 'badge.jpg',
+        ]);
 
+        $this->mock(CaptureImageNormalizer::class, function ($mock): void {
+            $mock->shouldReceive('normalizeStored')->once()->andReturn([
+                'path' => 'captures/normalized.jpg',
+                'filename' => 'badge-lead-capture.jpg',
+            ]);
+        });
         $this->mock(OpenAiLeadExtractor::class, function ($mock): void {
-            $mock->shouldReceive('extract')->once()->andReturn([
+            $mock->shouldReceive('extract')->once()->with('captures/normalized.jpg')->andReturn([
                 'full_name' => 'Jordan Ellis',
                 'first_name' => 'Jordan',
                 'last_name' => 'Ellis',
-                'email' => null,
+                'email' => 'jordan@example.org',
                 'phone' => null,
                 'title' => 'Instructional Coach',
                 'organization' => null,
@@ -110,17 +134,27 @@ class CaptureFlowTest extends TestCase
                 ],
             ]);
         });
+        $this->mock(HubSpotClient::class, function ($mock): void {
+            $mock->shouldReceive('lookupLeadContext')->once()->andReturn([
+                'contact' => null,
+                'company' => null,
+            ]);
+        });
 
-        $response = $this->actingAs($user)->post('/captures', [
-            'event_id' => $event->id,
-            'photo' => UploadedFile::fake()->image('badge.jpg', 600, 400),
-        ]);
+        (new ProcessCaptureImage($capture->id))->handle(
+            app(CaptureImageNormalizer::class),
+            app(OpenAiLeadExtractor::class),
+            app(DistrictMatcher::class),
+            app(HubSpotClient::class),
+        );
 
-        $capture = Capture::firstOrFail();
-        $response->assertRedirect(route('captures.review', $capture));
-
+        $capture->refresh();
+        $this->assertSame(Capture::STATUS_NEEDS_REVIEW, $capture->status);
+        $this->assertSame('Jordan Ellis', $capture->full_name);
+        $this->assertSame('jordan@example.org', $capture->email);
         $this->assertTrue($district->is($capture->district));
         $this->assertSame('Badge text closely matches Putnam City.', $capture->match_reason);
+        Storage::disk('local')->assertMissing('captures/incoming/badge.jpg');
     }
 
     public function test_review_page_has_searchable_district_picker_with_native_fallback(): void
@@ -162,14 +196,116 @@ class CaptureFlowTest extends TestCase
             ->assertSee('Denver County 1');
     }
 
-    public function test_capture_upload_automatically_runs_public_email_search_when_email_is_missing(): void
+    public function test_capture_status_endpoint_returns_only_requested_user_captures(): void
     {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $event = Event::create(['name' => 'CO Math', 'state_code' => 'CO']);
+        $first = Capture::create([
+            'user_id' => $user->id,
+            'event_id' => $event->id,
+            'status' => Capture::STATUS_QUEUED,
+        ]);
+        $second = Capture::create([
+            'user_id' => $user->id,
+            'event_id' => $event->id,
+            'status' => Capture::STATUS_NEEDS_REVIEW,
+            'full_name' => 'Alex Rivera',
+            'email' => 'alex@example.org',
+            'organization' => 'Cherry Creek School District',
+        ]);
+        $other = Capture::create([
+            'user_id' => $otherUser->id,
+            'event_id' => $event->id,
+            'status' => Capture::STATUS_NEEDS_REVIEW,
+            'full_name' => 'Hidden Person',
+        ]);
+
+        $response = $this->actingAs($user)
+            ->getJson(route('captures.status', ['ids' => "{$first->id},{$second->id},{$other->id}"]));
+
+        $response
+            ->assertOk()
+            ->assertJsonCount(2, 'captures')
+            ->assertJsonPath('captures.0.id', $first->id)
+            ->assertJsonPath('captures.0.status', Capture::STATUS_QUEUED)
+            ->assertJsonPath('captures.0.ready_for_review', false)
+            ->assertJsonPath('captures.1.id', $second->id)
+            ->assertJsonPath('captures.1.display_name', 'Alex Rivera')
+            ->assertJsonMissing(['id' => $other->id]);
+    }
+
+    public function test_capture_page_shows_last_batch_panel_and_batch_picker(): void
+    {
+        $user = User::factory()->create();
+        $event = Event::create(['name' => 'CO Math', 'state_code' => 'CO']);
+        $capture = Capture::create([
+            'user_id' => $user->id,
+            'event_id' => $event->id,
+            'status' => Capture::STATUS_PROCESSING,
+        ]);
+
+        $this->actingAs($user)
+            ->withSession([
+                'current_event_id' => $event->id,
+                'current_state_code' => 'CO',
+                'last_capture_batch_ids' => [$capture->id],
+            ])
+            ->get(route('captures.create'))
+            ->assertOk()
+            ->assertSee('data-batch-panel', false)
+            ->assertSee('data-capture-row="'.$capture->id.'"', false)
+            ->assertSee('name="photos[]"', false)
+            ->assertSee('Queue Photos for AI');
+    }
+
+    public function test_event_and_log_pages_show_processing_statuses(): void
+    {
+        $user = User::factory()->create();
+        $event = Event::create(['name' => 'CO Math', 'state_code' => 'CO']);
+        Capture::create([
+            'user_id' => $user->id,
+            'event_id' => $event->id,
+            'status' => Capture::STATUS_PROCESSING,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('events.show', $event))
+            ->assertOk()
+            ->assertSee('processing')
+            ->assertSee('AI is reading this photo');
+
+        $this->actingAs($user)
+            ->get(route('captures.index'))
+            ->assertOk()
+            ->assertSee('processing')
+            ->assertSee('AI is reading this photo');
+    }
+
+    public function test_processing_job_dispatches_public_email_search_when_email_is_missing(): void
+    {
+        Queue::fake();
         config(['services.openai.key' => 'test-key']);
         Storage::fake('local');
 
         $user = User::factory()->create();
         $event = Event::create(['name' => 'CO Math', 'state_code' => 'CO']);
+        Storage::disk('local')->put('captures/incoming/badge.jpg', 'image-bytes');
+        Storage::disk('local')->put('captures/normalized.jpg', 'normalized-image-bytes');
+        $capture = Capture::create([
+            'user_id' => $user->id,
+            'event_id' => $event->id,
+            'status' => Capture::STATUS_QUEUED,
+            'image_path' => 'captures/incoming/badge.jpg',
+            'original_filename' => 'badge.jpg',
+        ]);
 
+        $this->mock(CaptureImageNormalizer::class, function ($mock): void {
+            $mock->shouldReceive('normalizeStored')->once()->andReturn([
+                'path' => 'captures/normalized.jpg',
+                'filename' => 'badge-lead-capture.jpg',
+            ]);
+        });
         $this->mock(OpenAiLeadExtractor::class, function ($mock): void {
             $mock->shouldReceive('extract')->once()->andReturn([
                 'full_name' => 'Alex Rivera',
@@ -190,6 +326,77 @@ class CaptureFlowTest extends TestCase
                 'extracted_payload' => [],
             ]);
         });
+        $this->mock(HubSpotClient::class, function ($mock): void {
+            $mock->shouldReceive('lookupLeadContext')->once()->andReturn([
+                'contact' => null,
+                'company' => null,
+            ]);
+        });
+
+        (new ProcessCaptureImage($capture->id))->handle(
+            app(CaptureImageNormalizer::class),
+            app(OpenAiLeadExtractor::class),
+            app(DistrictMatcher::class),
+            app(HubSpotClient::class),
+        );
+
+        $capture->refresh();
+        $this->assertSame(Capture::STATUS_NEEDS_REVIEW, $capture->status);
+        $this->assertSame('queued', $capture->publicEnrichment()['status']);
+        Queue::assertPushed(FindPublicEmailForCapture::class, 1);
+    }
+
+    public function test_processing_job_marks_extraction_failure_for_manual_review(): void
+    {
+        Storage::fake('local');
+
+        $user = User::factory()->create();
+        $event = Event::create(['name' => 'CO Math', 'state_code' => 'CO']);
+        Storage::disk('local')->put('captures/incoming/badge.jpg', 'image-bytes');
+        Storage::disk('local')->put('captures/normalized.jpg', 'normalized-image-bytes');
+        $capture = Capture::create([
+            'user_id' => $user->id,
+            'event_id' => $event->id,
+            'status' => Capture::STATUS_QUEUED,
+            'image_path' => 'captures/incoming/badge.jpg',
+            'original_filename' => 'badge.jpg',
+        ]);
+
+        $this->mock(CaptureImageNormalizer::class, function ($mock): void {
+            $mock->shouldReceive('normalizeStored')->once()->andReturn([
+                'path' => 'captures/normalized.jpg',
+                'filename' => 'badge-lead-capture.jpg',
+            ]);
+        });
+        $this->mock(OpenAiLeadExtractor::class, function ($mock): void {
+            $mock->shouldReceive('extract')->once()->andThrow(new RuntimeException('Vision timeout.'));
+        });
+
+        (new ProcessCaptureImage($capture->id))->handle(
+            app(CaptureImageNormalizer::class),
+            app(OpenAiLeadExtractor::class),
+            app(DistrictMatcher::class),
+            app(HubSpotClient::class),
+        );
+
+        $capture->refresh();
+        $this->assertSame(Capture::STATUS_EXTRACTION_FAILED, $capture->status);
+        $this->assertSame('captures/normalized.jpg', $capture->image_path);
+        $this->assertSame('AI extraction failed. Review and enter fields manually.', $capture->sync_error);
+    }
+
+    public function test_public_email_job_applies_confident_sourced_email(): void
+    {
+        $user = User::factory()->create();
+        $event = Event::create(['name' => 'CO Math', 'state_code' => 'CO']);
+        $capture = Capture::create([
+            'user_id' => $user->id,
+            'event_id' => $event->id,
+            'status' => Capture::STATUS_NEEDS_REVIEW,
+            'full_name' => 'Alex Rivera',
+            'organization' => 'Cherry Creek School District',
+            'raw_text' => 'Alex Rivera Cherry Creek School District',
+        ]);
 
         $this->mock(PublicLeadEnricher::class, function ($mock): void {
             $mock->shouldReceive('enrich')->once()->andReturn([
@@ -208,18 +415,12 @@ class CaptureFlowTest extends TestCase
             ]);
         });
 
-        $response = $this->actingAs($user)->post('/captures', [
-            'event_id' => $event->id,
-            'photo' => UploadedFile::fake()->image('badge.jpg', 600, 400),
-        ]);
+        (new FindPublicEmailForCapture($capture->id))->handle(app(PublicLeadEnricher::class));
 
-        $capture = Capture::firstOrFail();
-        $response
-            ->assertRedirect(route('captures.review', $capture))
-            ->assertSessionHas('status', 'Capture ready for review. Public email found and added for review.');
-
-        $this->assertSame('alex.rivera@cherrycreekschools.org', $capture->fresh()->email);
-        $this->assertSame('found', $capture->fresh()->publicEnrichment()['status']);
+        $capture->refresh();
+        $this->assertSame('alex.rivera@cherrycreekschools.org', $capture->email);
+        $this->assertSame(Capture::STATUS_NEEDS_REVIEW, $capture->status);
+        $this->assertSame('found', $capture->publicEnrichment()['status']);
     }
 
     public function test_capture_photo_is_required(): void
@@ -232,15 +433,17 @@ class CaptureFlowTest extends TestCase
         ])->assertSessionHasErrors('photo');
     }
 
-    public function test_capture_photo_must_be_readable_as_an_image(): void
+    public function test_capture_batch_is_limited_to_twelve_photos(): void
     {
         $user = User::factory()->create();
         $event = Event::create(['name' => 'CO Math', 'state_code' => 'CO']);
 
         $this->actingAs($user)->post('/captures', [
             'event_id' => $event->id,
-            'photo' => UploadedFile::fake()->create('badge.txt', 1, 'text/plain'),
-        ])->assertSessionHasErrors('photo');
+            'photos' => collect(range(1, 13))
+                ->map(fn (int $index) => UploadedFile::fake()->image("badge-{$index}.jpg", 600, 400))
+                ->all(),
+        ])->assertSessionHasErrors('photos');
     }
 
     public function test_capture_can_be_deleted_from_event_workspace(): void
@@ -436,7 +639,7 @@ class CaptureFlowTest extends TestCase
         $this->assertSame('error', $capture->fresh()->publicEnrichment()['status']);
     }
 
-    public function test_review_page_auto_starts_public_email_search_when_email_is_missing(): void
+    public function test_review_page_does_not_auto_start_public_email_search(): void
     {
         $user = User::factory()->create();
         $event = Event::create(['name' => 'CO Math', 'state_code' => 'CO']);
@@ -452,7 +655,7 @@ class CaptureFlowTest extends TestCase
         $this->actingAs($user)
             ->get(route('captures.review', $capture))
             ->assertOk()
-            ->assertSee('data-testid="auto-public-email-enabled"', false);
+            ->assertDontSee('data-testid="auto-public-email-enabled"', false);
     }
 
     public function test_review_form_appears_before_badge_clues(): void

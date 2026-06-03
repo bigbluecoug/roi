@@ -201,7 +201,6 @@
                 id="web-enrich-form"
                 method="post"
                 action="{{ route('captures.web-enrich', $capture) }}"
-                @if ($capture->shouldAutoFindPublicEmail()) data-auto-web-enrich="true" data-testid="auto-public-email-enabled" @endif
             >
                 @csrf
                 <button class="button secondary" type="submit" form="review-form" formaction="{{ route('captures.web-enrich', $capture) }}" data-busy-label="Saving and Searching...">Find Public Email</button>
@@ -209,12 +208,25 @@
 
             <article class="item-card">
                 <div class="row">
-                    <span class="badge {{ $capture->status === 'synced' ? 'synced' : ($capture->status === 'sync_failed' ? 'failed' : 'review') }}">
-                        {{ str_replace('_', ' ', $capture->status) }}
+                    <span class="badge {{ $capture->statusBadgeClass() }}">
+                        {{ $capture->statusLabel() }}
                     </span>
                     <span class="meta">AI {{ number_format((float) $capture->ai_confidence, 2) }}</span>
                 </div>
-                <div class="meta">{{ $capture->match_reason ?? 'District match pending.' }}</div>
+                <div class="meta">
+                    @if ($capture->status === \App\Models\Capture::STATUS_QUEUED)
+                        Capture queued. AI will start shortly.
+                    @elseif ($capture->status === \App\Models\Capture::STATUS_PROCESSING)
+                        AI is reading this photo.
+                    @elseif ($capture->status === \App\Models\Capture::STATUS_EXTRACTION_FAILED)
+                        {{ $capture->sync_error ?? 'AI could not extract this photo. Enter details manually.' }}
+                    @else
+                        {{ $capture->match_reason ?? 'District match pending.' }}
+                    @endif
+                </div>
+                @if (in_array($capture->publicEnrichmentStatus(), ['queued', 'searching'], true))
+                    <div class="meta">Public email search {{ $capture->publicEnrichmentStatus() }}.</div>
+                @endif
                 @if ($capture->sync_error)
                     <div class="alert error" style="margin:0;">{{ $capture->sync_error }}</div>
                 @endif
@@ -303,6 +315,6 @@
 
     <form class="sync-form final-sync-form" method="post" action="{{ route('captures.sync', $capture) }}">
         @csrf
-        <button class="button accent" type="submit" @disabled(! $capture->readyForHubSpot())>Add to HubSpot</button>
+        <button class="button accent" type="submit" @disabled($capture->stillProcessing() || ! $capture->readyForHubSpot())>Add to HubSpot</button>
     </form>
 </x-layouts.app>

@@ -21,7 +21,7 @@ class CaptureImageNormalizer
     public function normalize(UploadedFile $file): array
     {
         try {
-            $image = $this->readImage($file);
+            $image = $this->readImagePath($file->getRealPath());
             $blob = $this->jpegBlob($image);
         } catch (ImagickException $exception) {
             throw new RuntimeException('This photo format could not be read. Try choosing the original photo or retaking it as a standard camera image.', 0, $exception);
@@ -36,17 +36,64 @@ class CaptureImageNormalizer
 
         return [
             'path' => $path,
-            'filename' => $this->normalizedFilename($file),
+            'filename' => $this->normalizedFilename($file->getClientOriginalName()),
+        ];
+    }
+
+    /**
+     * @return array{path: string, filename: string}
+     */
+    public function storeOriginal(UploadedFile $file): array
+    {
+        $filename = $file->getClientOriginalName() ?: 'capture';
+        $extension = strtolower($file->getClientOriginalExtension() ?: $file->guessExtension() ?: 'image');
+        $slug = Str::slug(pathinfo($filename, PATHINFO_FILENAME) ?: 'capture') ?: 'capture';
+        $path = 'captures/incoming/'.now()->format('Y/m').'/'.Str::uuid().'-'.$slug.'.'.$extension;
+
+        Storage::disk('local')->put($path, file_get_contents($file->getRealPath()));
+
+        return [
+            'path' => $path,
+            'filename' => $filename,
+        ];
+    }
+
+    /**
+     * @return array{path: string, filename: string}
+     */
+    public function normalizeStored(string $path, ?string $originalFilename = null): array
+    {
+        if (! Storage::disk('local')->exists($path)) {
+            throw new RuntimeException('The stored capture image could not be found.');
+        }
+
+        try {
+            $image = $this->readImagePath(Storage::disk('local')->path($path));
+            $blob = $this->jpegBlob($image);
+        } catch (ImagickException $exception) {
+            throw new RuntimeException('This photo format could not be read. Try choosing the original photo or retaking it as a standard camera image.', 0, $exception);
+        }
+
+        if (! $blob) {
+            throw new RuntimeException('This photo could not be converted for upload.');
+        }
+
+        $normalizedPath = 'captures/'.now()->format('Y/m').'/'.Str::uuid().'-lead-capture.jpg';
+        Storage::disk('local')->put($normalizedPath, $blob);
+
+        return [
+            'path' => $normalizedPath,
+            'filename' => $this->normalizedFilename($originalFilename ?: basename($path)),
         ];
     }
 
     /**
      * @throws ImagickException
      */
-    private function readImage(UploadedFile $file): Imagick
+    private function readImagePath(string $path): Imagick
     {
         $image = new Imagick;
-        $image->readImage($file->getRealPath());
+        $image->readImage($path);
 
         if ($image->getNumberImages() > 1) {
             $image->setIteratorIndex(0);
@@ -134,9 +181,9 @@ class CaptureImageNormalizer
         }
     }
 
-    private function normalizedFilename(UploadedFile $file): string
+    private function normalizedFilename(string $filename): string
     {
-        $name = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME) ?: 'capture';
+        $name = pathinfo($filename, PATHINFO_FILENAME) ?: 'capture';
         $slug = Str::slug($name) ?: 'capture';
 
         return $slug.'-lead-capture.jpg';

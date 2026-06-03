@@ -27,14 +27,22 @@
                         <tr>
                             <td>
                                 <strong>{{ $capture->displayName() }}</strong><br>
-                                <span class="meta">{{ $capture->usableEmail() ?? 'No email' }}</span>
+                                <span class="meta">
+                                    @if ($capture->stillProcessing())
+                                        AI is reading this photo
+                                    @elseif (in_array($capture->publicEnrichmentStatus(), ['queued', 'searching'], true))
+                                        Public email search {{ $capture->publicEnrichmentStatus() }}
+                                    @else
+                                        {{ $capture->usableEmail() ?? 'No email' }}
+                                    @endif
+                                </span>
                             </td>
-                            <td>{{ $capture->organization ?? 'Needs review' }}</td>
+                            <td>{{ $capture->organization ?? ($capture->stillProcessing() ? 'Processing capture' : 'Needs review') }}</td>
                             <td>{{ $capture->event->state_code }} · {{ $capture->event->name }}</td>
                             <td>{{ $capture->district?->name ?? 'Unconfirmed' }}</td>
                             <td>
-                                <span class="badge {{ $capture->status === 'synced' ? 'synced' : ($capture->status === 'sync_failed' ? 'failed' : 'review') }}">
-                                    {{ str_replace('_', ' ', $capture->status) }}
+                                <span class="badge {{ $capture->statusBadgeClass() }}">
+                                    {{ $capture->statusLabel() }}
                                 </span>
                             </td>
                             <td>

@@ -268,6 +268,7 @@
         }
         .badge.synced { background: rgba(21, 128, 61, 0.12); color: var(--green); }
         .badge.failed { background: rgba(185, 28, 28, 0.12); color: var(--red); }
+        .badge.processing { background: rgba(161, 98, 7, 0.14); color: var(--amber); }
         .badge.review { background: rgba(232, 69, 10, 0.12); color: var(--accent-dark); }
         .insight-list {
             display: grid;
@@ -526,6 +527,65 @@
             background: rgba(185, 28, 28, 0.09);
             color: var(--red);
         }
+        .photo-tray {
+            display: grid;
+            gap: 8px;
+        }
+        .photo-chip {
+            display: grid;
+            grid-template-columns: 58px minmax(0, 1fr) auto;
+            gap: 10px;
+            align-items: center;
+            border: 1px solid rgba(10, 31, 68, 0.1);
+            border-radius: 8px;
+            background: white;
+            padding: 8px;
+        }
+        .photo-chip img {
+            width: 58px;
+            height: 58px;
+            object-fit: cover;
+            border-radius: 6px;
+            background: #ece6dc;
+        }
+        .photo-chip-copy {
+            min-width: 0;
+            display: grid;
+            gap: 2px;
+        }
+        .photo-chip-copy strong,
+        .photo-chip-copy span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .photo-chip-copy span {
+            color: var(--body);
+            font-size: 12px;
+        }
+        .batch-panel {
+            gap: 12px;
+        }
+        .batch-list {
+            display: grid;
+            gap: 8px;
+        }
+        .batch-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto auto;
+            gap: 10px;
+            align-items: center;
+            border: 1px solid rgba(10, 31, 68, 0.1);
+            border-radius: 8px;
+            background: rgba(10, 31, 68, 0.035);
+            padding: 9px 10px;
+        }
+        .batch-row strong {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
         .capture-submit {
             min-height: 52px;
             font-size: 16px;
@@ -608,6 +668,14 @@
             }
             .state-grid { grid-template-columns: 1fr 1fr; }
             .button { width: 100%; }
+            .photo-chip,
+            .batch-row {
+                grid-template-columns: 1fr;
+            }
+            .photo-chip img {
+                width: 100%;
+                height: 120px;
+            }
         }
 
         @media (max-width: 480px) {

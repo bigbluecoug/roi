@@ -10,7 +10,13 @@ class Capture extends Model
 {
     use HasFactory;
 
+    public const STATUS_QUEUED = 'queued';
+
+    public const STATUS_PROCESSING = 'processing';
+
     public const STATUS_NEEDS_REVIEW = 'needs_review';
+
+    public const STATUS_EXTRACTION_FAILED = 'extraction_failed';
 
     public const STATUS_REVIEWED = 'reviewed';
 
@@ -82,6 +88,40 @@ class Capture extends Model
     public function displayName(): string
     {
         return $this->full_name ?: trim(($this->first_name ?? '').' '.($this->last_name ?? '')) ?: 'Unlabeled capture';
+    }
+
+    public function statusLabel(): string
+    {
+        return match ($this->status) {
+            self::STATUS_QUEUED => 'queued',
+            self::STATUS_PROCESSING => 'processing',
+            self::STATUS_NEEDS_REVIEW => 'needs review',
+            self::STATUS_EXTRACTION_FAILED => 'needs manual entry',
+            self::STATUS_REVIEWED => 'reviewed',
+            self::STATUS_SYNCED => 'synced',
+            self::STATUS_SYNC_FAILED => 'sync failed',
+            default => str_replace('_', ' ', (string) $this->status),
+        };
+    }
+
+    public function statusBadgeClass(): string
+    {
+        return match ($this->status) {
+            self::STATUS_SYNCED => 'synced',
+            self::STATUS_SYNC_FAILED, self::STATUS_EXTRACTION_FAILED => 'failed',
+            self::STATUS_QUEUED, self::STATUS_PROCESSING => 'processing',
+            default => 'review',
+        };
+    }
+
+    public function stillProcessing(): bool
+    {
+        return in_array($this->status, [self::STATUS_QUEUED, self::STATUS_PROCESSING], true);
+    }
+
+    public function reviewReady(): bool
+    {
+        return ! $this->stillProcessing();
     }
 
     public function readyForHubSpot(): bool
@@ -245,5 +285,12 @@ class Capture extends Model
         return blank($this->usableEmail())
             && $this->publicEnrichment() === []
             && $this->hasPublicEmailSearchClues();
+    }
+
+    public function publicEnrichmentStatus(): ?string
+    {
+        $status = $this->publicEnrichment()['status'] ?? null;
+
+        return is_string($status) && $status !== '' ? $status : null;
     }
 }

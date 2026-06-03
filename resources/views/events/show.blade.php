@@ -37,17 +37,25 @@
             @foreach ($captures as $capture)
                 <article class="item-card capture-card">
                     <div class="row">
-                        <span class="badge {{ $capture->status === 'synced' ? 'synced' : ($capture->status === 'sync_failed' ? 'failed' : 'review') }}">
-                            {{ str_replace('_', ' ', $capture->status) }}
+                        <span class="badge {{ $capture->statusBadgeClass() }}">
+                            {{ $capture->statusLabel() }}
                         </span>
                         <span class="meta">{{ $capture->created_at?->format('M j, g:i A') }}</span>
                     </div>
                     <div>
                         <h2 class="item-title">{{ $capture->displayName() }}</h2>
-                        <div class="meta">{{ $capture->email ?? 'No email yet' }}</div>
+                        <div class="meta">
+                            @if ($capture->stillProcessing())
+                                AI is reading this photo
+                            @elseif (in_array($capture->publicEnrichmentStatus(), ['queued', 'searching'], true))
+                                Public email search {{ $capture->publicEnrichmentStatus() }}
+                            @else
+                                {{ $capture->email ?? 'No email yet' }}
+                            @endif
+                        </div>
                     </div>
                     <div>
-                        <strong>{{ $capture->organization ?? 'Needs organization review' }}</strong>
+                        <strong>{{ $capture->organization ?? ($capture->stillProcessing() ? 'Processing capture' : 'Needs organization review') }}</strong>
                         <div class="meta">{{ $capture->district?->name ?? 'District unconfirmed' }}</div>
                     </div>
                     <div class="row">

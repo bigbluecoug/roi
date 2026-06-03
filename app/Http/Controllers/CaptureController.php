@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\ProcessCaptureImage;
 use App\Models\Capture;
 use App\Models\District;
 use App\Models\Event;
@@ -11,6 +12,7 @@ use App\Services\HubSpotClient;
 use App\Services\OpenAiLeadExtractor;
 use App\Services\PublicLeadEnricher;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -55,17 +57,20 @@ class CaptureController extends Controller
 
         return view('captures.create', [
             'events' => $events,
+            'lastBatchCaptures' => $this->lastBatchCaptures($request),
             'selectedEvent' => $selectedEvent,
             'selectedEventId' => $selectedEvent->id,
             'stateName' => EventController::STATES[$selectedEvent->state_code] ?? $selectedEvent->state_code,
         ]);
     }
 
-    public function store(Request $request, CaptureImageNormalizer $normalizer, OpenAiLeadExtractor $extractor, DistrictMatcher $matcher, HubSpotClient $hubSpot, PublicLeadEnricher $publicEnricher): RedirectResponse
+    public function store(Request $request, CaptureImageNormalizer $normalizer): RedirectResponse
     {
         $data = $request->validate([
             'event_id' => ['required', 'exists:events,id'],
-            'photo' => ['required', 'file', 'max:20480'],
+            'photo' => ['nullable', 'file', 'max:20480', 'required_without:photos'],
+            'photos' => ['nullable', 'array', 'max:12', 'required_without:photo'],
+            'photos.*' => ['file', 'max:20480'],
             'rep_notes' => ['nullable', 'string', 'max:2000'],
         ]);
 
@@ -73,96 +78,113 @@ class CaptureController extends Controller
         $request->session()->put('current_state_code', $event->state_code);
         $request->session()->put('current_event_id', $event->id);
 
-        $file = $request->file('photo');
-
-        try {
-            $normalized = $normalizer->normalize($file);
-            $path = $normalized['path'];
-        } catch (Throwable $exception) {
-            report($exception);
-
-            return back()
-                ->withErrors(['photo' => $exception->getMessage()])
-                ->withInput();
+        $files = collect($request->file('photos', []));
+        if ($request->hasFile('photo')) {
+            $files->push($request->file('photo'));
         }
 
-        try {
-            $extracted = $extractor->extract($path);
-            $syncError = null;
-        } catch (Throwable $exception) {
-            report($exception);
-            $extracted = [
-                'full_name' => null,
-                'first_name' => null,
-                'last_name' => null,
-                'email' => null,
-                'phone' => null,
-                'title' => null,
-                'organization' => null,
-                'city' => null,
-                'state' => null,
-                'raw_text' => null,
-                'confidence' => ['overall' => 0],
-                'evidence' => [],
-                'warnings' => [$exception->getMessage()],
-                'insights' => [],
-                'ai_confidence' => 0,
-                'extracted_payload' => [],
-            ];
-            $syncError = 'AI extraction failed. Review and enter fields manually.';
+        if ($files->isEmpty()) {
+            return back()->withErrors(['photo' => 'Choose at least one badge or card photo.'])->withInput();
         }
 
-        $hubSpotContext = ['contact' => null, 'company' => null];
-        try {
-            $hubSpotContext = $hubSpot->lookupLeadContext($extracted['email'], $extracted['organization']);
-        } catch (Throwable $exception) {
-            report($exception);
+        if ($files->count() > 12) {
+            return back()->withErrors(['photos' => 'Choose 12 or fewer photos at a time.'])->withInput();
         }
 
-        $matchInput = $extracted;
-        $hubSpotCompanyName = $hubSpotContext['company']['properties']['name'] ?? null;
-        $hubSpotContactCompany = $hubSpotContext['contact']['properties']['company'] ?? null;
-        if (blank($matchInput['organization']) && filled($hubSpotCompanyName ?: $hubSpotContactCompany)) {
-            $matchInput['organization'] = $hubSpotCompanyName ?: $hubSpotContactCompany;
+        $captureIds = [];
+        foreach ($files as $file) {
+            $capture = Capture::create([
+                'user_id' => $request->user()->id,
+                'event_id' => $event->id,
+                'status' => Capture::STATUS_QUEUED,
+                'rep_notes' => $data['rep_notes'] ?? null,
+                'sync_error' => null,
+            ]);
+
+            try {
+                $stored = $normalizer->storeOriginal($file);
+                $capture->forceFill([
+                    'image_path' => $stored['path'],
+                    'original_filename' => $stored['filename'],
+                ])->save();
+
+                ProcessCaptureImage::dispatch($capture->id);
+            } catch (Throwable $exception) {
+                report($exception);
+
+                $capture->forceFill([
+                    'status' => Capture::STATUS_EXTRACTION_FAILED,
+                    'original_filename' => $file->getClientOriginalName() ?: null,
+                    'sync_error' => 'This photo could not be queued: '.$exception->getMessage(),
+                ])->save();
+            }
+
+            $captureIds[] = $capture->id;
         }
 
-        $match = $matcher->match($event, $matchInput);
-        $matchReason = $match['reason'];
-        if ($hubSpotContext['contact'] || $hubSpotContext['company']) {
-            $matchReason .= ' Existing HubSpot '.($hubSpotContext['contact'] ? 'contact' : 'company').' found.';
+        $request->session()->put('last_capture_batch_ids', $captureIds);
+
+        return redirect()
+            ->route('captures.create')
+            ->with('status', $files->count().' '.($files->count() === 1 ? 'photo' : 'photos').' queued for AI processing. Keep capturing while we work.');
+    }
+
+    public function status(Request $request): JsonResponse
+    {
+        $ids = collect(explode(',', $request->string('ids')->toString()))
+            ->map(fn (string $id) => (int) trim($id))
+            ->filter()
+            ->unique()
+            ->take(50)
+            ->values();
+
+        if ($ids->isEmpty()) {
+            return response()->json(['captures' => []]);
         }
 
-        $capture = Capture::create([
-            'user_id' => $request->user()->id,
-            'event_id' => $event->id,
-            'district_id' => $match['district']?->id,
-            'status' => Capture::STATUS_NEEDS_REVIEW,
-            'image_path' => $path,
-            'original_filename' => $normalized['filename'],
-            'full_name' => $extracted['full_name'],
-            'first_name' => $extracted['first_name'],
-            'last_name' => $extracted['last_name'],
-            'email' => $extracted['email'],
-            'phone' => $extracted['phone'],
-            'title' => $extracted['title'],
-            'organization' => $extracted['organization'],
-            'city' => $extracted['city'],
-            'state' => $extracted['state'],
-            'raw_text' => $extracted['raw_text'],
-            'confidence' => $extracted['confidence'],
-            'evidence' => $extracted['evidence'],
-            'extracted_payload' => $extracted['extracted_payload'],
-            'ai_confidence' => $extracted['ai_confidence'],
-            'match_confidence' => $match['confidence'],
-            'match_reason' => $matchReason,
-            'rep_notes' => $data['rep_notes'] ?? null,
-            'sync_error' => $syncError,
-        ]);
+        $captures = Capture::query()
+            ->with(['district', 'event'])
+            ->where('user_id', $request->user()->id)
+            ->whereIn('id', $ids)
+            ->get()
+            ->sortBy(fn (Capture $capture) => $ids->search($capture->id))
+            ->values()
+            ->map(fn (Capture $capture) => [
+                'id' => $capture->id,
+                'status' => $capture->status,
+                'status_label' => $capture->statusLabel(),
+                'status_badge_class' => $capture->statusBadgeClass(),
+                'display_name' => $capture->displayName(),
+                'email' => $capture->usableEmail(),
+                'organization' => $capture->organization,
+                'district' => $capture->district?->name,
+                'public_enrichment_status' => $capture->publicEnrichmentStatus(),
+                'ready_for_review' => $capture->reviewReady(),
+                'review_url' => route('captures.review', $capture),
+            ]);
 
-        $autoMessage = $this->runAutomaticPublicEmailSearch($capture, $publicEnricher);
-        $message = trim('Capture ready for review. '.($autoMessage ?? ''));
+        return response()->json(['captures' => $captures]);
+    }
 
-        return redirect()->route('captures.review', $capture)->with('status', $message);
+    private function lastBatchCaptures(Request $request)
+    {
+        $ids = collect((array) $request->session()->get('last_capture_batch_ids', []))
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($ids->isEmpty()) {
+            return collect();
+        }
+
+        return Capture::query()
+            ->with(['event', 'district'])
+            ->where('user_id', $request->user()->id)
+            ->whereIn('id', $ids)
+            ->get()
+            ->sortBy(fn (Capture $capture) => $ids->search($capture->id))
+            ->values();
     }
 
     public function show(Capture $capture): View
