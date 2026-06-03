@@ -6,9 +6,7 @@ use App\Http\Controllers\EventController;
 use App\Http\Controllers\SetupController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return response()->file(public_path('index.html'));
-})->name('roi.index');
+Route::redirect('/', '/capture')->name('roi.index');
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [LoginController::class, 'create'])->name('login');

@@ -31,6 +31,12 @@ class SetupFlowTest extends TestCase
         ])->assertRedirect(route('setup.state'));
     }
 
+    public function test_homepage_routes_to_event_capture_site(): void
+    {
+        $this->get('/')
+            ->assertRedirect(route('captures.create'));
+    }
+
     public function test_seeded_derivita_users_can_login_with_capture_password(): void
     {
         $this->seed(InternalUserSeeder::class);

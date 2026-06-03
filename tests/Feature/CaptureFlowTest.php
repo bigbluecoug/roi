@@ -314,6 +314,22 @@ class CaptureFlowTest extends TestCase
             ->assertSee('Queue Photos for AI + Email');
     }
 
+    public function test_capture_page_compresses_large_photos_instead_of_rejecting_them_by_size(): void
+    {
+        $user = User::factory()->create();
+        $event = Event::create(['name' => 'CO Math', 'state_code' => 'CO']);
+
+        $this->actingAs($user)
+            ->withSession([
+                'current_event_id' => $event->id,
+                'current_state_code' => 'CO',
+            ])
+            ->get(route('captures.create'))
+            ->assertOk()
+            ->assertSee('Reducing ${formatBytes(file.size)} photo for upload...', false)
+            ->assertDontSee('Choose an image under', false);
+    }
+
     public function test_capture_page_hides_last_batch_panel_after_batch_is_complete(): void
     {
         $user = User::factory()->create();

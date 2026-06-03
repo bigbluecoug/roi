@@ -79,6 +79,7 @@
             const maxBytes = 1600 * 1024;
             const serverMaxBytes = 20 * 1024 * 1024;
             const maxDimension = 1600;
+            const minDimension = 420;
             const imageNamePattern = /\.(avif|bmp|gif|heic|heif|jpe?g|png|tiff?|webp)$/i;
             const items = [];
 
@@ -119,10 +120,9 @@
             const compressImage = async (file) => {
                 const image = await loadImage(file);
                 let scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
-                let quality = 0.82;
                 let bestBlob = null;
 
-                for (let attempt = 0; attempt < 6; attempt++) {
+                for (let attempt = 0; attempt < 12; attempt++) {
                     const width = Math.max(1, Math.round(image.width * scale));
                     const height = Math.max(1, Math.round(image.height * scale));
                     const canvas = document.createElement('canvas');
@@ -131,15 +131,18 @@
                     const context = canvas.getContext('2d');
                     context.drawImage(image, 0, 0, width, height);
 
-                    for (let q = quality; q >= 0.44; q -= 0.08) {
+                    for (let q = 0.84; q >= 0.32; q -= 0.08) {
                         const blob = await canvasToBlob(canvas, q);
                         if (!blob) continue;
-                        bestBlob = blob;
+                        if (!bestBlob || blob.size < bestBlob.size) bestBlob = blob;
                         if (blob.size <= maxBytes) return blob;
                     }
 
-                    scale *= 0.82;
-                    quality = 0.76;
+                    if (Math.max(width, height) <= minDimension && bestBlob && bestBlob.size <= serverMaxBytes) {
+                        return bestBlob;
+                    }
+
+                    scale *= 0.72;
                 }
 
                 return bestBlob;
@@ -217,14 +220,11 @@
                     return;
                 }
 
-                if (file.size > serverMaxBytes) {
-                    setStatus(`${file.name} is ${formatBytes(file.size)}. Choose an image under ${formatBytes(serverMaxBytes)}.`, true);
-                    return;
-                }
-
                 const item = {
                     file,
-                    message: `Preparing ${formatBytes(file.size)} photo...`,
+                    message: file.size > maxBytes
+                        ? `Reducing ${formatBytes(file.size)} photo for upload...`
+                        : `Preparing ${formatBytes(file.size)} photo...`,
                     previewUrl: URL.createObjectURL(file),
                     removed: false,
                     status: 'preparing',
@@ -235,18 +235,28 @@
 
                 try {
                     const blob = await compressImage(file);
-                    if (blob && blob.size <= serverMaxBytes) {
+                    if (!blob || blob.size > serverMaxBytes) {
+                        item.status = 'error';
+                        item.message = `Could not reduce below ${formatBytes(serverMaxBytes)}. Try cropping this image, then add it again.`;
+                    } else {
                         item.file = asCompressedFile(blob, file);
+                        item.status = 'ready';
+                        item.message = `${formatBytes(item.file.size)} ready`;
                     }
-                    item.status = 'ready';
-                    item.message = `${formatBytes(item.file.size)} ready`;
                 } catch (error) {
-                    item.status = 'ready';
-                    item.message = 'Will convert after upload';
+                    item.status = 'error';
+                    item.message = 'Could not read this image. Try saving it as a photo or screenshot, then add it again.';
                 }
 
                 renderTray();
-                setStatus(`${activeItems().filter((candidate) => candidate.status === 'ready').length} ${activeItems().length === 1 ? 'photo' : 'photos'} ready to queue.`);
+                const readyCount = activeItems().filter((candidate) => candidate.status === 'ready').length;
+                const errorCount = activeItems().filter((candidate) => candidate.status === 'error').length;
+                setStatus(
+                    errorCount > 0
+                        ? `${readyCount} ready, ${errorCount} could not be reduced. Ready photos can still be queued.`
+                        : `${readyCount} ${activeItems().length === 1 ? 'photo' : 'photos'} ready to queue.`,
+                    errorCount > 0
+                );
             };
 
             input.addEventListener('change', async () => {
