@@ -33,4 +33,31 @@ class DistrictMatcherTest extends TestCase
         $this->assertTrue($district->is($match['district']));
         $this->assertGreaterThanOrEqual(0.68, $match['confidence']);
     }
+
+    public function test_it_matches_raw_badge_and_ai_clues_when_organization_is_blank(): void
+    {
+        $event = Event::create(['name' => 'Oklahoma Event', 'state_code' => 'OK']);
+        $district = District::create([
+            'state_code' => 'OK',
+            'lea_id' => '4015480',
+            'name' => 'Putnam City',
+            'short_name' => 'Putnam City',
+            'city' => 'Oklahoma City',
+            'total_students' => 17950,
+        ]);
+
+        $match = (new DistrictMatcher)->match($event, [
+            'organization' => null,
+            'email' => null,
+            'city' => null,
+            'raw_text' => 'Jordan Ellis instructional coach Putnam City Schools',
+            'evidence' => ['Putnam City appears on the badge'],
+            'insights' => [
+                'district_clues' => ['Putnam City Schools'],
+            ],
+        ]);
+
+        $this->assertTrue($district->is($match['district']));
+        $this->assertGreaterThanOrEqual(0.68, $match['confidence']);
+    }
 }

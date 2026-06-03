@@ -34,6 +34,11 @@
             $publicEnrichmentDisplay[$key] = \App\Models\Capture::redactMaskedEmailText($publicEnrichment[$key] ?? null);
         }
         $publicSources = $capture->publicEnrichmentSources();
+        $selectedDistrictId = (int) old('district_id', $capture->district_id);
+        $selectedDistrict = $districts->firstWhere('id', $selectedDistrictId);
+        $selectedDistrictLabel = $selectedDistrict
+            ? $selectedDistrict->name.($selectedDistrict->city ? ' · '.$selectedDistrict->city : '')
+            : '';
     @endphp
 
     @if ($capture->image_path)
@@ -111,12 +116,44 @@
                     </div>
                 </div>
 
-                <div>
-                    <label for="district_id">District</label>
-                    <select id="district_id" name="district_id" required>
+                <div class="district-picker" data-district-picker>
+                    <label for="district_search">District</label>
+                    <div class="district-search-wrap">
+                        <input
+                            id="district_search"
+                            type="search"
+                            value="{{ $selectedDistrictLabel }}"
+                            inputmode="search"
+                            autocomplete="off"
+                            placeholder="Start typing district name"
+                            data-district-search
+                        >
+                        <input type="hidden" name="district_id" value="{{ $selectedDistrict?->id }}" data-district-hidden disabled>
+                        <div class="district-results" data-district-results hidden></div>
+                        <div class="meta">Type a few letters, then tap the matching district.</div>
+                    </div>
+                    <select id="district_id" name="district_id" class="district-native-select" data-district-select>
                         <option value="">Select district</option>
                         @foreach ($districts as $district)
-                            <option value="{{ $district->id }}" @selected((int) old('district_id', $capture->district_id) === $district->id)>
+                            @php
+                                $districtMeta = trim(($district->city ? $district->city.' · ' : '').number_format($district->total_students).' students');
+                                $districtLabel = $district->name.($district->city ? ' · '.$district->city : '');
+                                $districtSearchText = implode(' ', array_filter([
+                                    $district->name,
+                                    $district->short_name,
+                                    $district->nces_name,
+                                    $district->city,
+                                    $district->search_text,
+                                ]));
+                            @endphp
+                            <option
+                                value="{{ $district->id }}"
+                                data-name="{{ $district->name }}"
+                                data-label="{{ $districtLabel }}"
+                                data-meta="{{ $districtMeta }}"
+                                data-search="{{ $districtSearchText }}"
+                                @selected($selectedDistrictId === $district->id)
+                            >
                                 {{ $district->name }} · {{ number_format($district->total_students) }} students
                             </option>
                         @endforeach

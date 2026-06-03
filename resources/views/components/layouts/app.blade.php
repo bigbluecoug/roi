@@ -377,6 +377,53 @@
         .inline-field-action label {
             margin-bottom: 0;
         }
+        .district-search-wrap {
+            display: none;
+            gap: 8px;
+        }
+        .district-picker.is-enhanced .district-search-wrap {
+            display: grid;
+        }
+        .district-picker.is-enhanced .district-native-select {
+            display: none;
+        }
+        .district-results {
+            display: grid;
+            gap: 6px;
+            max-height: 260px;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+        }
+        .district-results[hidden] {
+            display: none;
+        }
+        .district-result {
+            width: 100%;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            background: white;
+            color: var(--ink);
+            cursor: pointer;
+            font: inherit;
+            padding: 10px 12px;
+            text-align: left;
+        }
+        .district-result[aria-selected="true"] {
+            border-color: rgba(232, 69, 10, 0.45);
+            background: rgba(232, 69, 10, 0.07);
+        }
+        .district-result strong,
+        .district-result span {
+            display: block;
+        }
+        .district-result strong {
+            line-height: 1.25;
+        }
+        .district-result span {
+            color: var(--body);
+            font-size: 12px;
+            margin-top: 2px;
+        }
         .sync-form {
             margin-top: 14px;
         }
@@ -678,6 +725,163 @@
 
             window.sessionStorage.setItem(storageKey, 'sent');
             form.requestSubmit();
+        });
+
+        document.querySelectorAll('[data-district-picker]').forEach((picker) => {
+            const select = picker.querySelector('[data-district-select]');
+            const search = picker.querySelector('[data-district-search]');
+            const hidden = picker.querySelector('[data-district-hidden]');
+            const results = picker.querySelector('[data-district-results]');
+
+            if (!(select instanceof HTMLSelectElement)
+                || !(search instanceof HTMLInputElement)
+                || !(hidden instanceof HTMLInputElement)
+                || !(results instanceof HTMLElement)) {
+                return;
+            }
+
+            const normalize = (value) => value
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9\s]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+
+            const districts = Array.from(select.options)
+                .filter((option) => option.value)
+                .map((option) => ({
+                    id: option.value,
+                    label: option.dataset.label || option.textContent.trim(),
+                    name: option.dataset.name || option.textContent.trim(),
+                    meta: option.dataset.meta || '',
+                    search: normalize([
+                        option.dataset.name,
+                        option.dataset.label,
+                        option.dataset.search,
+                        option.textContent,
+                    ].filter(Boolean).join(' ')),
+                }));
+
+            const choose = (district) => {
+                hidden.value = district.id;
+                select.value = district.id;
+                search.value = district.label;
+                search.setCustomValidity('');
+                renderResults([], district.id);
+            };
+
+            const matchingDistricts = (value) => {
+                const query = normalize(value);
+                if (!query) {
+                    return districts.slice(0, 8);
+                }
+
+                const words = query.split(' ').filter(Boolean);
+
+                return districts
+                    .filter((district) => district.search.includes(query)
+                        || words.every((word) => district.search.includes(word)))
+                    .slice(0, 8);
+            };
+
+            const resolveTypedValue = () => {
+                const query = normalize(search.value);
+                if (!query) {
+                    hidden.value = '';
+                    select.value = '';
+                    return null;
+                }
+
+                const exact = districts.find((district) => normalize(district.label) === query || normalize(district.name) === query);
+                if (exact) {
+                    choose(exact);
+                    return exact;
+                }
+
+                const matches = matchingDistricts(search.value);
+                if (matches.length === 1) {
+                    choose(matches[0]);
+                    return matches[0];
+                }
+
+                hidden.value = '';
+                select.value = '';
+                return null;
+            };
+
+            const renderResults = (matches = matchingDistricts(search.value), selectedId = hidden.value) => {
+                results.textContent = '';
+                results.hidden = matches.length === 0;
+
+                matches.forEach((district) => {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'district-result';
+                    button.setAttribute('aria-selected', district.id === selectedId ? 'true' : 'false');
+
+                    const name = document.createElement('strong');
+                    name.textContent = district.name;
+                    button.appendChild(name);
+
+                    if (district.meta) {
+                        const meta = document.createElement('span');
+                        meta.textContent = district.meta;
+                        button.appendChild(meta);
+                    }
+
+                    button.addEventListener('click', () => choose(district));
+                    results.appendChild(button);
+                });
+            };
+
+            picker.classList.add('is-enhanced');
+            select.disabled = true;
+            hidden.disabled = false;
+
+            if (select.value) {
+                const selected = districts.find((district) => district.id === select.value);
+                if (selected) {
+                    choose(selected);
+                }
+            }
+
+            search.addEventListener('input', () => {
+                hidden.value = '';
+                select.value = '';
+                search.setCustomValidity('');
+                renderResults();
+            });
+
+            search.addEventListener('focus', () => renderResults());
+            search.addEventListener('blur', () => {
+                window.setTimeout(() => {
+                    if (!picker.contains(document.activeElement)) {
+                        results.hidden = true;
+                    }
+                }, 120);
+            });
+
+            const form = search.form;
+            if (form instanceof HTMLFormElement) {
+                form.addEventListener('submit', (event) => {
+                    const submitter = event.submitter;
+                    const action = submitter instanceof HTMLElement && 'formAction' in submitter
+                        ? submitter.formAction
+                        : form.action;
+                    const districtOptional = typeof action === 'string' && action.includes('/web-enrich');
+
+                    if (hidden.value || resolveTypedValue() || districtOptional) {
+                        search.setCustomValidity('');
+                        return;
+                    }
+
+                    event.preventDefault();
+                    search.setCustomValidity('Type a few letters and tap one of the district matches.');
+                    search.reportValidity();
+                    renderResults();
+                }, { capture: true });
+            }
         });
     </script>
 </body>

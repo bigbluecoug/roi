@@ -69,6 +69,99 @@ class CaptureFlowTest extends TestCase
         Storage::disk('local')->assertExists($capture->image_path);
     }
 
+    public function test_capture_upload_uses_badge_clues_to_pick_district_when_organization_is_blank(): void
+    {
+        Storage::fake('local');
+
+        $user = User::factory()->create();
+        $event = Event::create(['name' => 'OK Math', 'state_code' => 'OK']);
+        $district = District::create([
+            'state_code' => 'OK',
+            'lea_id' => '4015480',
+            'name' => 'Putnam City',
+            'short_name' => 'Putnam City',
+            'city' => 'Oklahoma City',
+            'total_students' => 17950,
+        ]);
+
+        $this->mock(OpenAiLeadExtractor::class, function ($mock): void {
+            $mock->shouldReceive('extract')->once()->andReturn([
+                'full_name' => 'Jordan Ellis',
+                'first_name' => 'Jordan',
+                'last_name' => 'Ellis',
+                'email' => null,
+                'phone' => null,
+                'title' => 'Instructional Coach',
+                'organization' => null,
+                'city' => null,
+                'state' => 'OK',
+                'raw_text' => 'Jordan Ellis Instructional Coach Putnam City Schools',
+                'confidence' => ['overall' => 0.87],
+                'evidence' => ['Putnam City Schools'],
+                'warnings' => [],
+                'insights' => [
+                    'district_clues' => ['Putnam City Schools'],
+                ],
+                'ai_confidence' => 0.87,
+                'extracted_payload' => [
+                    'insights' => [
+                        'district_clues' => ['Putnam City Schools'],
+                    ],
+                ],
+            ]);
+        });
+
+        $response = $this->actingAs($user)->post('/captures', [
+            'event_id' => $event->id,
+            'photo' => UploadedFile::fake()->image('badge.jpg', 600, 400),
+        ]);
+
+        $capture = Capture::firstOrFail();
+        $response->assertRedirect(route('captures.review', $capture));
+
+        $this->assertTrue($district->is($capture->district));
+        $this->assertSame('Badge text closely matches Putnam City.', $capture->match_reason);
+    }
+
+    public function test_review_page_has_searchable_district_picker_with_native_fallback(): void
+    {
+        $user = User::factory()->create();
+        $event = Event::create(['name' => 'CO Math', 'state_code' => 'CO']);
+        District::create([
+            'state_code' => 'CO',
+            'lea_id' => '0802910',
+            'name' => 'Cherry Creek SD',
+            'short_name' => 'Cherry Creek',
+            'city' => 'Greenwood Village',
+            'total_students' => 51980,
+        ]);
+        District::create([
+            'state_code' => 'CO',
+            'lea_id' => '0803360',
+            'name' => 'Denver County 1',
+            'short_name' => 'Denver Public Schools',
+            'city' => 'Denver',
+            'total_students' => 87855,
+        ]);
+        $capture = Capture::create([
+            'user_id' => $user->id,
+            'event_id' => $event->id,
+            'status' => Capture::STATUS_NEEDS_REVIEW,
+            'full_name' => 'Alex Rivera',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('captures.review', $capture))
+            ->assertOk()
+            ->assertSee('data-district-picker', false)
+            ->assertSee('data-district-search', false)
+            ->assertSee('data-district-select', false)
+            ->assertSee('data-district-results', false)
+            ->assertSee('Start typing district name')
+            ->assertSee('Cherry Creek SD')
+            ->assertSee('Denver County 1');
+    }
+
     public function test_capture_upload_automatically_runs_public_email_search_when_email_is_missing(): void
     {
         config(['services.openai.key' => 'test-key']);
