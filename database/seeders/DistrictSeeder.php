@@ -2,28 +2,17 @@
 
 namespace Database\Seeders;
 
+use App\Http\Controllers\EventController;
 use App\Models\District;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
 class DistrictSeeder extends Seeder
 {
-    private const STATE_NAMES = [
-        'CO' => 'Colorado',
-        'UT' => 'Utah',
-        'TX' => 'Texas',
-        'CA' => 'California',
-        'IL' => 'Illinois',
-        'GA' => 'Georgia',
-        'FL' => 'Florida',
-        'MO' => 'Missouri',
-        'OK' => 'Oklahoma',
-    ];
-
     public function run(): void
     {
         foreach ($this->districtsFromRoiTool() as $stateCode => $districts) {
-            if (! array_key_exists($stateCode, self::STATE_NAMES)) {
+            if (! array_key_exists($stateCode, EventController::STATES)) {
                 continue;
             }
 
@@ -33,7 +22,7 @@ class DistrictSeeder extends Seeder
                 District::updateOrCreate(
                     ['state_code' => $stateCode, 'lea_id' => $leaId],
                     [
-                        'state_name' => self::STATE_NAMES[$stateCode],
+                        'state_name' => EventController::STATES[$stateCode],
                         'name' => $district['name'] ?? $district['ncesName'] ?? 'Unnamed District',
                         'short_name' => $district['short'] ?? null,
                         'nces_name' => $district['ncesName'] ?? null,

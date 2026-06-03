@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\EventController;
 use App\Models\Capture;
 use App\Models\District;
 use App\Models\Event;
@@ -91,15 +92,18 @@ class SetupFlowTest extends TestCase
             ->assertSessionMissing('current_event_id');
     }
 
-    public function test_state_picker_includes_oklahoma(): void
+    public function test_state_picker_includes_all_supported_states(): void
     {
         $user = User::factory()->create();
 
-        $this->actingAs($user)
+        $response = $this->actingAs($user)
             ->get('/setup/state')
-            ->assertOk()
-            ->assertSee('OK')
-            ->assertSee('Oklahoma');
+            ->assertOk();
+
+        foreach (EventController::STATES as $code => $name) {
+            $response->assertSee($code);
+            $response->assertSee($name);
+        }
     }
 
     public function test_oklahoma_seeders_create_event_and_district_profiles(): void
@@ -113,9 +117,13 @@ class SetupFlowTest extends TestCase
             'name' => 'Oklahoma Field Capture',
             'state_code' => 'OK',
         ]);
+        $this->assertDatabaseHas('events', [
+            'name' => 'Wyoming Field Capture',
+            'state_code' => 'WY',
+        ]);
         $this->assertDatabaseHas('districts', [
             'state_code' => 'OK',
-            'name' => 'Tulsa Public Schools',
+            'name' => 'TULSA',
         ]);
     }
 
