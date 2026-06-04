@@ -1,9 +1,10 @@
-const CACHE_NAME = 'lead-capture-shell-v1';
+const CACHE_NAME = 'lead-capture-shell-v2';
 const SHELL_ASSETS = [
     '/manifest.webmanifest',
     '/icons/icon-192.png',
     '/icons/icon-512.png',
     '/icons/apple-touch-icon.png',
+    '/assets/edchange-event-capture-mark.png',
 ];
 
 self.addEventListener('install', (event) => {
@@ -28,7 +29,9 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    if (!url.pathname.startsWith('/icons/') && url.pathname !== '/manifest.webmanifest') {
+    if (!url.pathname.startsWith('/icons/')
+        && !url.pathname.startsWith('/assets/edchange-event-capture-')
+        && url.pathname !== '/manifest.webmanifest') {
         return;
     }
 

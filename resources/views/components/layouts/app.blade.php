@@ -4,14 +4,14 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $title ?? 'Event Lead Capture' }}</title>
+    <title>{{ $title ?? 'Edchange Event Capture' }}</title>
     <link rel="manifest" href="/manifest.webmanifest">
     <meta name="theme-color" content="#0a233f">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="Lead Capture">
+    <meta name="apple-mobile-web-app-title" content="Edchange Capture">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
-    <link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
+    <link rel="icon" type="image/png" href="/icons/icon-192.png">
     <style>
         :root {
             --ink: #0a233f;
@@ -80,8 +80,8 @@
             font-weight: 800;
         }
         .brand-mark {
-            width: 38px;
-            height: 38px;
+            width: 42px;
+            height: 42px;
             border-radius: 8px;
             display: block;
             flex: 0 0 auto;
@@ -709,8 +709,8 @@
     <header class="topbar">
         <div class="topbar-inner">
             <a class="brand" href="{{ auth()->check() ? route('events.index') : route('login') }}">
-                <img class="brand-mark" src="{{ asset('icons/icon.svg') }}" alt="Derivita event intelligence">
-                <span>Event Lead Capture</span>
+                <img class="brand-mark" src="{{ asset('assets/edchange-event-capture-mark.png') }}" alt="Edchange Event Capture">
+                <span>Edchange Event Capture</span>
             </a>
             @auth
                 <nav class="nav">

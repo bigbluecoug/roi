@@ -1,7 +1,7 @@
 {
-  "name": "Lead Capture",
-  "short_name": "Lead Capture",
-  "description": "Internal conference lead capture for badge and business card photos.",
+  "name": "Edchange Event Capture",
+  "short_name": "Edchange",
+  "description": "Internal Edchange conference lead capture for badge and business card photos.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
