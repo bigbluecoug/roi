@@ -266,11 +266,15 @@ class CaptureController extends Controller
 
     private function shouldKickPublicEmailSearch(Capture $capture): bool
     {
-        if ($capture->stillProcessing() || filled($capture->usableEmail()) || ! $capture->hasPublicEmailSearchClues()) {
+        if ($capture->stillProcessing() || ! $capture->hasPublicEmailSearchClues()) {
             return false;
         }
 
-        if ($capture->shouldAutoFindPublicEmail() || $capture->publicEnrichmentStatus() === 'queued') {
+        if (filled($capture->usableEmail()) && $capture->status !== Capture::STATUS_COMPLETE) {
+            return false;
+        }
+
+        if ($capture->shouldAutoResearchPublicEmail() || $capture->publicEnrichmentStatus() === 'queued') {
             return true;
         }
 
@@ -288,7 +292,7 @@ class CaptureController extends Controller
             'confidence' => 0,
             'person_match' => null,
             'organization_match' => null,
-            'summary' => 'Public email search is queued after AI extraction.',
+            'summary' => 'Public email research is queued after AI extraction to verify and source the current email.',
             'sources' => [],
             'checked_at' => now()->toIso8601String(),
         ];
@@ -432,9 +436,12 @@ class CaptureController extends Controller
 
         $capture->delete();
 
-        $redirect = $request->string('return_to')->toString() === 'event' && $event
-            ? redirect()->route('events.show', $event)
-            : redirect()->route('captures.index');
+        $returnTo = $request->string('return_to')->toString();
+        $redirect = match (true) {
+            $returnTo === 'event' && $event => redirect()->route('events.show', $event),
+            $returnTo === 'event_log' && $event => redirect()->route('events.log', $event),
+            default => redirect()->route('captures.index'),
+        };
 
         return $redirect->with('status', 'Lead deleted from the local capture log.');
     }
@@ -608,7 +615,7 @@ class CaptureController extends Controller
             return false;
         }
 
-        if ((float) ($enrichment['confidence'] ?? 0) < 0.65) {
+        if ((float) ($enrichment['confidence'] ?? 0) < 0.78) {
             return false;
         }
 
@@ -617,7 +624,7 @@ class CaptureController extends Controller
 
     private function runAutomaticPublicEmailSearch(Capture $capture, PublicLeadEnricher $enricher): ?string
     {
-        if (! config('services.openai.key') || ! $capture->shouldAutoFindPublicEmail()) {
+        if (! config('services.openai.key') || ! $capture->shouldAutoResearchPublicEmail()) {
             return null;
         }
 
@@ -654,7 +661,7 @@ class CaptureController extends Controller
         ];
 
         $emailApplied = false;
-        if (blank($capture->email) && $this->canApplyEnrichmentEmail($enrichment)) {
+        if ($this->shouldApplyEnrichmentEmail($capture, $enrichment)) {
             $updates['email'] = $enrichment['email'];
             $updates['status'] = $capture->status === Capture::STATUS_SYNCED
                 ? Capture::STATUS_SYNCED
@@ -665,6 +672,23 @@ class CaptureController extends Controller
         $capture->forceFill($updates)->save();
 
         return $emailApplied;
+    }
+
+    private function shouldApplyEnrichmentEmail(Capture $capture, array $enrichment): bool
+    {
+        if (! $this->canApplyEnrichmentEmail($enrichment)) {
+            return false;
+        }
+
+        $candidateEmail = strtolower(trim((string) $enrichment['email']));
+        $currentEmail = $capture->usableEmail();
+
+        if (! $currentEmail) {
+            return true;
+        }
+
+        return $capture->status === Capture::STATUS_COMPLETE
+            && $currentEmail !== $candidateEmail;
     }
 
     private function sanitizePublicEnrichment(array $enrichment): array

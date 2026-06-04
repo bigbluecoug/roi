@@ -114,7 +114,7 @@ class ProcessCaptureImage implements ShouldQueue
         $this->deleteOriginalIfReplaced($originalPath, $normalizedPath);
 
         $freshCapture = $capture->fresh();
-        if ($freshCapture && $freshCapture->shouldAutoFindPublicEmail()) {
+        if ($freshCapture && $freshCapture->shouldAutoResearchPublicEmail()) {
             $this->markPublicEmailQueued($freshCapture);
             FindPublicEmailForCapture::dispatch($freshCapture->id)
                 ->onConnection(config('services.capture.processing_queue', 'background'));
@@ -138,7 +138,7 @@ class ProcessCaptureImage implements ShouldQueue
             'confidence' => 0,
             'person_match' => null,
             'organization_match' => null,
-            'summary' => 'Public email search is queued after AI extraction.',
+            'summary' => 'Public email research is queued after AI extraction to verify and source the current email.',
             'sources' => [],
             'checked_at' => now()->toIso8601String(),
         ];

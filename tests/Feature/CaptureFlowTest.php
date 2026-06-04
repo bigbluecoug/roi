@@ -120,6 +120,7 @@ class CaptureFlowTest extends TestCase
 
     public function test_processing_job_fills_fields_and_matches_district(): void
     {
+        Queue::fake();
         Storage::fake('local');
 
         $user = User::factory()->create();
@@ -194,6 +195,10 @@ class CaptureFlowTest extends TestCase
         $this->assertSame('jordan@example.org', $capture->email);
         $this->assertTrue($district->is($capture->district));
         $this->assertSame('Badge text closely matches Putnam City.', $capture->match_reason);
+        $this->assertSame('queued', $capture->publicEnrichment()['status']);
+        Queue::assertPushed(FindPublicEmailForCapture::class, function (FindPublicEmailForCapture $job) use ($capture): bool {
+            return $job->captureId === $capture->id && $job->connection === 'background';
+        });
         Storage::disk('local')->assertMissing('captures/incoming/badge.jpg');
     }
 
@@ -253,6 +258,19 @@ class CaptureFlowTest extends TestCase
             'full_name' => 'Alex Rivera',
             'email' => 'alex@example.org',
             'organization' => 'Cherry Creek School District',
+            'extracted_payload' => [
+                'public_enrichment' => [
+                    'status' => 'found',
+                    'email' => 'alex@example.org',
+                    'confidence' => 0.92,
+                    'summary' => 'Email verified from current public source.',
+                    'sources' => [[
+                        'title' => 'Staff Directory',
+                        'url' => 'https://example.org/staff/alex-rivera',
+                        'evidence' => 'Lists Alex Rivera email.',
+                    ]],
+                ],
+            ],
         ]);
         $other = Capture::create([
             'user_id' => $otherUser->id,
@@ -317,6 +335,19 @@ class CaptureFlowTest extends TestCase
             'full_name' => 'Alex Rivera',
             'email' => 'alex@example.org',
             'organization' => 'Cherry Creek School District',
+            'extracted_payload' => [
+                'public_enrichment' => [
+                    'status' => 'found',
+                    'email' => 'alex@example.org',
+                    'confidence' => 0.92,
+                    'summary' => 'Email verified from current public source.',
+                    'sources' => [[
+                        'title' => 'Staff Directory',
+                        'url' => 'https://example.org/staff/alex-rivera',
+                        'evidence' => 'Lists Alex Rivera email.',
+                    ]],
+                ],
+            ],
         ]);
 
         $this->actingAs($user)
@@ -626,6 +657,82 @@ class CaptureFlowTest extends TestCase
         $this->assertSame('found', $capture->publicEnrichment()['status']);
     }
 
+    public function test_public_email_job_replaces_unreviewed_extracted_email_with_confident_sourced_email(): void
+    {
+        $user = User::factory()->create();
+        $event = Event::create(['name' => 'CO Math', 'state_code' => 'CO']);
+        $capture = Capture::create([
+            'user_id' => $user->id,
+            'event_id' => $event->id,
+            'status' => Capture::STATUS_COMPLETE,
+            'full_name' => 'Alex Rivera',
+            'email' => 'alex.old@old-district.example',
+            'organization' => 'Cherry Creek School District',
+            'raw_text' => 'Alex Rivera Cherry Creek School District Math Director',
+        ]);
+
+        $this->mock(PublicLeadEnricher::class, function ($mock): void {
+            $mock->shouldReceive('enrich')->once()->andReturn([
+                'status' => 'found',
+                'email' => 'alex.rivera@cherrycreekschools.org',
+                'confidence' => 0.92,
+                'person_match' => 'Name matches the current staff directory.',
+                'organization_match' => 'Organization matches the badge clues.',
+                'summary' => 'Newest official staff directory source lists this email.',
+                'sources' => [[
+                    'title' => 'Current Staff Directory',
+                    'url' => 'https://example.org/current/alex-rivera',
+                    'evidence' => 'Current Cherry Creek staff page lists Alex Rivera email.',
+                ]],
+                'checked_at' => now()->toIso8601String(),
+            ]);
+        });
+
+        (new FindPublicEmailForCapture($capture->id))->handle(app(PublicLeadEnricher::class));
+
+        $capture->refresh();
+        $this->assertSame('alex.rivera@cherrycreekschools.org', $capture->email);
+        $this->assertSame('found', $capture->publicEnrichment()['status']);
+    }
+
+    public function test_public_email_job_keeps_reviewed_existing_email(): void
+    {
+        $user = User::factory()->create();
+        $event = Event::create(['name' => 'CO Math', 'state_code' => 'CO']);
+        $capture = Capture::create([
+            'user_id' => $user->id,
+            'event_id' => $event->id,
+            'status' => Capture::STATUS_REVIEWED,
+            'full_name' => 'Alex Rivera',
+            'email' => 'manual@example.org',
+            'organization' => 'Cherry Creek School District',
+            'raw_text' => 'Alex Rivera Cherry Creek School District Math Director',
+        ]);
+
+        $this->mock(PublicLeadEnricher::class, function ($mock): void {
+            $mock->shouldReceive('enrich')->once()->andReturn([
+                'status' => 'found',
+                'email' => 'alex.rivera@cherrycreekschools.org',
+                'confidence' => 0.92,
+                'person_match' => 'Name matches the current staff directory.',
+                'organization_match' => 'Organization matches the badge clues.',
+                'summary' => 'Newest official staff directory source lists this email.',
+                'sources' => [[
+                    'title' => 'Current Staff Directory',
+                    'url' => 'https://example.org/current/alex-rivera',
+                    'evidence' => 'Current Cherry Creek staff page lists Alex Rivera email.',
+                ]],
+                'checked_at' => now()->toIso8601String(),
+            ]);
+        });
+
+        (new FindPublicEmailForCapture($capture->id))->handle(app(PublicLeadEnricher::class));
+
+        $capture->refresh();
+        $this->assertSame('manual@example.org', $capture->email);
+        $this->assertSame('alex.rivera@cherrycreekschools.org', $capture->publicEnrichment()['email']);
+    }
+
     public function test_capture_photo_is_required(): void
     {
         $user = User::factory()->create();
@@ -687,6 +794,26 @@ class CaptureFlowTest extends TestCase
 
         $this->actingAs($user)->delete("/captures/{$capture->id}")
             ->assertRedirect(route('captures.index'));
+
+        $this->assertDatabaseMissing('captures', ['id' => $capture->id]);
+    }
+
+    public function test_capture_delete_can_return_to_event_log(): void
+    {
+        Storage::fake('local');
+
+        $user = User::factory()->create();
+        $event = Event::create(['name' => 'CO Math', 'state_code' => 'CO']);
+        $capture = Capture::create([
+            'user_id' => $user->id,
+            'event_id' => $event->id,
+            'status' => Capture::STATUS_NEEDS_REVIEW,
+            'full_name' => 'Alex Rivera',
+        ]);
+
+        $this->actingAs($user)->delete("/captures/{$capture->id}", [
+            'return_to' => 'event_log',
+        ])->assertRedirect(route('events.log', $event));
 
         $this->assertDatabaseMissing('captures', ['id' => $capture->id]);
     }

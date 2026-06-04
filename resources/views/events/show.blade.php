@@ -23,7 +23,7 @@
     <section class="item-card" style="margin-bottom: 18px;">
         <div class="row">
             <span class="badge">{{ $event->captures_count }} {{ $event->captures_count === 1 ? 'capture' : 'captures' }}</span>
-            <a class="button secondary" href="{{ route('captures.index') }}">Full Log</a>
+            <a class="button secondary" href="{{ route('events.log', $event) }}">Event Log</a>
         </div>
         @if ($event->notes)
             <div class="meta">{{ $event->notes }}</div>

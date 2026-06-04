@@ -182,7 +182,50 @@ class SetupFlowTest extends TestCase
             ->assertSessionHas('current_event_id', $event->id)
             ->assertSee('Jenny Walker')
             ->assertSee('Washington District')
+            ->assertSee(route('events.log', $event), false)
             ->assertDontSee('Other Lead');
+    }
+
+    public function test_event_log_shows_only_captures_for_that_event(): void
+    {
+        $user = User::factory()->create();
+        $event = Event::create(['name' => 'URSA', 'state_code' => 'UT']);
+        $otherEvent = Event::create(['name' => 'Utah Field Capture', 'state_code' => 'UT']);
+        $district = District::create([
+            'state_code' => 'UT',
+            'lea_id' => '4900960',
+            'name' => 'Washington District',
+        ]);
+
+        Capture::create([
+            'user_id' => $user->id,
+            'event_id' => $event->id,
+            'district_id' => $district->id,
+            'status' => Capture::STATUS_COMPLETE,
+            'full_name' => 'Jenny Walker',
+            'email' => 'jenny@example.org',
+            'organization' => 'Washington County District',
+        ]);
+        Capture::create([
+            'user_id' => $user->id,
+            'event_id' => $otherEvent->id,
+            'status' => Capture::STATUS_COMPLETE,
+            'full_name' => 'Other Lead',
+            'organization' => 'Another District',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('events.log', $event))
+            ->assertOk()
+            ->assertSessionHas('current_state_code', 'UT')
+            ->assertSessionHas('current_event_id', $event->id)
+            ->assertSee('URSA Log')
+            ->assertSee('Jenny Walker')
+            ->assertSee('Washington District')
+            ->assertSee('jenny@example.org')
+            ->assertSee('value="event_log"', false)
+            ->assertDontSee('Other Lead')
+            ->assertDontSee('Utah Field Capture');
     }
 
     public function test_event_selection_stores_event_and_redirects_to_capture(): void

@@ -292,7 +292,12 @@ class Capture extends Model
     public function shouldAutoFindPublicEmail(): bool
     {
         return blank($this->usableEmail())
-            && $this->publicEnrichment() === []
+            && $this->shouldAutoResearchPublicEmail();
+    }
+
+    public function shouldAutoResearchPublicEmail(): bool
+    {
+        return $this->publicEnrichment() === []
             && $this->hasPublicEmailSearchClues();
     }
 

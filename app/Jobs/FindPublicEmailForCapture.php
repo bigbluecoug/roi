@@ -24,7 +24,7 @@ class FindPublicEmailForCapture implements ShouldQueue
     {
         $capture = Capture::query()->with(['event', 'district'])->find($this->captureId);
 
-        if (! $capture || filled($capture->usableEmail()) || ! $capture->hasPublicEmailSearchClues()) {
+        if (! $capture || ! $capture->hasPublicEmailSearchClues()) {
             return;
         }
 
@@ -65,7 +65,7 @@ class FindPublicEmailForCapture implements ShouldQueue
             'sync_error' => null,
         ];
 
-        if (blank($capture->email) && $this->canApplyEnrichmentEmail($enrichment)) {
+        if ($this->shouldApplyEnrichmentEmail($capture, $enrichment)) {
             $updates['email'] = $enrichment['email'];
             $updates['status'] = $capture->status === Capture::STATUS_SYNCED
                 ? Capture::STATUS_SYNCED
@@ -93,8 +93,25 @@ class FindPublicEmailForCapture implements ShouldQueue
     {
         return ($enrichment['status'] ?? null) === 'found'
             && Capture::isUsableEmail($enrichment['email'] ?? null)
-            && (float) ($enrichment['confidence'] ?? 0) >= 0.65
+            && (float) ($enrichment['confidence'] ?? 0) >= 0.78
             && collect($enrichment['sources'] ?? [])->contains(fn ($source) => filled($source['url'] ?? null));
+    }
+
+    private function shouldApplyEnrichmentEmail(Capture $capture, array $enrichment): bool
+    {
+        if (! $this->canApplyEnrichmentEmail($enrichment)) {
+            return false;
+        }
+
+        $candidateEmail = strtolower(trim((string) $enrichment['email']));
+        $currentEmail = $capture->usableEmail();
+
+        if (! $currentEmail) {
+            return true;
+        }
+
+        return $capture->status === Capture::STATUS_COMPLETE
+            && $currentEmail !== $candidateEmail;
     }
 
     private function sanitizePublicEnrichment(array $enrichment): array

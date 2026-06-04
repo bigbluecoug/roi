@@ -100,6 +100,23 @@ class EventController extends Controller
         ]);
     }
 
+    public function log(Request $request, Event $event): View
+    {
+        abort_unless($event->active && array_key_exists($event->state_code, self::STATES), 404);
+
+        $request->session()->put('current_state_code', $event->state_code);
+        $request->session()->put('current_event_id', $event->id);
+
+        return view('captures.index', [
+            'event' => $event->loadCount('captures'),
+            'stateName' => self::STATES[$event->state_code],
+            'captures' => $event->captures()
+                ->with(['event', 'district'])
+                ->latest()
+                ->paginate(20),
+        ]);
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([

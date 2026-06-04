@@ -23,7 +23,7 @@ class PublicLeadEnricher
                 'model' => config('services.openai.search_model', config('services.openai.model', 'gpt-5.4-mini')),
                 'tools' => [[
                     'type' => 'web_search',
-                    'search_context_size' => 'low',
+                    'search_context_size' => 'high',
                 ]],
                 'tool_choice' => 'required',
                 'input' => $this->prompt($capture),
@@ -91,6 +91,7 @@ class PublicLeadEnricher
             'Event state' => $capture->event->state_code,
             'Manual notes' => $capture->rep_notes,
             'Visible text' => $capture->raw_text,
+            'Current extracted email to verify' => $capture->usableEmail(),
         ] as $label => $value) {
             if (filled($value)) {
                 $clues[] = $label.': '.$value;
@@ -103,12 +104,16 @@ class PublicLeadEnricher
         }
 
         return implode("\n", [
-            'Find a publicly listed professional email address for this conference lead.',
-            'Use web search. Prefer official school, district, staff directory, conference, or organization pages.',
+            'Find the current publicly listed professional email address for this conference lead.',
+            'Use full web research. Search using the name tag clues together: name, title, organization/district, city, state, event state, visible badge text, and manual notes.',
+            'Prefer the most recent official source that matches the person and the current organization from the badge: school, district, staff directory, department page, conference speaker page, or organization profile.',
+            'If several emails appear, choose the email from the newest/current source that best matches the badge organization and role. Explain the recency/current-role evidence in summary or source evidence.',
+            'Treat any current extracted email as unverified OCR/badge text. Verify it against public evidence; do not assume it is correct.',
+            'Reject stale or mismatched sources, old conference PDFs, archived pages, past jobs, similarly named people, and sources for a different district/organization unless a newer official source confirms the same email.',
             'Use manually entered notes as search clues, but still require public source evidence before returning an email.',
-            'Only return an email if the address is directly visible in public search/source evidence and appears to match the person and organization clues.',
-            'Do not guess email patterns. Do not create synthetic addresses from a domain. If there is no directly evidenced email, return email null and status "not_found".',
-            'Return JSON only. Include source URLs and short evidence notes.',
+            'Only return an email if the address is directly visible in public search/source evidence and appears to match the person, role clues, and organization clues.',
+            'Do not guess email patterns. Do not create synthetic addresses from a domain. If there is no directly evidenced current email, return email null and status "not_found" or "ambiguous".',
+            'Return JSON only. Include source URLs and short evidence notes, including any date/current-role clue you used.',
             '',
             implode("\n", $clues),
         ]);
