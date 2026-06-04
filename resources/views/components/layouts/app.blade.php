@@ -6,26 +6,26 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'Event Lead Capture' }}</title>
     <link rel="manifest" href="/manifest.webmanifest">
-    <meta name="theme-color" content="#0a1f44">
+    <meta name="theme-color" content="#0a233f">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="Lead Capture">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
-    <link rel="icon" type="image/png" href="/assets/eric-event-roi-logo.png">
+    <link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
     <style>
         :root {
-            --ink: #0a1f44;
-            --body: #4d5d73;
-            --muted: #7d8da3;
-            --line: rgba(10, 31, 68, 0.14);
-            --paper: #fbf7f1;
+            --ink: #0a233f;
+            --body: #405f70;
+            --muted: #6f8797;
+            --line: rgba(10, 35, 63, 0.14);
+            --paper: #f3fbfb;
             --surface: #ffffff;
-            --accent: #e8450a;
-            --accent-dark: #bd3506;
-            --green: #15803d;
+            --accent: #0f766e;
+            --accent-dark: #0b5f59;
+            --green: #0f766e;
             --amber: #a16207;
             --red: #b91c1c;
-            --shadow: 0 10px 30px rgba(10, 31, 68, 0.08);
+            --shadow: 0 10px 30px rgba(10, 35, 63, 0.08);
         }
 
         * { box-sizing: border-box; }
@@ -40,8 +40,8 @@
             font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             color: var(--ink);
             background:
-                linear-gradient(rgba(10, 31, 68, 0.035) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(10, 31, 68, 0.035) 1px, transparent 1px),
+                linear-gradient(rgba(10, 35, 63, 0.035) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(10, 35, 63, 0.035) 1px, transparent 1px),
                 var(--paper);
             background-size: 28px 28px;
             font-size: 15px;
@@ -61,7 +61,7 @@
             position: sticky;
             top: 0;
             z-index: 10;
-            box-shadow: 0 4px 16px rgba(10, 31, 68, 0.22);
+            box-shadow: 0 4px 16px rgba(10, 35, 63, 0.22);
         }
         .topbar-inner {
             max-width: 1120px;
@@ -247,8 +247,8 @@
         }
         .event-card:hover,
         .capture-card:hover {
-            border-color: rgba(232, 69, 10, 0.42);
-            box-shadow: 0 14px 34px rgba(10, 31, 68, 0.12);
+            border-color: rgba(15, 118, 110, 0.42);
+            box-shadow: 0 14px 34px rgba(10, 35, 63, 0.12);
             transform: translateY(-1px);
         }
         .meta {
@@ -261,15 +261,15 @@
             width: fit-content;
             border-radius: 999px;
             padding: 4px 9px;
-            background: rgba(10, 31, 68, 0.08);
+            background: rgba(10, 35, 63, 0.08);
             color: var(--ink);
             font-size: 12px;
             font-weight: 800;
         }
-        .badge.synced { background: rgba(21, 128, 61, 0.12); color: var(--green); }
+        .badge.synced { background: rgba(15, 118, 110, 0.12); color: var(--green); }
         .badge.failed { background: rgba(185, 28, 28, 0.12); color: var(--red); }
         .badge.processing { background: rgba(161, 98, 7, 0.14); color: var(--amber); }
-        .badge.review { background: rgba(232, 69, 10, 0.12); color: var(--accent-dark); }
+        .badge.review { background: rgba(15, 118, 110, 0.12); color: var(--accent-dark); }
         .insight-list {
             display: grid;
             gap: 8px;
@@ -278,9 +278,9 @@
             list-style: none;
         }
         .insight-list li {
-            border: 1px solid rgba(10, 31, 68, 0.1);
+            border: 1px solid rgba(10, 35, 63, 0.1);
             border-radius: 6px;
-            background: rgba(10, 31, 68, 0.035);
+            background: rgba(10, 35, 63, 0.035);
             padding: 9px 10px;
             color: var(--body);
             font-size: 13px;
@@ -312,7 +312,7 @@
             min-width: 0;
             border: 1px solid var(--line);
             border-radius: 6px;
-            background: #fffdfa;
+            background: #f9fefe;
             color: var(--ink);
             font: inherit;
             padding: 11px 12px;
@@ -322,7 +322,7 @@
         select:focus,
         textarea:focus {
             border-color: var(--accent);
-            outline: 2px solid rgba(232, 69, 10, 0.18);
+            outline: 2px solid rgba(15, 118, 110, 0.18);
         }
         .field-grid {
             display: grid;
@@ -410,8 +410,8 @@
             text-align: left;
         }
         .district-result[aria-selected="true"] {
-            border-color: rgba(232, 69, 10, 0.45);
-            background: rgba(232, 69, 10, 0.07);
+            border-color: rgba(15, 118, 110, 0.45);
+            background: rgba(15, 118, 110, 0.07);
         }
         .district-result strong,
         .district-result span {
@@ -439,7 +439,7 @@
             align-items: center;
             border: 1px solid var(--line);
             border-radius: 6px;
-            background: rgba(10, 31, 68, 0.04);
+            background: rgba(10, 35, 63, 0.04);
             color: var(--body);
             padding: 11px 12px;
             font-weight: 700;
@@ -477,8 +477,8 @@
         }
         .choice-card:has(input:checked) {
             border-color: var(--accent);
-            background: rgba(232, 69, 10, 0.07);
-            box-shadow: inset 0 0 0 1px rgba(232, 69, 10, 0.15);
+            background: rgba(15, 118, 110, 0.07);
+            box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.15);
         }
         .event-context {
             display: grid;
@@ -486,7 +486,7 @@
             padding: 14px;
             border: 1px solid var(--line);
             border-radius: 8px;
-            background: rgba(10, 31, 68, 0.04);
+            background: rgba(10, 35, 63, 0.04);
         }
         .event-context strong {
             font-size: 18px;
@@ -501,12 +501,12 @@
             display: grid;
             gap: 8px;
             padding: 16px;
-            border: 1px dashed rgba(232, 69, 10, 0.45);
+            border: 1px dashed rgba(15, 118, 110, 0.45);
             border-radius: 8px;
-            background: rgba(232, 69, 10, 0.06);
+            background: rgba(15, 118, 110, 0.06);
         }
         .photo-picker input[type=file] {
-            border-color: rgba(232, 69, 10, 0.28);
+            border-color: rgba(15, 118, 110, 0.28);
             background: white;
             font-weight: 800;
         }
@@ -516,7 +516,7 @@
         }
         .photo-status {
             border-radius: 6px;
-            background: rgba(10, 31, 68, 0.06);
+            background: rgba(10, 35, 63, 0.06);
             color: var(--body);
             display: none;
             font-size: 13px;
@@ -536,7 +536,7 @@
             grid-template-columns: 58px minmax(0, 1fr) auto;
             gap: 10px;
             align-items: center;
-            border: 1px solid rgba(10, 31, 68, 0.1);
+            border: 1px solid rgba(10, 35, 63, 0.1);
             border-radius: 8px;
             background: white;
             padding: 8px;
@@ -546,7 +546,7 @@
             height: 58px;
             object-fit: cover;
             border-radius: 6px;
-            background: #ece6dc;
+            background: #dcebed;
         }
         .photo-chip-copy {
             min-width: 0;
@@ -575,9 +575,9 @@
             grid-template-columns: minmax(0, 1fr) auto auto;
             gap: 10px;
             align-items: center;
-            border: 1px solid rgba(10, 31, 68, 0.1);
+            border: 1px solid rgba(10, 35, 63, 0.1);
             border-radius: 8px;
-            background: rgba(10, 31, 68, 0.035);
+            background: rgba(10, 35, 63, 0.035);
             padding: 9px 10px;
         }
         .batch-row strong {
@@ -598,14 +598,14 @@
             border: 1px solid var(--line);
             overflow-wrap: anywhere;
         }
-        .alert.ok { border-color: rgba(21, 128, 61, 0.24); color: var(--green); }
+        .alert.ok { border-color: rgba(15, 118, 110, 0.24); color: var(--green); }
         .alert.error { border-color: rgba(185, 28, 28, 0.24); color: var(--red); }
         .capture-image {
             display: block;
             width: 100%;
             max-height: 460px;
             object-fit: contain;
-            background: #ece6dc;
+            background: #dcebed;
             border: 1px solid var(--line);
             border-radius: 8px;
         }
@@ -709,7 +709,7 @@
     <header class="topbar">
         <div class="topbar-inner">
             <a class="brand" href="{{ auth()->check() ? route('events.index') : route('login') }}">
-                <img class="brand-mark" src="{{ asset('assets/eric-event-roi-logo.png') }}" alt="Derivita event intelligence">
+                <img class="brand-mark" src="{{ asset('icons/icon.svg') }}" alt="Derivita event intelligence">
                 <span>Event Lead Capture</span>
             </a>
             @auth
