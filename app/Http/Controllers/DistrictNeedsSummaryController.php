@@ -34,11 +34,13 @@ class DistrictNeedsSummaryController extends Controller
             'mode' => ['nullable', 'string', 'in:evidence,secondary_schools'],
             'question' => ['nullable', 'string', 'max:1000'],
             'previousSummary' => ['nullable', 'array'],
+            'forceRefresh' => ['nullable', 'boolean'],
         ]);
 
         $mode = $request->input('mode') === 'secondary_schools' ? 'secondary_schools' : 'evidence';
         $cacheKey = $this->cacheKey($request, $mode);
-        $cached = $this->cachedPayload($cacheKey);
+        $forceRefresh = $request->boolean('forceRefresh');
+        $cached = $forceRefresh ? null : $this->cachedPayload($cacheKey);
 
         if ($cached) {
             return response()->json($this->withCacheMeta($cached, $cacheKey, true));

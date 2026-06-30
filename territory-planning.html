@@ -951,6 +951,82 @@
     gap: 8px;
     margin-top: 12px;
   }
+  .query-bubble {
+    border: 1px solid rgba(0, 128, 128, 0.28);
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 14px 32px rgba(10,31,68,0.14);
+    margin-top: 10px;
+    padding: 11px 12px;
+  }
+  .query-bubble-head {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .query-bubble-title {
+    color: var(--navy);
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .query-bubble-close {
+    align-items: center;
+    background: rgba(10,31,68,0.06);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--navy);
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 17px;
+    font-weight: 800;
+    height: 30px;
+    justify-content: center;
+    line-height: 1;
+    width: 30px;
+  }
+  .query-bubble-query {
+    background: rgba(0, 128, 128, 0.08);
+    border: 1px solid rgba(0, 128, 128, 0.18);
+    border-radius: 8px;
+    color: var(--navy);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.45;
+    margin-top: 9px;
+    padding: 9px 10px;
+  }
+  .query-search-frame-wrap {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    margin-top: 10px;
+    overflow: hidden;
+  }
+  .query-search-frame {
+    border: 0;
+    display: block;
+    height: min(52vh, 520px);
+    min-height: 360px;
+    width: 100%;
+  }
+  .query-search-note {
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.45;
+    margin-top: 8px;
+  }
+  .query-bubble-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .query-bubble-trigger {
+    text-align: left;
+  }
   .ai-chat {
     margin-top: 14px;
     border-top: 1px solid rgba(10,31,68,0.08);
@@ -33573,6 +33649,10 @@ function searchUrl(query) {
   return 'https://www.google.com/search?q=' + encodeURIComponent(query);
 }
 
+function embeddedSearchUrl(query) {
+  return 'https://www.google.com/search?igu=1&q=' + encodeURIComponent(query);
+}
+
 function normalize(value) {
   return String(value ?? '').trim().toLowerCase();
 }
@@ -33865,8 +33945,22 @@ function researchLinksHtml(district) {
     { label: 'Google official district clues', query: `${base} official district math curriculum Canvas` }
   ];
   return '<div class="ai-brief-section"><h4>Google-style follow-up searches</h4><p>Use these if the research brief needs a second pass or the AE wants to validate a claim manually.</p><div class="investigation-grid">' + links.map(link =>
-    '<a class="secondary-button" href="' + escapeHtml(searchUrl(link.query)) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(link.label) + '</a>'
-  ).join('') + '</div></div>';
+    followUpQueryButtonHtml(link.label, link.query)
+  ).join('') + '</div>' + followUpQueryBubbleHtml() + '</div>';
+}
+
+function followUpQueryButtonHtml(label, query) {
+  return '<button class="secondary-button query-bubble-trigger" type="button" aria-expanded="false" data-query="' + escapeHtml(query) + '">' + escapeHtml(label) + '</button>';
+}
+
+function followUpQueryBubbleHtml() {
+  return '<div class="query-bubble" data-query-bubble hidden>'
+    + '<div class="query-bubble-head"><div class="query-bubble-title">Google search</div><button class="query-bubble-close" type="button" aria-label="Close Google search">&times;</button></div>'
+    + '<div class="query-bubble-query" data-query-bubble-query></div>'
+    + '<div class="query-search-frame-wrap"><iframe class="query-search-frame" data-query-search-frame title="Google search results inside Territory Planner" loading="lazy" referrerpolicy="no-referrer"></iframe></div>'
+    + '<p class="query-search-note">Google results load inside this panel so you can stay in the planner. If Google blocks the embedded view, use the copied query in your browser search bar.</p>'
+    + '<div class="query-bubble-actions"><button class="secondary-button query-bubble-copy" type="button">Copy query</button></div>'
+    + '</div>';
 }
 
 function districtKeySummaryHtml(district) {
@@ -34019,9 +34113,9 @@ function aiLocalBriefHtml(district, note) {
 function aiEnrichmentHtml(district) {
   return '<div class="ai-enrichment">'
     + '<div class="ai-enrichment-head">'
-    + '<div><div class="ai-enrichment-title">Public web research brief</div><div class="ai-enrichment-copy">The API runs Google-style public research to compare math scores with the state average, find LMS/platform clues, and find curriculum evidence, then saves the result for all users.</div></div>'
+    + '<div><div class="ai-enrichment-title">Saved needs review</div><div class="ai-enrichment-copy">The first review runs public research once and saves the result for all users. Opening this again reuses the saved result unless you choose to run it again.</div></div>'
     + '<div class="ai-enrichment-actions">'
-    + '<button class="primary-button ai-generate" type="button">Run public research</button>'
+    + '<button class="primary-button ai-generate" type="button">Run again</button>'
     + '<button class="secondary-button ai-copy-prompt" type="button">Copy AI prompt</button>'
     + '</div></div>'
     + '<div id="ai-enrichment-output">' + aiLocalBriefHtml(district, 'Waiting for API evidence review.') + '</div>'
@@ -34079,8 +34173,8 @@ function investigationQueriesHtml(payload, district) {
   const queries = compactStrings(payload.investigation_queries || []);
   if (!queries.length) return '';
   return '<div class="ai-brief-section"><h4>Additional investigation</h4><p>Use these searches if the AE wants to validate or go deeper.</p><div class="investigation-grid">'
-    + queries.slice(0, 3).map(query => '<a class="secondary-button" href="' + escapeHtml(searchUrl(query)) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(query.length > 46 ? query.slice(0, 43) + '...' : query) + '</a>').join('')
-    + '</div></div>';
+    + queries.slice(0, 3).map(query => followUpQueryButtonHtml(query.length > 46 ? query.slice(0, 43) + '...' : query, query)).join('')
+    + '</div>' + followUpQueryBubbleHtml() + '</div>';
 }
 
 function renderExternalAiPayload(payload, district) {
@@ -34128,23 +34222,31 @@ async function runAiEnrichment(district, button, force = false) {
   const cacheKey = aiBriefCacheKey(district);
   if (!force && aiBriefCache.has(cacheKey)) {
     output.innerHTML = aiBriefCache.get(cacheKey);
-    if (button) button.textContent = 'Run public research';
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'Run again';
+      button.title = 'Refresh the saved needs review with a new public research run.';
+    }
     return;
   }
 
-  if (output.dataset.loadingKey === cacheKey) return;
-  output.dataset.loadingKey = cacheKey;
+  const loadingKey = cacheKey + (force ? ':refresh' : ':saved');
+  if (output.dataset.loadingKey === loadingKey) return;
+  output.dataset.loadingKey = loadingKey;
   if (button) {
     button.disabled = true;
-    button.textContent = 'Searching...';
+    button.textContent = force ? 'Refreshing...' : 'Loading saved...';
   }
-  output.innerHTML = '<div class="ai-output"><strong>Public web research brief</strong><p>Checking for saved research. If no shared result exists yet, the API will run a public-source search once and save the result for all users.</p></div>';
+  output.innerHTML = '<div class="ai-output"><strong>Saved needs review</strong><p>' + (force ? 'Running a fresh public-source review and replacing the saved result for future users.' : 'Checking for a saved review. If none exists yet, the API will run the public-source review once and save it for future users.') + '</p></div>';
 
   try {
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(aiEnrichmentPayload(district))
+      body: JSON.stringify({
+        ...aiEnrichmentPayload(district),
+        forceRefresh: Boolean(force)
+      })
     });
     if (!response.ok) throw new Error('AI enrichment endpoint returned ' + response.status);
     const payload = await response.json();
@@ -34158,7 +34260,8 @@ async function runAiEnrichment(district, button, force = false) {
     delete output.dataset.loadingKey;
     if (button) {
       button.disabled = false;
-      button.textContent = 'Run public research';
+      button.textContent = 'Run again';
+      button.title = 'Refresh the saved needs review with a new public research run.';
     }
   }
 }
@@ -34206,6 +34309,89 @@ async function runAiChat(district, question, form) {
     if (button) button.disabled = false;
     log.scrollTop = log.scrollHeight;
   }
+}
+
+function activeRationaleDistrict() {
+  const modal = document.getElementById('rationale-modal');
+  return modal?.dataset.key ? findDistrictByPlanKey(modal.dataset.key) : null;
+}
+
+function openFollowUpQueryBubble(trigger, modal) {
+  const section = trigger.closest('.ai-brief-section');
+  const bubble = section?.querySelector('[data-query-bubble]');
+  const query = trigger.dataset.query || trigger.textContent.trim();
+  if (!bubble || !query) return;
+  modal.querySelectorAll('[data-query-bubble]').forEach(item => {
+    if (item !== bubble) item.hidden = true;
+  });
+  modal.querySelectorAll('.query-bubble-trigger[aria-expanded="true"]').forEach(button => {
+    button.setAttribute('aria-expanded', 'false');
+  });
+  bubble.dataset.query = query;
+  const queryOutput = bubble.querySelector('[data-query-bubble-query]');
+  if (queryOutput) queryOutput.textContent = query;
+  const frame = bubble.querySelector('[data-query-search-frame]');
+  if (frame) {
+    const nextSrc = embeddedSearchUrl(query);
+    if (frame.getAttribute('src') !== nextSrc) frame.setAttribute('src', nextSrc);
+  }
+  bubble.hidden = false;
+  trigger.setAttribute('aria-expanded', 'true');
+  const input = modal.querySelector('#ai-chat-question');
+  if (input) input.value = query;
+  bubble.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+function closeFollowUpQueryBubble(button) {
+  const section = button.closest('.ai-brief-section');
+  const bubble = button.closest('[data-query-bubble]');
+  if (bubble) bubble.hidden = true;
+  section?.querySelectorAll('.query-bubble-trigger[aria-expanded="true"]').forEach(trigger => {
+    trigger.setAttribute('aria-expanded', 'false');
+  });
+}
+
+function bindQueryBubbleControls() {
+  const modal = document.getElementById('rationale-modal');
+  if (!modal || modal.dataset.queryBubbleBound === '1') return;
+  modal.dataset.queryBubbleBound = '1';
+  modal.addEventListener('click', async event => {
+    const target = event.target instanceof Element ? event.target : event.target?.parentElement;
+    if (!target) return;
+    const trigger = target.closest('.query-bubble-trigger');
+    if (trigger && modal.contains(trigger)) {
+      event.preventDefault();
+      openFollowUpQueryBubble(trigger, modal);
+      return;
+    }
+    const close = target.closest('.query-bubble-close');
+    if (close && modal.contains(close)) {
+      event.preventDefault();
+      closeFollowUpQueryBubble(close);
+      return;
+    }
+    const copy = target.closest('.query-bubble-copy');
+    if (copy && modal.contains(copy)) {
+      event.preventDefault();
+      const bubble = copy.closest('[data-query-bubble]');
+      const query = bubble?.dataset.query || bubble?.querySelector('[data-query-bubble-query]')?.textContent || '';
+      if (!query.trim()) return;
+      try {
+        await navigator.clipboard.writeText(query);
+        copy.textContent = 'Query copied';
+      } catch (err) {
+        const input = modal.querySelector('#ai-chat-question');
+        if (input) {
+          input.value = query;
+          input.focus();
+        }
+        copy.textContent = 'Query ready';
+      }
+      window.setTimeout(() => {
+        copy.textContent = 'Copy query';
+      }, 1400);
+    }
+  });
 }
 
 function schoolRosterPayload(district) {
@@ -34378,9 +34564,8 @@ function openRationale(district) {
   const note = document.getElementById('rationale-note');
   if (note) {
     note.innerHTML = '<strong>Research scope:</strong> This brief asks how district math test scores compare to the state average, then looks for LMS/platform clues and curriculum evidence. Exact grade-level score comparisons may still need a manual report-card check.'
-      + aiEnrichmentHtml(district)
       + researchLinksHtml(district);
-    bindAiEnrichmentControls(district);
+    bindQueryBubbleControls();
   }
   if (modal) modal.hidden = false;
 }
@@ -34389,6 +34574,7 @@ function bindAiEnrichmentControls(district) {
   const modal = document.getElementById('rationale-modal');
   const promptBox = modal?.querySelector('#ai-prompt-box');
   const generateButton = modal?.querySelector('.ai-generate');
+  bindQueryBubbleControls();
   modal?.querySelector('.ai-copy-prompt')?.addEventListener('click', async event => {
     const prompt = aiPromptText(district);
     try {

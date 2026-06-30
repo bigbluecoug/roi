@@ -106,4 +106,115 @@ class DistrictNeedsSummaryControllerTest extends TestCase
         $this->assertStringContainsString('including at least one math-score comparison query', $openAiPayload['input']);
         $this->assertStringNotContainsString('Do not answer anything else.', $openAiPayload['input']);
     }
+
+    public function test_district_needs_summary_reuses_saved_result_until_forced_refresh(): void
+    {
+        Storage::fake('local');
+        config([
+            'services.openai.key' => 'test-key',
+            'services.openai.model' => 'gpt-test',
+        ]);
+
+        $calls = 0;
+
+        Http::fake(function () use (&$calls) {
+            $calls++;
+
+            return Http::response([
+                'output_text' => json_encode($this->needsSummaryPayload('Saved summary '.$calls)),
+            ]);
+        });
+
+        $payload = [
+            'profile' => [
+                'stateCode' => 'CO',
+                'stateName' => 'Colorado',
+            ],
+            'district' => [
+                'name' => 'St. Vrain Valley School District No. Re1J',
+                'city' => 'Longmont',
+                'leaId' => '0805370',
+                'leaType' => 'Regular public district',
+                'totalStudents' => 31607,
+                'secondaryStudents' => 16984,
+            ],
+            'currentSignals' => [
+                'mathNeed' => 'Unknown',
+                'lms' => 'Unknown',
+                'curriculum' => 'Unknown',
+            ],
+        ];
+
+        $this->postJson('/api/district-needs-summary', $payload)
+            ->assertOk()
+            ->assertJsonPath('summary', 'Saved summary 1')
+            ->assertJsonPath('cached', false)
+            ->assertJsonPath('cache_scope', 'shared');
+
+        $this->postJson('/api/district-needs-summary', $payload)
+            ->assertOk()
+            ->assertJsonPath('summary', 'Saved summary 1')
+            ->assertJsonPath('cached', true)
+            ->assertJsonPath('cache_scope', 'shared');
+
+        $this->assertSame(1, $calls);
+
+        $this->postJson('/api/district-needs-summary', [
+            ...$payload,
+            'forceRefresh' => true,
+        ])
+            ->assertOk()
+            ->assertJsonPath('summary', 'Saved summary 2')
+            ->assertJsonPath('cached', false)
+            ->assertJsonPath('cache_scope', 'shared');
+
+        $this->assertSame(2, $calls);
+    }
+
+    private function needsSummaryPayload(string $summary): array
+    {
+        return [
+            'summary' => $summary,
+            'answer' => null,
+            'math_test_score' => [
+                'status' => 'Needs manual score check',
+                'summary' => 'Exact grade-level comparison needs a manual report-card check.',
+                'evidence' => 'State assessment source should be validated.',
+                'confidence' => 'Medium',
+                'source_title' => 'State report card',
+                'source_url' => 'https://example.test/report-card',
+            ],
+            'lms' => [
+                'status' => 'Needs validation',
+                'summary' => 'District platform clue needs validation.',
+                'evidence' => 'Portal evidence should be checked.',
+                'confidence' => 'Low',
+                'source_title' => 'District portal',
+                'source_url' => 'https://example.test/portal',
+            ],
+            'math_curriculum' => [
+                'status' => 'Needs validation',
+                'summary' => 'Curriculum source needs validation.',
+                'evidence' => 'Course guide should be checked.',
+                'confidence' => 'Low',
+                'source_title' => 'Course guide',
+                'source_url' => 'https://example.test/course-guide',
+            ],
+            'confidence' => 'Medium',
+            'validation_checklist' => [
+                'Validate state report-card math comparison.',
+            ],
+            'investigation_queries' => [
+                'St. Vrain Valley math scores state average',
+            ],
+            'sources' => [
+                [
+                    'title' => 'State report card',
+                    'url' => 'https://example.test/report-card',
+                    'evidence' => 'Assessment source.',
+                    'category' => 'math',
+                ],
+            ],
+        ];
+    }
 }
