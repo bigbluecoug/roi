@@ -11,7 +11,7 @@ use RuntimeException;
 
 class DistrictNeedsSummaryController extends Controller
 {
-    private const CACHE_VERSION = 'v2-grade-level-math';
+    private const CACHE_VERSION = 'v4-math-score-comparison';
 
     public function __invoke(Request $request): JsonResponse
     {
@@ -59,7 +59,7 @@ class DistrictNeedsSummaryController extends Controller
                     'model' => config('services.openai.search_model', config('services.openai.model', 'gpt-5.4-mini')),
                     'tools' => [[
                         'type' => 'web_search',
-                        'search_context_size' => 'medium',
+                        'search_context_size' => 'high',
                     ]],
                     'tool_choice' => 'required',
                     'input' => $this->prompt($request->all(), $mode),
@@ -168,9 +168,11 @@ class DistrictNeedsSummaryController extends Controller
 
         if ($question) {
             return implode("\n", [
-                'Answer the AE follow-up question for Derivita using web search and public sources.',
-                'Keep the same simple scope: grade-level math scores below state average for grades 6-12, district LMS, and district math curriculum.',
-                'Do not guess. If a claim is not source-backed, say it needs validation.',
+                'Answer the AE follow-up question for Derivita using quick public-web research.',
+                'Use targeted search queries the way a sales rep would: district name + state + the requested topic, official district pages, state report-card pages, board PDFs, parent/student access pages, course catalogs, and school pages.',
+                'Keep the scope around how district math test scores compare to the state average, district LMS, adopted math curriculum, and practical outreach implications.',
+                'For math, answer the comparison question directly: above state average, near state average, below state average, mixed by grade, or exact comparison needs manual state report-card check.',
+                'Do not give generic "could not confirm" filler. If the exact score comparison is not source-backed, state that clearly, then provide the closest useful public clues and the search query that should be used next.',
                 'Cite source URLs in the sources array.',
                 'Answer in 3 short bullets or fewer.',
                 'Return JSON only in the requested schema.',
@@ -184,15 +186,24 @@ class DistrictNeedsSummaryController extends Controller
         }
 
         return implode("\n", [
-            'Use web search and public sources to answer only these three questions for the district:',
-            '1. Which grade-level math scores for grades 6-12 are below the state average?',
-            '2. What LMS is used by this district?',
-            '3. Is there an adopted math curriculum for this district?',
-            'Do not answer anything else.',
-            'For question 1, list only source-backed grade levels below state average. Include grade, district score, state average, assessment/year, and source URL when available.',
-            'Do not guess. If a question cannot be answered from a source, say Needs validation.',
-            'Use one short sentence for each answer. Cite source URLs in the section and sources array when possible.',
+            'Run quick public-web research for a Derivita AE. Search like Google, not like a compliance validator.',
+            'Goal: produce a useful district research brief with source-backed clues for outreach. Do not stop after one missing exact source.',
+            'Use several targeted searches before answering. Start with the exact district name, state, city, and LEA ID from the payload.',
+            'Prioritize official and near-official sources: state report cards/assessment pages, district and school pages, board agenda PDFs, parent/student login pages, course catalogs, curriculum pages, technology help pages, and credible public documents.',
+            'Answer these three sections:',
+            '1. Math scores vs state average: answer "How do this district\'s math test scores compare to the state average?" Look for grades 6-12 math results, state assessment/report-card pages, CMAS or state test terms, SAT/PSAT/math readiness where relevant. Report whether scores appear above state average, near state average, below state average, mixed by grade, or unavailable. Include district score, state average, grade/span, assessment/year, and source URL when available. If exact district-vs-state values are not directly visible, say "Exact math-score comparison needs manual state report-card check" and still summarize the best sourced math clues you found.',
+            '2. LMS / platform clue: identify the district LMS or student/parent learning platform from public pages. Canvas, Schoology, Google Classroom, Blackboard, Infinite Campus, ParentVUE/StudentVUE, Clever, ClassLink, and district portals are useful clues. Distinguish LMS from SIS when possible.',
+            '3. Math curriculum / instructional clue: look for adopted math curriculum, course sequence, math resources, curriculum guides, board adoptions, or school math pages. If no districtwide adoption is visible, summarize school-level or course-guide evidence and mark it as a clue.',
+            'For every section, provide a concrete summary, a short evidence note, confidence, and the best source URL. Avoid empty "could not confirm" answers unless no relevant source was found after multiple targeted searches.',
+            'Return 3-5 investigation_queries that are ready to click in Google, including at least one math-score comparison query, one state report-card query, one LMS query, and one curriculum query.',
+            'Cite source URLs in the section and sources array when possible.',
             'Return JSON only in the requested schema.',
+            '',
+            'Suggested search patterns to adapt to this district:',
+            '- "{district name}" "{state name}" math scores compared to state average',
+            '- "{district name}" CMAS math report card state average OR state assessment math',
+            '- "site:{district domain if visible}" "{district name}" Canvas OR Schoology OR LMS OR Clever',
+            '- "{district name}" math curriculum OR curriculum guide OR course catalog OR board adoption',
             '',
             'Planner payload:',
             json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES),

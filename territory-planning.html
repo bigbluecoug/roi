@@ -444,6 +444,15 @@
     font-size: 12px;
   }
   tr:last-child td { border-bottom: none; }
+  tr.tier-highlight-tier1 td { background: rgba(220,38,38,0.08); }
+  tr.tier-highlight-tier2 td { background: rgba(245,158,11,0.10); }
+  tr.tier-highlight-tier3 td { background: rgba(34,197,94,0.08); }
+  tr.tier-highlight-tier1 td:first-child { border-left: 4px solid #dc2626; }
+  tr.tier-highlight-tier2 td:first-child { border-left: 4px solid #f59e0b; }
+  tr.tier-highlight-tier3 td:first-child { border-left: 4px solid #22c55e; }
+  tr.tier-highlight-tier1:hover td { background: rgba(220,38,38,0.12); }
+  tr.tier-highlight-tier2:hover td { background: rgba(245,158,11,0.14); }
+  tr.tier-highlight-tier3:hover td { background: rgba(34,197,94,0.12); }
   .district-cell strong { display: block; font-size: 13px; line-height: 1.25; }
   .district-cell span { display: block; color: var(--body); margin-top: 4px; }
   .district-penetration-quick {
@@ -485,6 +494,51 @@
   .district-penetration-quick input {
     width: 100%;
     accent-color: var(--orange);
+  }
+  .lead-notes-panel {
+    margin-top: 10px;
+    border: 1px solid rgba(10,31,68,0.12);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.62);
+    overflow: hidden;
+  }
+  .lead-notes-panel summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    list-style: none;
+    cursor: pointer;
+    padding: 9px 10px;
+    color: var(--navy);
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .lead-notes-panel summary::-webkit-details-marker { display: none; }
+  .lead-notes-panel summary::after {
+    content: '+';
+    color: var(--orange);
+    font-size: 16px;
+    line-height: 1;
+  }
+  .lead-notes-panel[open] summary::after { content: '-'; }
+  .lead-notes-panel summary span {
+    color: var(--muted);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .lead-notes-panel summary strong {
+    margin-left: auto;
+    font-size: 10px;
+    color: var(--navy);
+  }
+  .lead-notes-panel textarea {
+    width: calc(100% - 20px);
+    margin: 0 10px 10px;
+    min-height: 78px;
+    font-size: 12px;
+    line-height: 1.45;
   }
   .numeric { text-align: right; font-weight: 700; }
   .school-count-button {
@@ -1184,7 +1238,7 @@
       <div class="rationale-head">
         <div>
           <div class="rationale-title" id="rationale-title">District needs summary</div>
-          <div class="rationale-subtitle" id="rationale-subtitle">Below-state math scores, LMS, curriculum, and cited sources</div>
+          <div class="rationale-subtitle" id="rationale-subtitle">Math scores vs state average, LMS, curriculum, and cited sources</div>
         </div>
         <button class="icon-button" id="rationale-close" type="button" aria-label="Close district needs summary">×</button>
       </div>
@@ -33156,7 +33210,7 @@ const aiBriefPayloadCache = new Map();
 const schoolRosterCache = new Map();
 
 let currentProfile = STATE_PROFILES.CO;
-let planningState = loadPlanningState();
+let planningState = migratePlanningStateKeys(loadPlanningState());
 let focusedStateCodes = loadFocusedStateCodes();
 let searchQuery = '';
 let tierFilter = 'all';
@@ -33327,13 +33381,49 @@ function getDefaultPenetrationPct() {
   return Number(document.getElementById('default-penetration')?.value) || currentProfile.penetrationDefault || 30;
 }
 
+function slugKey(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'unknown';
+}
+
+function legacyPlanningKeyForProfile(profile, district) {
+  return profile.stateCode + ':' + (district.leaId || district.name);
+}
+
+function planningKeyForProfile(profile, district) {
+  const leaPart = district.leaId ? 'lea-' + district.leaId : 'name-' + slugKey(district.name);
+  return [profile.stateCode, leaPart, slugKey(district.name), slugKey(district.city)].join(':');
+}
+
+function migratePlanningStateKeys(state) {
+  const migrated = { ...state };
+  let changed = false;
+  Object.values(STATE_PROFILES).forEach(profile => {
+    profile.districts.forEach(district => {
+      const legacyKey = legacyPlanningKeyForProfile(profile, district);
+      const nextKey = planningKeyForProfile(profile, district);
+      if (legacyKey === nextKey || !migrated[legacyKey]) return;
+      if (!migrated[nextKey]) migrated[nextKey] = migrated[legacyKey];
+      delete migrated[legacyKey];
+      changed = true;
+    });
+  });
+  if (changed) {
+    try { localStorage.setItem(PLANNER_STORAGE_KEY, JSON.stringify(migrated)); } catch (err) {}
+  }
+  return migrated;
+}
+
 function planningKey(district) {
-  return currentProfile.stateCode + ':' + (district.leaId || district.name);
+  return planningKeyForProfile(currentProfile, district);
 }
 
 function getDistrictPlan(district) {
   const key = planningKey(district);
-  const saved = planningState[key] || {};
+  const saved = planningState[key] || planningState[legacyPlanningKeyForProfile(currentProfile, district)] || {};
   return {
     key,
     tier: saved.tier || '',
@@ -33499,7 +33589,8 @@ function searchableText(district, plan) {
     tierMeta(effectiveTier(district)).label,
     signalOption('mathNeed', plan.mathNeed).label,
     signalOption('lms', plan.lms).label,
-    signalOption('curriculum', plan.curriculum).label
+    signalOption('curriculum', plan.curriculum).label,
+    plan.note
   ].join(' '));
 }
 
@@ -33529,7 +33620,7 @@ function districtMatchesFilters(district) {
 
 function visibleDistricts() {
   return currentProfile.districts.filter(districtMatchesFilters)
-    .sort((a, b) => tierMeta(effectiveTier(a)).rank - tierMeta(effectiveTier(b)).rank || b.secondary - a.secondary);
+    .sort((a, b) => b.secondary - a.secondary || String(a.name).localeCompare(String(b.name)));
 }
 
 function renderProfileCopy() {
@@ -33612,9 +33703,11 @@ function renderDistrictTable() {
     const key = escapeHtml(plan.key);
     const reviewHref = reviewHashForKey(plan.key);
     const anchor = district.anchor ? '<span class="mini-pill">Anchor</span>' : '';
-    return '<tr data-key="' + key + '">'
+    const rowClass = ['tier1', 'tier2', 'tier3'].includes(plan.tier) ? 'tier-highlight-' + plan.tier : '';
+    return '<tr data-key="' + key + '"' + (rowClass ? ' class="' + rowClass + '"' : '') + '>'
       + '<td class="district-cell"><strong>' + escapeHtml(district.name) + '</strong><span>' + escapeHtml(district.city || 'Unknown city') + ' · LEA ' + escapeHtml(district.leaId || 'N/A') + '</span>' + anchor
-      + '<div class="district-penetration-quick"><label>Modeled secondary opportunity</label><div class="quick-value">' + fmt(modeledOpportunity(district)) + '</div><div class="quick-sub">Full secondary TAM ' + fmt(fullOpportunity(district)) + '</div><div class="quick-sub">' + fullN(district.secondary) + ' secondary students @ $' + getRate() + '</div><div class="quick-row"><label>Target penetration</label><strong>' + penetration + '%</strong></div><input class="planner-penetration" data-key="' + key + '" type="range" min="0" max="100" step="5" value="' + penetration + '"></div></td>'
+      + '<div class="district-penetration-quick"><label>Modeled secondary opportunity</label><div class="quick-value">' + fmt(modeledOpportunity(district)) + '</div><div class="quick-sub">Full secondary TAM ' + fmt(fullOpportunity(district)) + '</div><div class="quick-sub">' + fullN(district.secondary) + ' secondary students @ $' + getRate() + '</div><div class="quick-row"><label>Target penetration</label><strong>' + penetration + '%</strong></div><input class="planner-penetration" data-key="' + key + '" type="range" min="0" max="100" step="5" value="' + penetration + '"></div>'
+      + '<details class="lead-notes-panel"><summary><span>Lead notes</span><strong>' + (plan.note ? 'Saved note' : 'Add note') + '</strong></summary><textarea class="planner-input planner-note" data-key="' + key + '" rows="3" placeholder="Add lead notes, champions, blockers, or follow-up context">' + escapeHtml(plan.note) + '</textarea></details></td>'
       + '<td>' + escapeHtml(district.leaType || 'Unknown') + '</td>'
       + '<td class="numeric">' + fullN(district.total) + '</td>'
       + '<td class="numeric">' + fullN(district.secondary) + '</td>'
@@ -33757,25 +33850,28 @@ async function buildTerritoryMap() {
 }
 
 function findDistrictByPlanKey(key) {
-  return currentProfile.districts.find(district => planningKey(district) === key);
+  return currentProfile.districts.find(district =>
+    planningKey(district) === key || legacyPlanningKeyForProfile(currentProfile, district) === key
+  );
 }
 
 function researchLinksHtml(district) {
   const stateName = currentProfile.stateName.replace(' Rural Schools', '');
   const base = `${district.name} ${stateName}`;
   const links = [
-    { label: 'Investigate below-state math scores', query: `${base} grade 6 7 8 9 10 11 12 math scores below state average district report card` },
-    { label: 'Investigate LMS evidence', query: `${base} Canvas Schoology Google Classroom LMS district technology` },
-    { label: 'Investigate math curriculum', query: `${base} Illustrative Math Open Up Resources Big Ideas math curriculum adoption` }
+    { label: 'Google math vs state average', query: `${base} ${district.leaId || ''} math scores compared to state average district report card CMAS` },
+    { label: 'Google LMS/portal', query: `${base} Canvas Schoology Clever LMS student parent portal` },
+    { label: 'Google math curriculum', query: `${base} math curriculum course catalog curriculum guide board adoption` },
+    { label: 'Google official district clues', query: `${base} official district math curriculum Canvas` }
   ];
-  return '<div class="ai-brief-section"><h4>Additional investigation</h4><p>Use these searches if the AI result needs a second pass or the AE wants to validate a claim manually.</p><div class="investigation-grid">' + links.map(link =>
+  return '<div class="ai-brief-section"><h4>Google-style follow-up searches</h4><p>Use these if the research brief needs a second pass or the AE wants to validate a claim manually.</p><div class="investigation-grid">' + links.map(link =>
     '<a class="secondary-button" href="' + escapeHtml(searchUrl(link.query)) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(link.label) + '</a>'
   ).join('') + '</div></div>';
 }
 
 function districtKeySummaryHtml(district) {
   const intro = `${district.name} is a ${district.leaType || 'public LEA'} in ${district.city || 'the selected state'} with ${fullN(district.secondary)} NCES grade 6-12 students.`;
-  return '<p>' + escapeHtml(intro) + ' The evidence review below is intentionally limited to grade-level math scores below state average, LMS, and math curriculum. Treat unsourced claims as leads for validation, not facts.</p>';
+  return '<p>' + escapeHtml(intro) + ' The research brief below uses public web sources to answer how district math test scores compare to the state average, plus LMS and curriculum clues. Treat exact unsourced claims as leads for validation, but use the links and search queries to move quickly.</p>';
 }
 
 function aiEnrichmentEndpoint() {
@@ -33881,11 +33977,12 @@ function aiEnrichmentPayload(district) {
       reason: item.reason
     })),
     instructions: [
-      'Ask only three questions.',
-      '1. Which grade-level math scores for grades 6-12 are below the state average?',
-      '2. What LMS is used by this district?',
-      '3. Is there an adopted math curriculum for this district?',
-      'For math, list only sourced grades below state average with district score, state average, assessment/year, and source when available. If not found, say Needs validation.'
+      'Run quick public-web research for a Derivita AE.',
+      'Return useful source-backed clues, not generic could-not-confirm filler.',
+      '1. Answer how math test scores compare to the state average for grades 6-12, including state report-card or assessment pages where possible.',
+      '2. Find LMS, learning platform, parent/student portal, or district technology clues.',
+      '3. Find math curriculum, course catalog, curriculum guide, board adoption, or instructional resource clues.',
+      'If exact grade-level district-vs-state math scores are not visible, say that exact comparison needs a manual state report-card check and still summarize the closest public evidence.'
     ]
   };
 }
@@ -33893,13 +33990,14 @@ function aiEnrichmentPayload(district) {
 function aiPromptText(district) {
   const payload = aiEnrichmentPayload(district);
   return [
-    'Answer these three questions for Derivita using public sources.',
+    'Run quick public-web research for a Derivita AE.',
+    'Search like Google and return useful source-backed clues, not generic could-not-confirm filler.',
     '',
-    '1. Which grade-level math scores for grades 6-12 are below the state average?',
-    '2. What LMS is used by this district?',
-    '3. Is there an adopted math curriculum for this district?',
+    '1. How do this district\'s math test scores compare to the state average for grades 6-12, especially from state report-card or assessment evidence?',
+    '2. What LMS, learning platform, parent/student portal, or technology platform does this district appear to use?',
+    '3. What adopted math curriculum, course catalog, curriculum guide, board adoption, or instructional resource evidence is public?',
     '',
-    'For math, list only sourced grades below state average with district score, state average, assessment/year, and source when available. Use one short sentence per answer. Cite source URLs. If a source cannot be found, say Needs validation.',
+    'If exact grade-level district-vs-state math scores are not visible, say that exact comparison needs a manual state report-card check and still summarize the closest public evidence. Cite source URLs and include click-ready Google queries.',
     '',
     'District context:',
     JSON.stringify(payload, null, 2)
@@ -33908,12 +34006,12 @@ function aiPromptText(district) {
 
 function aiLocalBriefHtml(district, note) {
   return '<div class="ai-output">'
-    + '<strong>Evidence review pending</strong>'
-    + '<p>' + escapeHtml(note) + ' The connected API will search public sources for only three fields: below-state grade-level math scores, LMS, and math curriculum.</p>'
+    + '<strong>Public research pending</strong>'
+    + '<p>' + escapeHtml(note) + ' The connected API will search public sources for math test scores compared to the state average, LMS/platform, and curriculum clues.</p>'
     + '<div class="evidence-grid">'
-    + '<div class="evidence-card"><h4>Below-state math scores</h4><p>Needs grade-level state report-card validation.</p><div class="evidence-meta"><span class="ai-brief-pill">Needs validation</span></div></div>'
-    + '<div class="evidence-card"><h4>Listed LMS</h4><p>Needs district technology source validation.</p><div class="evidence-meta"><span class="ai-brief-pill">Needs validation</span></div></div>'
-    + '<div class="evidence-card"><h4>Math curriculum</h4><p>Needs district curriculum/adoption source validation.</p><div class="evidence-meta"><span class="ai-brief-pill">Needs validation</span></div></div>'
+    + '<div class="evidence-card"><h4>Math scores vs state average</h4><p>Searching state report-card and assessment sources for above, near, below, or mixed math-score comparisons.</p><div class="evidence-meta"><span class="ai-brief-pill">Research pending</span></div></div>'
+    + '<div class="evidence-card"><h4>LMS / platform clue</h4><p>Searching district portals, parent/student access pages, and school technology pages.</p><div class="evidence-meta"><span class="ai-brief-pill">Research pending</span></div></div>'
+    + '<div class="evidence-card"><h4>Math curriculum clue</h4><p>Searching curriculum guides, course catalogs, board adoptions, and school math pages.</p><div class="evidence-meta"><span class="ai-brief-pill">Research pending</span></div></div>'
     + '</div>'
     + '</div>';
 }
@@ -33921,9 +34019,9 @@ function aiLocalBriefHtml(district, note) {
 function aiEnrichmentHtml(district) {
   return '<div class="ai-enrichment">'
     + '<div class="ai-enrichment-head">'
-    + '<div><div class="ai-enrichment-title">AI evidence review</div><div class="ai-enrichment-copy">The API checks for grades 6-12 math scores below the state average, district LMS, and adopted math curriculum, then saves the sourced result for all users.</div></div>'
+    + '<div><div class="ai-enrichment-title">Public web research brief</div><div class="ai-enrichment-copy">The API runs Google-style public research to compare math scores with the state average, find LMS/platform clues, and find curriculum evidence, then saves the result for all users.</div></div>'
     + '<div class="ai-enrichment-actions">'
-    + '<button class="primary-button ai-generate" type="button">Load saved evidence</button>'
+    + '<button class="primary-button ai-generate" type="button">Run public research</button>'
     + '<button class="secondary-button ai-copy-prompt" type="button">Copy AI prompt</button>'
     + '</div></div>'
     + '<div id="ai-enrichment-output">' + aiLocalBriefHtml(district, 'Waiting for API evidence review.') + '</div>'
@@ -33959,7 +34057,7 @@ function evidenceSectionHtml(title, section, fallback) {
     ? '<p><a href="' + escapeHtml(normalized.sourceUrl) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(normalized.sourceTitle || 'Source') + '</a></p>'
     : '';
   return '<div class="evidence-card"><h4>' + escapeHtml(title) + '</h4>'
-    + '<p>' + escapeHtml(conciseText(summary, 110)) + (normalized.evidence ? '<br>' + escapeHtml(conciseText(normalized.evidence, 90)) : '') + '</p>'
+    + '<p>' + escapeHtml(conciseText(summary, 180)) + (normalized.evidence ? '<br>' + escapeHtml(conciseText(normalized.evidence, 140)) : '') + '</p>'
     + source
     + (meta ? '<div class="evidence-meta">' + meta + '</div>' : '')
     + '</div>';
@@ -33968,7 +34066,7 @@ function evidenceSectionHtml(title, section, fallback) {
 function sourceListHtml(sources) {
   if (!sources.length) return '';
   return '<div class="ai-brief-section"><h4>Cited sources</h4><ul class="ai-source-list">'
-    + sources.slice(0, 4).map(source => {
+    + sources.slice(0, 6).map(source => {
       const title = conciseText(source.title || source.url || 'Public source', 74);
       const category = source.category ? '[' + source.category + '] ' : '';
       const evidence = source.evidence ? ' — ' + conciseText(source.evidence, 80) : '';
@@ -33993,12 +34091,12 @@ function renderExternalAiPayload(payload, district) {
     ? (payload.cached ? 'Saved result reused for all users' : 'New result saved for all users')
     : '';
   return '<div class="ai-output">'
-    + '<strong>Source-backed evidence review</strong>'
-    + '<p>' + escapeHtml(conciseText(payload.summary || 'AI enrichment returned. Validate all sources before outreach.', 150)) + '</p>'
+    + '<strong>Public web research brief</strong>'
+    + '<p>' + escapeHtml(conciseText(payload.summary || 'Public research returned. Validate all sources before outreach.', 220)) + '</p>'
     + '<div class="evidence-grid">'
-    + evidenceSectionHtml('Below-state math scores', payload.math_test_score || payload.mathTestScore || payload.math, 'Needs grade-level state report-card validation.')
-    + evidenceSectionHtml('Listed LMS', payload.lms || payload.listed_lms || payload.listedLms, 'Needs district technology validation.')
-    + evidenceSectionHtml('Math curriculum', payload.math_curriculum || payload.mathCurriculum || payload.curriculum, 'Needs curriculum adoption validation.')
+    + evidenceSectionHtml('Math scores vs state average', payload.math_test_score || payload.mathTestScore || payload.math, 'Exact math-score comparison needs manual state report-card check.')
+    + evidenceSectionHtml('LMS / platform clue', payload.lms || payload.listed_lms || payload.listedLms, 'Needs district platform source validation.')
+    + evidenceSectionHtml('Math curriculum clue', payload.math_curriculum || payload.mathCurriculum || payload.curriculum, 'Needs curriculum or course-guide validation.')
     + '</div>'
     + (validation.length ? '<div class="ai-brief-section"><h4>Validation checklist</h4><ul>' + validation.slice(0, 3).map(item => '<li>' + escapeHtml(conciseText(item, 90)) + '</li>').join('') + '</ul></div>' : '')
     + investigationQueriesHtml(payload, district)
@@ -34030,7 +34128,7 @@ async function runAiEnrichment(district, button, force = false) {
   const cacheKey = aiBriefCacheKey(district);
   if (!force && aiBriefCache.has(cacheKey)) {
     output.innerHTML = aiBriefCache.get(cacheKey);
-    if (button) button.textContent = 'Load saved evidence';
+    if (button) button.textContent = 'Run public research';
     return;
   }
 
@@ -34038,9 +34136,9 @@ async function runAiEnrichment(district, button, force = false) {
   output.dataset.loadingKey = cacheKey;
   if (button) {
     button.disabled = true;
-    button.textContent = 'Checking saved...';
+    button.textContent = 'Searching...';
   }
-  output.innerHTML = '<div class="ai-output"><strong>Source-backed evidence review</strong><p>Checking for saved evidence. If no shared result exists yet, the API will search public sources once and save the result for all users.</p></div>';
+  output.innerHTML = '<div class="ai-output"><strong>Public web research brief</strong><p>Checking for saved research. If no shared result exists yet, the API will run a public-source search once and save the result for all users.</p></div>';
 
   try {
     const response = await fetch(endpoint, {
@@ -34060,13 +34158,13 @@ async function runAiEnrichment(district, button, force = false) {
     delete output.dataset.loadingKey;
     if (button) {
       button.disabled = false;
-      button.textContent = 'Load saved evidence';
+      button.textContent = 'Run public research';
     }
   }
 }
 
 function renderChatAnswer(payload) {
-  const answer = payload?.answer || payload?.summary || 'No answer returned. Try a narrower question about below-state grade-level math scores, LMS, or curriculum.';
+  const answer = payload?.answer || payload?.summary || 'No answer returned. Try a narrower question about math scores vs state average, LMS/platform evidence, curriculum, or next search terms.';
   const sources = Array.isArray(payload?.sources) ? payload.sources.slice(0, 4) : [];
   const links = sources.length
     ? '<div class="ai-brief-meta">' + sources.map(source => source.url ? '<a class="ai-brief-pill" href="' + escapeHtml(source.url) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(source.title || 'Source') + '</a>' : '').join('') + '</div>'
@@ -34081,7 +34179,7 @@ async function runAiChat(district, question, form) {
   log.insertAdjacentHTML('beforeend', '<div class="ai-chat-message user">' + escapeHtml(question) + '</div>');
   const pending = document.createElement('div');
   pending.className = 'ai-chat-message assistant';
-  pending.textContent = endpoint ? 'Searching sources...' : 'API unavailable. Use the investigation links above.';
+  pending.textContent = endpoint ? 'Searching public sources...' : 'API unavailable. Use the investigation links above.';
   log.appendChild(pending);
   log.scrollTop = log.scrollHeight;
   if (!endpoint) return;
@@ -34279,7 +34377,7 @@ function openRationale(district) {
   if (summary) summary.innerHTML = districtKeySummaryHtml(district);
   const note = document.getElementById('rationale-note');
   if (note) {
-    note.innerHTML = '<strong>Evidence scope:</strong> This review only covers source-backed grade-level math scores below state average, LMS, and math curriculum. The AE can use the chat or investigation links for deeper validation.'
+    note.innerHTML = '<strong>Research scope:</strong> This brief asks how district math test scores compare to the state average, then looks for LMS/platform clues and curriculum evidence. Exact grade-level score comparisons may still need a manual report-card check.'
       + aiEnrichmentHtml(district)
       + researchLinksHtml(district);
     bindAiEnrichmentControls(district);
@@ -34460,6 +34558,11 @@ function handleTableChange(event) {
   const key = target?.dataset?.key;
   if (!key) return;
   let affectsTier = false;
+  if (target.classList.contains('planner-note')) {
+    updateDistrictPlan(key, { note: target.value });
+    renderAnnualSummary();
+    return;
+  }
   if (target.classList.contains('planner-tier')) updateDistrictPlan(key, { tier: target.value });
   if (target.classList.contains('planner-math')) {
     updateDistrictPlan(key, { mathNeed: target.value });
@@ -34505,7 +34608,8 @@ function exportCsv() {
     'secondary_school_6_12_count',
     'full_secondary_tam',
     'target_penetration_pct',
-    'modeled_secondary_opportunity'
+    'modeled_secondary_opportunity',
+    'lead_note'
   ];
   const rows = visibleDistricts().map(district => {
     const plan = getDistrictPlan(district);
@@ -34530,7 +34634,8 @@ function exportCsv() {
       secondarySchoolCount(district),
       Math.round(fullOpportunity(district)),
       targetPenetrationPct(district),
-      Math.round(modeledOpportunity(district))
+      Math.round(modeledOpportunity(district)),
+      plan.note || ''
     ];
   });
   const csv = [header, ...rows].map(row => row.map(csvEscape).join(',')).join('\n');
