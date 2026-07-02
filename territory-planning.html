@@ -437,6 +437,47 @@
     margin-bottom: 16px;
   }
   .table-count { color: var(--body); font-size: 13px; margin-bottom: 14px; }
+  .export-menu {
+    position: relative;
+    display: inline-block;
+    margin-left: 8px;
+  }
+  .export-menu summary {
+    list-style: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .export-menu summary::-webkit-details-marker { display: none; }
+  .export-menu summary::after {
+    content: '▾';
+    font-size: 10px;
+    opacity: 0.8;
+  }
+  .export-options {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: 30;
+    display: grid;
+    gap: 6px;
+    width: 220px;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: white;
+    box-shadow: 0 12px 28px rgba(10,31,68,0.14);
+  }
+  .export-options .secondary-button {
+    width: 100%;
+    text-align: left;
+  }
+  .export-status {
+    display: inline-block;
+    margin-left: 8px;
+    color: var(--muted);
+    font-size: 12px;
+  }
   .table-wrap {
     border: 1px solid var(--border);
     border-radius: 10px;
@@ -1333,7 +1374,18 @@
           <button class="secondary-button" id="reset-filters" type="button">Reset filters</button>
         </div>
 
-        <div class="table-count">Showing <strong id="visible-count">—</strong> of <strong id="total-count">—</strong> districts. <button class="primary-button" id="export-csv" type="button">Export CSV</button></div>
+        <div class="table-count">
+          Showing <strong id="visible-count">—</strong> of <strong id="total-count">—</strong> districts.
+          <details class="export-menu" id="export-menu">
+            <summary class="primary-button">Export</summary>
+            <div class="export-options">
+              <button class="secondary-button" id="export-download-csv" type="button">Download CSV</button>
+              <button class="secondary-button" id="export-copy-sheets" type="button">Copy + open Google Sheets</button>
+              <button class="secondary-button" id="export-open-sheets" type="button">Open blank Google Sheet</button>
+            </div>
+          </details>
+          <span class="export-status" id="export-status" aria-live="polite"></span>
+        </div>
 
         <div class="table-wrap">
           <table>
@@ -33874,7 +33926,6 @@ function renderDistrictTable() {
       + '<td class="needs-cell"><a class="needs-review-button" href="' + escapeHtml(reviewHref) + '">Review needs</a></td>'
       + '<td class="tier-cell"><div class="tier-select-stack">'
       + tierSelectHtml(plan.tier, key)
-      + '<div class="suggested-mini">Suggested: ' + escapeHtml(tierMeta(suggested).label) + '<br>Effective: ' + escapeHtml(tierMeta(effective).label) + '</div>'
       + '</div></td>'
       + '</tr>';
   }).join('');
@@ -34023,7 +34074,7 @@ function researchLinksHtml(district) {
     { label: 'Google math curriculum', query: `${base} math curriculum course catalog curriculum guide board adoption` },
     { label: 'Google official district clues', query: `${base} official district math curriculum Canvas` }
   ];
-  return '<div class="ai-brief-section"><h4>Google-style follow-up searches</h4><p>Use these if the research brief needs a second pass or the AE wants to validate a claim manually.</p><div class="investigation-grid">' + links.map(link =>
+  return '<div class="ai-brief-section"><h4>Google-style follow-up searches</h4><p>Click a box to open a targeted Google search for more detail on that topic.</p><div class="investigation-grid">' + links.map(link =>
     followUpQueryButtonHtml(link.label, link.query)
   ).join('') + '</div>' + followUpQueryBubbleHtml() + '</div>';
 }
@@ -34784,7 +34835,13 @@ function bindPlannerControls() {
     savePlanningState();
     renderAll();
   });
-  document.getElementById('export-csv')?.addEventListener('click', exportCsv);
+  document.getElementById('export-download-csv')?.addEventListener('click', exportCsv);
+  document.getElementById('export-copy-sheets')?.addEventListener('click', exportToGoogleSheets);
+  document.getElementById('export-open-sheets')?.addEventListener('click', () => {
+    closeExportMenu();
+    window.open('https://sheets.new', '_blank', 'noopener,noreferrer');
+    setExportStatus('Opened Google Sheets.');
+  });
   document.getElementById('district-table-body')?.addEventListener('input', handleTableChange);
   document.getElementById('district-table-body')?.addEventListener('change', handleTableChange);
   document.getElementById('district-table-body')?.addEventListener('click', event => {
@@ -34859,8 +34916,8 @@ function csvEscape(value) {
   return text;
 }
 
-function exportCsv() {
-  const header = [
+function exportColumns() {
+  return [
     'state_profile',
     'state_code',
     'district',
@@ -34881,7 +34938,10 @@ function exportCsv() {
     'modeled_secondary_opportunity',
     'lead_note'
   ];
-  const rows = visibleDistricts().map(district => {
+}
+
+function exportRows() {
+  return visibleDistricts().map(district => {
     const plan = getDistrictPlan(district);
     const suggested = suggestedTier(district, currentProfile);
     const details = tierScoreDetails(district, currentProfile);
@@ -34908,16 +34968,82 @@ function exportCsv() {
       plan.note || ''
     ];
   });
-  const csv = [header, ...rows].map(row => row.map(csvEscape).join(',')).join('\n');
+}
+
+function exportFilename(extension) {
+  return 'territory-plan-' + currentProfile.stateCode.toLowerCase() + '.' + extension;
+}
+
+function exportTable() {
+  return [exportColumns(), ...exportRows()];
+}
+
+function buildCsvText() {
+  return exportTable().map(row => row.map(csvEscape).join(',')).join('\n');
+}
+
+function sheetEscape(value) {
+  return String(value ?? '').replace(/\t/g, ' ').replace(/\r?\n/g, ' ').trim();
+}
+
+function buildSheetText() {
+  return exportTable().map(row => row.map(sheetEscape).join('\t')).join('\n');
+}
+
+function closeExportMenu() {
+  const menu = document.getElementById('export-menu');
+  if (menu) menu.open = false;
+}
+
+function setExportStatus(message) {
+  const status = document.getElementById('export-status');
+  if (!status) return;
+  status.textContent = message;
+  window.clearTimeout(setExportStatus.timer);
+  setExportStatus.timer = window.setTimeout(() => { status.textContent = ''; }, 4500);
+}
+
+async function copyText(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.left = '-9999px';
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand('copy');
+  textarea.remove();
+}
+
+function exportCsv() {
+  const csv = buildCsvText();
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = 'territory-plan-' + currentProfile.stateCode.toLowerCase() + '.csv';
+  link.download = exportFilename('csv');
   document.body.appendChild(link);
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+  closeExportMenu();
+  setExportStatus('CSV downloaded.');
+}
+
+async function exportToGoogleSheets() {
+  const sheetWindow = window.open('https://sheets.new', '_blank', 'noopener,noreferrer');
+  try {
+    await copyText(buildSheetText());
+    setExportStatus('Copied for Google Sheets. Paste into the new sheet.');
+  } catch (err) {
+    if (sheetWindow) sheetWindow.close();
+    setExportStatus('Copy failed. Download CSV instead.');
+  }
+  closeExportMenu();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
