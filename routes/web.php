@@ -5,6 +5,7 @@ use App\Http\Controllers\CaptureController;
 use App\Http\Controllers\DistrictNeedsSummaryController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\SetupController;
+use App\Http\Controllers\TerritoryPlanController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -30,6 +31,14 @@ Route::middleware('guest')->group(function (): void {
 
 Route::middleware('auth')->group(function (): void {
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
+
+    Route::get('/api/territory-plan', [TerritoryPlanController::class, 'show'])
+        ->middleware('throttle:60,1')
+        ->name('api.territory-plan.show');
+
+    Route::match(['post', 'put', 'patch'], '/api/territory-plan', [TerritoryPlanController::class, 'store'])
+        ->middleware('throttle:60,1')
+        ->name('api.territory-plan.store');
 
     Route::get('/setup/state', [SetupController::class, 'state'])->name('setup.state');
     Route::post('/setup/state', [SetupController::class, 'storeState'])->name('setup.state.store');

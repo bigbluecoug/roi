@@ -169,6 +169,15 @@
   .header-meta { text-align: right; }
   .header-meta .label { font-size: 10px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(255,255,255,0.5); }
   .header-meta .value { font-size: 15px; font-weight: 600; color: white; }
+  .account-save-status {
+    min-height: 16px;
+    margin-top: 4px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.58);
+  }
+  .account-save-status.is-saving { color: white; }
+  .account-save-status.is-warning { color: #fbbf24; }
+  .account-save-status.is-saved { color: #86efac; }
   .sign-out-button {
     border: 1px solid rgba(255,255,255,0.26);
     border-radius: 999px;
@@ -1251,6 +1260,7 @@
         <div class="header-meta">
           <div class="label">Territory Coverage</div>
           <div class="value" id="header-coverage">Annual Planning</div>
+          <div class="account-save-status" id="account-save-status" aria-live="polite">Browser autosave ready</div>
           <button class="sign-out-button" id="sign-out-button" type="button">Sign out</button>
         </div>
       </div>
@@ -33353,6 +33363,8 @@ const STATE_PROFILES = Object.fromEntries(
 const PLANNER_STORAGE_KEY = 'derivita-territory-planning-v1';
 const PLANNER_AUTH_KEY = 'derivita-territory-planner-auth-v1';
 const PLANNER_FOCUSED_STATES_KEY = 'derivita-territory-planning-focused-states-v1';
+const PLANNER_ACCOUNT_EMAIL_KEY = 'derivita-territory-planner-email-v1';
+const PLANNER_SETTINGS_KEY = 'derivita-territory-planning-settings-v1';
 const TIER_OPTIONS = [
   { value: '', label: 'Use suggested' },
   { value: 'tier1', label: 'Tier 1' },
@@ -33400,6 +33412,13 @@ const schoolRosterCache = new Map();
 let currentProfile = STATE_PROFILES.CO;
 let planningState = migratePlanningStateKeys(loadPlanningState());
 let focusedStateCodes = loadFocusedStateCodes();
+let plannerSettings = loadPlannerSettings();
+let plannerAccountEmail = loadPlannerAccountEmail();
+let accountPlanLoaded = false;
+let accountSyncReady = false;
+let accountCsrfToken = '';
+let pendingAccountSave = false;
+let accountSaveTimer = null;
 let searchQuery = '';
 let tierFilter = 'all';
 let enrollmentFilter = 'all';
@@ -33456,10 +33475,11 @@ function loadPlanningState() {
   }
 }
 
-function savePlanningState() {
+function savePlanningState(options = {}) {
   try {
     localStorage.setItem(PLANNER_STORAGE_KEY, JSON.stringify(planningState));
   } catch {}
+  if (options.sync !== false) scheduleAccountPlanSave();
 }
 
 function loadFocusedStateCodes() {
@@ -33471,10 +33491,194 @@ function loadFocusedStateCodes() {
   }
 }
 
-function saveFocusedStateCodes() {
+function saveFocusedStateCodes(options = {}) {
   try {
     localStorage.setItem(PLANNER_FOCUSED_STATES_KEY, JSON.stringify([...focusedStateCodes]));
   } catch {}
+  if (options.sync !== false) scheduleAccountPlanSave();
+}
+
+function loadPlannerSettings() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PLANNER_SETTINGS_KEY) || '{}');
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function savePlannerSettings(options = {}) {
+  try {
+    localStorage.setItem(PLANNER_SETTINGS_KEY, JSON.stringify(plannerSettings));
+  } catch {}
+  if (options.sync !== false) scheduleAccountPlanSave();
+}
+
+function getProfileSettings(stateCode = currentProfile.stateCode) {
+  return plannerSettings[stateCode] || {};
+}
+
+function updateProfileSettings(patch) {
+  const stateCode = currentProfile.stateCode;
+  plannerSettings[stateCode] = {
+    ...(plannerSettings[stateCode] || {}),
+    ...patch,
+    updatedAt: new Date().toISOString()
+  };
+  savePlannerSettings();
+}
+
+function normalizeAccountEmail(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function loadPlannerAccountEmail() {
+  try {
+    return normalizeAccountEmail(localStorage.getItem(PLANNER_ACCOUNT_EMAIL_KEY) || '');
+  } catch {
+    return '';
+  }
+}
+
+function savePlannerAccountEmail(email) {
+  plannerAccountEmail = normalizeAccountEmail(email);
+  try {
+    if (plannerAccountEmail) localStorage.setItem(PLANNER_ACCOUNT_EMAIL_KEY, plannerAccountEmail);
+    else localStorage.removeItem(PLANNER_ACCOUNT_EMAIL_KEY);
+  } catch {}
+}
+
+function accountApiAvailable() {
+  return location.protocol === 'http:' || location.protocol === 'https:';
+}
+
+function setAccountSaveStatus(message, state = '') {
+  const status = document.getElementById('account-save-status');
+  if (!status) return;
+  status.textContent = message;
+  status.className = 'account-save-status' + (state ? ' is-' + state : '');
+}
+
+function accountPlanPayload() {
+  return {
+    planningState,
+    focusedStateCodes: [...focusedStateCodes],
+    plannerSettings
+  };
+}
+
+function mergeAccountPlan(data) {
+  const remoteState = migratePlanningStateKeys(data?.planningState || {});
+  const remoteFocused = Array.isArray(data?.focusedStateCodes) ? data.focusedStateCodes : [];
+  const remoteSettings = data?.plannerSettings && typeof data.plannerSettings === 'object' ? data.plannerSettings : {};
+  const hasRemote = Object.keys(remoteState).length || remoteFocused.length || Object.keys(remoteSettings).length;
+
+  if (!hasRemote) return false;
+
+  planningState = { ...planningState, ...remoteState };
+  focusedStateCodes = new Set([...focusedStateCodes, ...remoteFocused]);
+  plannerSettings = { ...plannerSettings, ...remoteSettings };
+  savePlanningState({ sync: false });
+  saveFocusedStateCodes({ sync: false });
+  savePlannerSettings({ sync: false });
+  return true;
+}
+
+async function loadAccountPlan() {
+  if (!accountApiAvailable()) {
+    accountPlanLoaded = true;
+    accountSyncReady = false;
+    setAccountSaveStatus('Browser autosave only', 'warning');
+    return;
+  }
+
+  setAccountSaveStatus('Checking account save...', 'saving');
+  try {
+    const response = await fetch('/api/territory-plan', {
+      headers: { 'Accept': 'application/json' },
+      credentials: 'same-origin'
+    });
+    if (response.status === 401 || response.status === 403) {
+      accountPlanLoaded = true;
+      accountSyncReady = false;
+      setAccountSaveStatus('Browser saved. Sign into the app to sync account.', 'warning');
+      return;
+    }
+    if (!response.ok) throw new Error('Account plan load failed.');
+
+    const data = await response.json();
+    accountPlanLoaded = true;
+    accountSyncReady = true;
+    accountCsrfToken = data.csrfToken || '';
+    if (data.accountEmail) savePlannerAccountEmail(data.accountEmail);
+
+    const merged = mergeAccountPlan(data);
+    if (merged) {
+      populateStateSelector();
+      updateFocusedToggle();
+      applyProfile(currentProfile.stateCode, false);
+      setAccountSaveStatus('Loaded account plan', 'saved');
+    } else {
+      setAccountSaveStatus('Account autosave ready', 'saved');
+      scheduleAccountPlanSave(100);
+    }
+
+    if (pendingAccountSave) scheduleAccountPlanSave(100);
+  } catch {
+    accountPlanLoaded = true;
+    accountSyncReady = false;
+    setAccountSaveStatus('Browser saved. Account sync unavailable.', 'warning');
+  }
+}
+
+function scheduleAccountPlanSave(delay = 700) {
+  if (!accountApiAvailable()) {
+    setAccountSaveStatus('Browser autosave only', 'warning');
+    return;
+  }
+  if (!accountPlanLoaded) {
+    pendingAccountSave = true;
+    return;
+  }
+  if (!accountSyncReady || !accountCsrfToken) {
+    pendingAccountSave = true;
+    setAccountSaveStatus('Browser saved. Sign into the app to sync account.', 'warning');
+    return;
+  }
+
+  pendingAccountSave = false;
+  window.clearTimeout(accountSaveTimer);
+  setAccountSaveStatus('Saving to account...', 'saving');
+  accountSaveTimer = window.setTimeout(saveAccountPlan, delay);
+}
+
+async function saveAccountPlan() {
+  try {
+    const response = await fetch('/api/territory-plan', {
+      method: 'PUT',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': accountCsrfToken
+      },
+      credentials: 'same-origin',
+      body: JSON.stringify(accountPlanPayload())
+    });
+    if (response.status === 401 || response.status === 403 || response.status === 419) {
+      accountSyncReady = false;
+      pendingAccountSave = true;
+      setAccountSaveStatus('Browser saved. Sign into the app to sync account.', 'warning');
+      return;
+    }
+    if (!response.ok) throw new Error('Account plan save failed.');
+    const data = await response.json();
+    accountCsrfToken = data.csrfToken || accountCsrfToken;
+    if (data.accountEmail) savePlannerAccountEmail(data.accountEmail);
+    setAccountSaveStatus('Saved to account', 'saved');
+  } catch {
+    pendingAccountSave = true;
+    setAccountSaveStatus('Browser saved. Account sync pending.', 'warning');
+  }
 }
 
 function isAuthenticated() {
@@ -33504,20 +33708,26 @@ function showLoginScreen(show) {
 }
 
 function bindLoginGate() {
+  const emailInput = document.getElementById('login-email');
+  if (emailInput && plannerAccountEmail) emailInput.value = plannerAccountEmail;
   showLoginScreen(!isAuthenticated());
   document.getElementById('login-form')?.addEventListener('submit', event => {
     event.preventDefault();
-    const email = document.getElementById('login-email')?.value.trim() || '';
+    const email = emailInput?.value.trim() || '';
     if (!email) {
       setText('login-error', 'Enter your work email to continue.');
       return;
     }
     setText('login-error', '');
+    savePlannerAccountEmail(email);
     setAuthenticated(true);
     showLoginScreen(false);
+    loadAccountPlan();
   });
   document.getElementById('sign-out-button')?.addEventListener('click', () => {
     setAuthenticated(false);
+    accountSyncReady = false;
+    setAccountSaveStatus('Browser autosave ready');
     showLoginScreen(true);
   });
 }
@@ -33844,7 +34054,7 @@ function renderProfileCopy() {
   setText('header-coverage', profile.stateName + ' Annual Planning');
   setText('overview-eyebrow', 'Territory Plan · ' + profile.stateName);
   setText('overview-title', profile.stateName + ' Territory Planning');
-  setText('overview-sub', 'Build a full-year account plan from NCES enrollment, secondary school counts for grades 6-12, TAM, state rank, and district signals. AE edits save in this browser.');
+  setText('overview-sub', 'Build a full-year account plan from NCES enrollment, secondary school counts for grades 6-12, TAM, state rank, and district signals. AE edits autosave locally and sync to the signed-in account when available.');
   setText('state-event-label', profile.eventLabel);
   setText('state-count-label', profile.countLabel);
   setText('anchor-name', anchor ? anchor.short : 'No anchor available');
@@ -33852,7 +34062,7 @@ function renderProfileCopy() {
   setText('rank-number', rank ? '#' + rank.rank + ' / 50' : '#— / 50');
   setText('rank-title', rank ? rank.stateName + ' statewide secondary enrollment' : 'Statewide rank unavailable');
   setText('rank-detail', rank ? fmtN(rank.secondary) + ' public grade 6-12 students' + (isSubset ? ' for this ' + rank.stateName + ' profile' : '') : 'NCES statewide rank not available.');
-  setText('footer-copy', 'Derivita · Territory Planner · Browser-only planning data · District source: ' + DISTRICT_SOURCE_NOTE);
+  setText('footer-copy', 'Derivita · Territory Planner · Account autosave with browser fallback · District source: ' + DISTRICT_SOURCE_NOTE);
 }
 
 function renderOverview() {
@@ -34071,7 +34281,7 @@ function researchLinksHtml(district) {
   const links = [
     { label: 'Google math vs state average', query: `${base} ${district.leaId || ''} math scores compared to state average district report card CMAS` },
     { label: 'Google LMS used by district', query: `${base} Canvas Schoology Clever LMS student parent portal` },
-    { label: 'Google math curriculum', query: `${base} math curriculum course catalog curriculum guide board adoption` },
+    { label: 'Google secondary math curriculum', query: `${base} secondary math curriculum middle school high school math course catalog curriculum guide board adoption` },
     { label: 'Google official district clues', query: `${base} official district math curriculum Canvas` }
   ];
   return '<div class="ai-brief-section"><h4>Google-style follow-up searches</h4><p>Click a box to open a targeted Google search for more detail on that topic.</p><div class="investigation-grid">' + links.map(link =>
@@ -34782,18 +34992,25 @@ function applyProfile(stateCode, updateHash) {
   if (stateSelect) stateSelect.value = currentProfile.stateCode;
   const rateInput = document.getElementById('rate-input');
   const penInput = document.getElementById('default-penetration');
-  if (rateInput) rateInput.value = currentProfile.perStudentDefault || 15;
-  if (penInput) penInput.value = currentProfile.penetrationDefault || 30;
-  setText('default-penetration-display', (currentProfile.penetrationDefault || 30) + '%');
+  const settings = getProfileSettings(currentProfile.stateCode);
+  const rate = Number.isFinite(Number(settings.rate)) ? Number(settings.rate) : currentProfile.perStudentDefault || 15;
+  const penetration = Number.isFinite(Number(settings.defaultPenetration)) ? Number(settings.defaultPenetration) : currentProfile.penetrationDefault || 30;
+  if (rateInput) rateInput.value = rate;
+  if (penInput) penInput.value = penetration;
+  setText('default-penetration-display', penetration + '%');
   if (updateHash) history.replaceState(null, '', '#' + currentProfile.stateCode);
   renderAll();
 }
 
 function bindPlannerControls() {
-  document.getElementById('rate-input')?.addEventListener('input', renderAll);
+  document.getElementById('rate-input')?.addEventListener('input', event => {
+    updateProfileSettings({ rate: Number(event.target.value) || currentProfile.perStudentDefault || 15 });
+    renderAll();
+  });
   const defaultPen = document.getElementById('default-penetration');
   defaultPen?.addEventListener('input', () => {
     setText('default-penetration-display', defaultPen.value + '%');
+    updateProfileSettings({ defaultPenetration: Number(defaultPen.value) || 0 });
     renderAll();
   });
   document.getElementById('district-search')?.addEventListener('input', event => {
@@ -35054,6 +35271,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const initial = reviewKey ? stateCodeFromPlanKey(reviewKey) : normalizeStateCode(location.hash.replace('#', '') || 'CO');
   applyProfile(STATE_PROFILES[initial] ? initial : 'CO', false);
   if (reviewKey) openReviewFromHash();
+  if (isAuthenticated()) loadAccountPlan();
+  else if (!accountApiAvailable()) setAccountSaveStatus('Browser autosave only', 'warning');
 });
 
 window.addEventListener('hashchange', handleRouteFromHash);
