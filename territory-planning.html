@@ -565,6 +565,24 @@
     width: 100%;
     accent-color: var(--orange);
   }
+  .opportunity-band-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .opportunity-band {
+    border: 1px solid rgba(10,31,68,0.1);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.64);
+    padding: 8px;
+  }
+  .opportunity-band .quick-value {
+    font-size: 15px;
+  }
+  .opportunity-band .quick-sub {
+    margin-bottom: 5px;
+  }
   .lead-notes-panel {
     margin-top: 10px;
     border: 1px solid rgba(10,31,68,0.12);
@@ -1227,6 +1245,7 @@
     .ai-output-grid,
     .evidence-grid,
     .investigation-grid,
+    .opportunity-band-grid,
     .ai-chat-form,
     .key-point-grid { grid-template-columns: 1fr; }
   }
@@ -33832,6 +33851,8 @@ function getDistrictPlan(district) {
     lms: saved.lms || '',
     curriculum: saved.curriculum || '',
     penetrationPct: Number.isFinite(Number(saved.penetrationPct)) ? Number(saved.penetrationPct) : null,
+    middlePenetrationPct: Number.isFinite(Number(saved.middlePenetrationPct)) ? Number(saved.middlePenetrationPct) : null,
+    highPenetrationPct: Number.isFinite(Number(saved.highPenetrationPct)) ? Number(saved.highPenetrationPct) : null,
     note: saved.note || ''
   };
 }
@@ -33839,7 +33860,10 @@ function getDistrictPlan(district) {
 function updateDistrictPlan(key, patch) {
   const current = planningState[key] || {};
   const next = { ...current, ...patch, updatedAt: new Date().toISOString() };
-  const empty = !next.tier && !next.quarter && !next.status && !next.nextAction && !next.mathNeed && !next.lms && !next.curriculum && !next.note && (next.penetrationPct === null || next.penetrationPct === undefined || next.penetrationPct === '');
+  const empty = !next.tier && !next.quarter && !next.status && !next.nextAction && !next.mathNeed && !next.lms && !next.curriculum && !next.note
+    && (next.penetrationPct === null || next.penetrationPct === undefined || next.penetrationPct === '')
+    && (next.middlePenetrationPct === null || next.middlePenetrationPct === undefined || next.middlePenetrationPct === '')
+    && (next.highPenetrationPct === null || next.highPenetrationPct === undefined || next.highPenetrationPct === '');
   if (empty) delete planningState[key];
   else planningState[key] = next;
   savePlanningState();
@@ -33950,15 +33974,52 @@ function effectiveTier(district) {
   return plan.tier || suggestedTier(district, currentProfile);
 }
 
-function targetPenetrationPct(district) {
+function clampPercent(value) {
+  return Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+}
+
+function middlePenetrationPct(district) {
   const plan = getDistrictPlan(district);
-  if (plan.penetrationPct === null) return getDefaultPenetrationPct();
-  return Math.max(0, Math.min(100, Math.round(plan.penetrationPct)));
+  if (plan.middlePenetrationPct !== null) return clampPercent(plan.middlePenetrationPct);
+  if (plan.penetrationPct !== null) return clampPercent(plan.penetrationPct);
+  return getDefaultPenetrationPct();
+}
+
+function highPenetrationPct(district) {
+  const plan = getDistrictPlan(district);
+  if (plan.highPenetrationPct !== null) return clampPercent(plan.highPenetrationPct);
+  if (plan.penetrationPct !== null) return clampPercent(plan.penetrationPct);
+  return getDefaultPenetrationPct();
+}
+
+function targetPenetrationPct(district) {
+  const split = secondaryBandSplit(district);
+  if (!district.secondary) return getDefaultPenetrationPct();
+  const weighted = ((split.middleStudents * middlePenetrationPct(district)) + (split.highStudents * highPenetrationPct(district))) / district.secondary;
+  return clampPercent(weighted);
+}
+
+function fullMiddleOpportunity(district) {
+  return secondaryBandSplit(district).middleStudents * getRate();
+}
+
+function fullHighOpportunity(district) {
+  return secondaryBandSplit(district).highStudents * getRate();
+}
+
+function modeledMiddleOpportunity(district) {
+  if (effectiveTier(district) === 'notfit') return 0;
+  return fullMiddleOpportunity(district) * (middlePenetrationPct(district) / 100);
+}
+
+function modeledHighOpportunity(district) {
+  if (effectiveTier(district) === 'notfit') return 0;
+  return fullHighOpportunity(district) * (highPenetrationPct(district) / 100);
 }
 
 function modeledOpportunity(district) {
   if (effectiveTier(district) === 'notfit') return 0;
-  return district.secondary * getRate() * (targetPenetrationPct(district) / 100);
+  return modeledMiddleOpportunity(district) + modeledHighOpportunity(district);
 }
 
 function fullOpportunity(district) {
@@ -34093,7 +34154,7 @@ function renderAnnualSummary() {
       coveredSecondary += district.secondary;
       focusCount += 1;
     }
-    if (plan.tier || plan.mathNeed || plan.lms || plan.curriculum || plan.penetrationPct !== null) adjustedCount += 1;
+    if (plan.tier || plan.mathNeed || plan.lms || plan.curriculum || plan.penetrationPct !== null || plan.middlePenetrationPct !== null || plan.highPenetrationPct !== null) adjustedCount += 1;
   });
   setText('summary-modeled', fmt(modeled));
   setText('summary-covered', fmtN(coveredSecondary));
@@ -34121,13 +34182,20 @@ function renderDistrictTable() {
     const suggested = suggestedTier(district, currentProfile);
     const effective = effectiveTier(district);
     const penetration = targetPenetrationPct(district);
+    const split = secondaryBandSplit(district);
+    const middlePenetration = middlePenetrationPct(district);
+    const highPenetration = highPenetrationPct(district);
     const key = escapeHtml(plan.key);
     const reviewHref = reviewHashForKey(plan.key);
     const anchor = district.anchor ? '<span class="mini-pill">Anchor</span>' : '';
     const rowClass = ['tier1', 'tier2', 'tier3'].includes(plan.tier) ? 'tier-highlight-' + plan.tier : '';
     return '<tr data-key="' + key + '"' + (rowClass ? ' class="' + rowClass + '"' : '') + '>'
       + '<td class="district-cell"><strong>' + escapeHtml(district.name) + '</strong><span>' + escapeHtml(district.city || 'Unknown city') + ' · LEA ' + escapeHtml(district.leaId || 'N/A') + '</span>' + anchor
-      + '<div class="district-penetration-quick"><label>Modeled secondary opportunity</label><div class="quick-value">' + fmt(modeledOpportunity(district)) + '</div><div class="quick-sub">Full secondary TAM ' + fmt(fullOpportunity(district)) + '</div><div class="quick-sub">' + fullN(district.secondary) + ' secondary students @ $' + getRate() + '</div><div class="quick-row"><label>Target penetration</label><strong>' + penetration + '%</strong></div><input class="planner-penetration" data-key="' + key + '" type="range" min="0" max="100" step="5" value="' + penetration + '"></div>'
+      + '<div class="district-penetration-quick"><label>Modeled secondary opportunity</label><div class="quick-value">' + fmt(modeledOpportunity(district)) + '</div><div class="quick-sub">Full secondary TAM ' + fmt(fullOpportunity(district)) + '</div><div class="quick-sub">' + fullN(district.secondary) + ' secondary students @ $' + getRate() + ' · weighted ' + penetration + '%</div><div class="quick-sub">Band split estimated from ' + escapeHtml(split.source) + '.</div>'
+      + '<div class="opportunity-band-grid">'
+      + '<div class="opportunity-band"><div class="quick-row"><label>Middle/Jr. High</label><strong>' + middlePenetration + '%</strong></div><div class="quick-value">' + fmt(modeledMiddleOpportunity(district)) + '</div><div class="quick-sub">' + fullN(split.middleStudents) + ' students · full ' + fmt(fullMiddleOpportunity(district)) + '</div><input class="planner-middle-penetration" data-key="' + key + '" type="range" min="0" max="100" step="5" value="' + middlePenetration + '" aria-label="Middle/Jr. High target penetration for ' + escapeHtml(district.name) + '"></div>'
+      + '<div class="opportunity-band"><div class="quick-row"><label>High School</label><strong>' + highPenetration + '%</strong></div><div class="quick-value">' + fmt(modeledHighOpportunity(district)) + '</div><div class="quick-sub">' + fullN(split.highStudents) + ' students · full ' + fmt(fullHighOpportunity(district)) + '</div><input class="planner-high-penetration" data-key="' + key + '" type="range" min="0" max="100" step="5" value="' + highPenetration + '" aria-label="High School target penetration for ' + escapeHtml(district.name) + '"></div>'
+      + '</div></div>'
       + '<details class="lead-notes-panel"><summary><span>Lead notes</span><strong>' + (plan.note ? 'Saved note' : 'Add note') + '</strong></summary><textarea class="planner-input planner-note" data-key="' + key + '" rows="3" placeholder="Add lead notes, champions, blockers, or follow-up context">' + escapeHtml(plan.note) + '</textarea></details></td>'
       + '<td>' + escapeHtml(district.leaType || 'Unknown') + '</td>'
       + '<td class="numeric">' + fullN(district.total) + '</td>'
@@ -34342,6 +34410,53 @@ function secondarySchoolCount(district) {
   return roster.length || Number(district.secondarySchools) || 0;
 }
 
+function gradesFromSpan(label) {
+  const text = String(label || '');
+  const range = text.match(/Grades?\s+(\d{1,2})\s*-\s*(\d{1,2})/i);
+  if (range) {
+    const start = Number(range[1]);
+    const end = Number(range[2]);
+    if (Number.isFinite(start) && Number.isFinite(end)) {
+      const low = Math.min(start, end);
+      const high = Math.max(start, end);
+      return Array.from({ length: high - low + 1 }, (_, index) => low + index);
+    }
+  }
+  const single = text.match(/Grade\s+(\d{1,2})/i);
+  if (single) return [Number(single[1])].filter(Number.isFinite);
+  return [];
+}
+
+function secondaryBandShares(district) {
+  const roster = schoolRosterForDistrict(district);
+  let middleSlots = 0;
+  let highSlots = 0;
+  roster.forEach(school => {
+    gradesFromSpan(school.grades).forEach(grade => {
+      if (grade >= 6 && grade <= 8) middleSlots += 1;
+      if (grade >= 9 && grade <= 12) highSlots += 1;
+    });
+  });
+  const totalSlots = middleSlots + highSlots;
+  if (!totalSlots) return { middleShare: 3 / 7, highShare: 4 / 7, source: 'standard 6-12 estimate' };
+  return {
+    middleShare: middleSlots / totalSlots,
+    highShare: highSlots / totalSlots,
+    source: 'NCES ELSI school grade spans'
+  };
+}
+
+function secondaryBandSplit(district) {
+  const shares = secondaryBandShares(district);
+  const middleStudents = Math.round((Number(district.secondary) || 0) * shares.middleShare);
+  const highStudents = Math.max(0, (Number(district.secondary) || 0) - middleStudents);
+  return {
+    middleStudents,
+    highStudents,
+    source: shares.source
+  };
+}
+
 function secondarySchoolSource(district) {
   if (schoolRosterForDistrict(district).length) return SCHOOL_ROSTER_SOURCE;
   const source = district.secondarySchoolsSource || 'NCES ELSI/CCD school-directory source needs validation.';
@@ -34360,6 +34475,7 @@ function aiEnrichmentPayload(district) {
   const details = tierScoreDetails(district, currentProfile);
   const plan = getDistrictPlan(district);
   const anchor = findAnchor(currentProfile);
+  const split = secondaryBandSplit(district);
   return {
     profile: {
       stateCode: currentProfile.stateCode,
@@ -34377,10 +34493,19 @@ function aiEnrichmentPayload(district) {
       leaType: district.leaType || '',
       totalStudents: district.total,
       secondaryStudents: district.secondary,
+      middleJrHighStudents: split.middleStudents,
+      highSchoolStudents: split.highStudents,
+      secondaryBandSplitSource: split.source,
       middleHighSchools: secondarySchoolCount(district),
       fullOpportunity: Math.round(fullOpportunity(district)),
+      fullMiddleJrHighOpportunity: Math.round(fullMiddleOpportunity(district)),
+      fullHighSchoolOpportunity: Math.round(fullHighOpportunity(district)),
       modeledOpportunity: Math.round(modeledOpportunity(district)),
+      modeledMiddleJrHighOpportunity: Math.round(modeledMiddleOpportunity(district)),
+      modeledHighSchoolOpportunity: Math.round(modeledHighOpportunity(district)),
       targetPenetrationPct: targetPenetrationPct(district),
+      middleJrHighPenetrationPct: middlePenetrationPct(district),
+      highSchoolPenetrationPct: highPenetrationPct(district),
       ncesSecondarySource: district.secondarySource || '',
       ncesSchoolCountSource: secondarySchoolSource(district),
       knownSecondarySchoolRoster: schoolRosterForDistrict(district).map(school => ({
@@ -35119,6 +35244,8 @@ function handleTableChange(event) {
   }
   if (target.classList.contains('planner-tier')) affectsTier = true;
   if (target.classList.contains('planner-penetration')) updateDistrictPlan(key, { penetrationPct: Number(target.value) });
+  if (target.classList.contains('planner-middle-penetration')) updateDistrictPlan(key, { middlePenetrationPct: Number(target.value) });
+  if (target.classList.contains('planner-high-penetration')) updateDistrictPlan(key, { highPenetrationPct: Number(target.value) });
   renderAnnualSummary();
   renderDistrictTable();
   const modal = document.getElementById('rationale-modal');
@@ -35149,9 +35276,15 @@ function exportColumns() {
     'lms_signal',
     'curriculum_signal',
     'secondary_enrollment',
+    'middle_jr_high_enrollment_est',
+    'high_school_enrollment_est',
     'secondary_school_6_12_count',
     'full_secondary_tam',
     'target_penetration_pct',
+    'middle_jr_high_penetration_pct',
+    'high_school_penetration_pct',
+    'modeled_middle_jr_high_opportunity',
+    'modeled_high_school_opportunity',
     'modeled_secondary_opportunity',
     'lead_note'
   ];
@@ -35163,6 +35296,7 @@ function exportRows() {
     const suggested = suggestedTier(district, currentProfile);
     const details = tierScoreDetails(district, currentProfile);
     const effective = effectiveTier(district);
+    const split = secondaryBandSplit(district);
     return [
       currentProfile.stateName,
       currentProfile.stateCode,
@@ -35178,9 +35312,15 @@ function exportRows() {
       signalOption('lms', plan.lms).label,
       signalOption('curriculum', plan.curriculum).label,
       district.secondary,
+      split.middleStudents,
+      split.highStudents,
       secondarySchoolCount(district),
       Math.round(fullOpportunity(district)),
       targetPenetrationPct(district),
+      middlePenetrationPct(district),
+      highPenetrationPct(district),
+      Math.round(modeledMiddleOpportunity(district)),
+      Math.round(modeledHighOpportunity(district)),
       Math.round(modeledOpportunity(district)),
       plan.note || ''
     ];
