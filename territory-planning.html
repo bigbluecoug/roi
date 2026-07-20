@@ -425,7 +425,7 @@
   .summary-metric .value { font-size: 28px; font-weight: 700; line-height: 1.1; margin-top: 5px; }
   .tier-strip {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     gap: 10px;
     margin-top: 18px;
   }
@@ -1344,7 +1344,7 @@
       <div class="page-wrap">
         <div class="eyebrow">Annual Plan</div>
         <h2 class="section-title">Coverage Summary</h2>
-        <p class="section-sub">Summaries use the effective tier: AE tier when set, otherwise the suggested tier. District-level penetration overrides feed the modeled secondary-student opportunity.</p>
+        <p class="section-sub">Summaries use company-selected tiers only. Districts stay unassigned until the AE chooses the tier that fits the territory plan.</p>
 
         <div class="summary-box">
           <div class="summary-top">
@@ -1363,6 +1363,7 @@
             <div class="tier-count"><strong id="tier3-count">—</strong><span>Tier 3</span></div>
             <div class="tier-count"><strong id="nurture-count">—</strong><span>Nurture</span></div>
             <div class="tier-count"><strong id="notfit-count">—</strong><span>Not a fit</span></div>
+            <div class="tier-count"><strong id="unassigned-count">—</strong><span>Unassigned</span></div>
           </div>
         </div>
 
@@ -1380,6 +1381,7 @@
               <option value="tier3">Tier 3</option>
               <option value="nurture">Nurture</option>
               <option value="notfit">Not a fit</option>
+              <option value="unassigned">Unassigned</option>
             </select>
           </div>
           <div>
@@ -1426,7 +1428,7 @@
                 <th>Secondary</th>
                 <th>Secondary schools (6-12)</th>
                 <th>Needs</th>
-                <th>AE Tier</th>
+                <th>Company Tier</th>
               </tr>
             </thead>
             <tbody id="district-table-body"></tbody>
@@ -1439,7 +1441,7 @@
       <div class="page-wrap">
         <div class="eyebrow">Territory Map</div>
         <h2 class="section-title">Districts by Effective Tier</h2>
-        <p class="section-sub">Circle color follows the effective tier: AE tier when set, otherwise the suggested tier. Circle size follows secondary enrollment.</p>
+        <p class="section-sub">Circle color follows the company-selected tier. Unassigned districts stay neutral until the AE chooses a tier. Circle size follows secondary enrollment.</p>
         <div class="territory-map-card" id="territory-map-card">
           <div id="territory-map"></div>
           <div class="map-tooltip" id="map-tooltip"></div>
@@ -33385,14 +33387,14 @@ const PLANNER_FOCUSED_STATES_KEY = 'derivita-territory-planning-focused-states-v
 const PLANNER_ACCOUNT_EMAIL_KEY = 'derivita-territory-planner-email-v1';
 const PLANNER_SETTINGS_KEY = 'derivita-territory-planning-settings-v1';
 const TIER_OPTIONS = [
-  { value: '', label: 'Use suggested' },
+  { value: '', label: 'Select tier' },
   { value: 'tier1', label: 'Tier 1' },
   { value: 'tier2', label: 'Tier 2' },
   { value: 'tier3', label: 'Tier 3' },
   { value: 'nurture', label: 'Nurture' },
   { value: 'notfit', label: 'Not a fit' }
 ];
-const SUMMARY_TIERS = ['tier1', 'tier2', 'tier3', 'nurture', 'notfit'];
+const SUMMARY_TIERS = ['tier1', 'tier2', 'tier3', 'nurture', 'notfit', 'unassigned'];
 const SIGNAL_OPTIONS = {
   mathNeed: [
     { value: '', label: 'Math need: validate', points: 0, reason: 'Math state-test performance is not validated yet.' },
@@ -33422,7 +33424,8 @@ const TIER_COLORS = {
   tier2: '#f97316',
   tier3: '#0ea5e9',
   nurture: '#65a30d',
-  notfit: '#64748b'
+  notfit: '#64748b',
+  unassigned: '#94a3b8'
 };
 const aiBriefCache = new Map();
 const aiBriefPayloadCache = new Map();
@@ -33879,7 +33882,8 @@ function tierMeta(value) {
     tier2: { label: 'Tier 2', rank: 2 },
     tier3: { label: 'Tier 3', rank: 3 },
     nurture: { label: 'Nurture', rank: 4 },
-    notfit: { label: 'Not a fit', rank: 5 }
+    notfit: { label: 'Not a fit', rank: 5 },
+    unassigned: { label: 'Unassigned', rank: 6 }
   }[value] || { label: 'Unassigned', rank: 6 };
 }
 
@@ -33904,15 +33908,14 @@ function tierSelectHtml(selected, key) {
 
 function rationaleTierControlHtml(district) {
   const plan = getDistrictPlan(district);
-  const suggested = suggestedTier(district, currentProfile);
   const effective = effectiveTier(district);
   const key = escapeHtml(plan.key);
   return '<div class="rationale-tier-panel">'
-    + '<div><label for="rationale-tier-select">AE tier</label>'
+    + '<div><label for="rationale-tier-select">Company tier</label>'
     + '<select class="planner-input planner-tier" id="rationale-tier-select" data-key="' + key + '">' + optionHtml(TIER_OPTIONS, plan.tier) + '</select></div>'
     + '<div class="rationale-tier-readout">'
-    + '<div><b>Suggested:</b> ' + escapeHtml(tierMeta(suggested).label) + '</div>'
-    + '<div><b>Effective:</b> ' + escapeHtml(tierMeta(effective).label) + '</div>'
+    + '<div><b>Selected:</b> ' + escapeHtml(tierMeta(effective).label) + '</div>'
+    + '<div>Choose the tier that best matches company strategy.</div>'
     + '</div></div>';
 }
 
@@ -33971,7 +33974,7 @@ function suggestedTier(district, profile) {
 
 function effectiveTier(district) {
   const plan = getDistrictPlan(district);
-  return plan.tier || suggestedTier(district, currentProfile);
+  return plan.tier || 'unassigned';
 }
 
 function clampPercent(value) {
@@ -34008,17 +34011,17 @@ function fullHighOpportunity(district) {
 }
 
 function modeledMiddleOpportunity(district) {
-  if (effectiveTier(district) === 'notfit') return 0;
+  if (['notfit', 'unassigned'].includes(effectiveTier(district))) return 0;
   return fullMiddleOpportunity(district) * (middlePenetrationPct(district) / 100);
 }
 
 function modeledHighOpportunity(district) {
-  if (effectiveTier(district) === 'notfit') return 0;
+  if (['notfit', 'unassigned'].includes(effectiveTier(district))) return 0;
   return fullHighOpportunity(district) * (highPenetrationPct(district) / 100);
 }
 
 function modeledOpportunity(district) {
-  if (effectiveTier(district) === 'notfit') return 0;
+  if (['notfit', 'unassigned'].includes(effectiveTier(district))) return 0;
   return modeledMiddleOpportunity(district) + modeledHighOpportunity(district);
 }
 
@@ -34066,7 +34069,6 @@ function searchableText(district, plan) {
     district.city,
     district.leaId,
     district.leaType,
-    tierMeta(suggestedTier(district, currentProfile)).label,
     tierMeta(plan.tier).label,
     tierMeta(effectiveTier(district)).label,
     signalOption('mathNeed', plan.mathNeed).label,
@@ -34139,8 +34141,9 @@ function renderOverview() {
 }
 
 function renderAnnualSummary() {
-  const districts = currentProfile.districts;
-  const tierCounts = { tier1: 0, tier2: 0, tier3: 0, nurture: 0, notfit: 0 };
+  const districts = visibleDistricts();
+  const totalDistricts = currentProfile.districts.length;
+  const tierCounts = { tier1: 0, tier2: 0, tier3: 0, nurture: 0, notfit: 0, unassigned: 0 };
   let modeled = 0;
   let coveredSecondary = 0;
   let focusCount = 0;
@@ -34165,6 +34168,11 @@ function renderAnnualSummary() {
   setText('tier3-count', fullN(tierCounts.tier3));
   setText('nurture-count', fullN(tierCounts.nurture));
   setText('notfit-count', fullN(tierCounts.notfit));
+  setText('unassigned-count', fullN(tierCounts.unassigned));
+  const scope = districts.length === totalDistricts
+    ? 'across all ' + fullN(totalDistricts) + ' districts'
+    : 'filtered to ' + fullN(districts.length) + ' of ' + fullN(totalDistricts) + ' districts';
+  setText('stat-rate-label', 'At $' + getRate() + ' per secondary student · ' + scope);
 }
 
 function renderDistrictTable() {
@@ -34177,9 +34185,8 @@ function renderDistrictTable() {
     tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No districts match the current filters.</td></tr>';
     return;
   }
-  tbody.innerHTML = rows.map(district => {
+    tbody.innerHTML = rows.map(district => {
     const plan = getDistrictPlan(district);
-    const suggested = suggestedTier(district, currentProfile);
     const effective = effectiveTier(district);
     const penetration = targetPenetrationPct(district);
     const split = secondaryBandSplit(district);
@@ -34233,13 +34240,11 @@ function profileCounties(features, profile) {
 }
 
 function tooltipHtml(district) {
-  const details = tierScoreDetails(district, currentProfile);
   const effective = effectiveTier(district);
   const plan = getDistrictPlan(district);
   return '<strong>' + escapeHtml(district.name) + '</strong>'
     + '<span>' + escapeHtml(district.city || 'Unknown city') + ' · ' + escapeHtml(district.leaType || 'Unknown LEA type') + '</span>'
-    + '<div class="tooltip-row"><span>Effective tier</span><b>' + escapeHtml(tierMeta(effective).label) + '</b></div>'
-    + '<div class="tooltip-row"><span>Suggested score</span><b>' + Math.round(details.score) + '</b></div>'
+    + '<div class="tooltip-row"><span>Company tier</span><b>' + escapeHtml(tierMeta(effective).label) + '</b></div>'
     + '<div class="tooltip-row"><span>Secondary</span><b>' + fullN(district.secondary) + '</b></div>'
     + '<div class="tooltip-row"><span>Signals</span><b>' + escapeHtml([signalOption('mathNeed', plan.mathNeed).label, signalOption('lms', plan.lms).label, signalOption('curriculum', plan.curriculum).label].join(' · ')) + '</b></div>';
 }
@@ -34252,7 +34257,7 @@ function inlineRationaleHtml(district) {
     '<div class="inline-rationale-row"><span>' + escapeHtml(item.label) + '</span><b>' + (item.points > 0 ? '+' : '') + item.points + '</b></div>'
   ).join('');
   return '<div class="inline-rationale">'
-    + '<strong>Score ' + Math.round(details.score) + ' · Effective ' + escapeHtml(tierMeta(effective).label) + '</strong>'
+    + '<strong>Company tier: ' + escapeHtml(tierMeta(effective).label) + '</strong>'
     + rows
     + '<div class="inline-rationale-row"><span>Math</span><b>' + escapeHtml(signalOption('mathNeed', plan.mathNeed).label.replace('Math need: ', '')) + '</b></div>'
     + '<div class="inline-rationale-row"><span>LMS</span><b>' + escapeHtml(signalOption('lms', plan.lms).label.replace('LMS: ', '')) + '</b></div>'
@@ -34311,7 +34316,7 @@ async function buildTerritoryMap() {
       .attr('cx', d => d.point[0])
       .attr('cy', d => d.point[1])
       .attr('r', d => radius(d.district.secondary))
-      .attr('fill', d => TIER_COLORS[effectiveTier(d.district)] || TIER_COLORS.nurture)
+      .attr('fill', d => TIER_COLORS[effectiveTier(d.district)] || TIER_COLORS.unassigned)
       .attr('fill-opacity', 0.72)
       .attr('stroke', d => d.district.anchor ? '#0A1F44' : 'white')
       .attr('stroke-width', d => d.district.anchor ? 2.4 : 1.2)
@@ -34472,7 +34477,6 @@ function conciseText(value, maxChars = 130) {
 }
 
 function aiEnrichmentPayload(district) {
-  const details = tierScoreDetails(district, currentProfile);
   const plan = getDistrictPlan(district);
   const anchor = findAnchor(currentProfile);
   const split = secondaryBandSplit(district);
@@ -34525,16 +34529,9 @@ function aiEnrichmentPayload(district) {
       mathNeed: optionLabel(SIGNAL_OPTIONS.mathNeed, plan.mathNeed),
       lms: optionLabel(SIGNAL_OPTIONS.lms, plan.lms),
       curriculum: optionLabel(SIGNAL_OPTIONS.curriculum, plan.curriculum),
-      aeTier: plan.tier ? tierMeta(plan.tier).label : '',
-      suggestedTier: tierMeta(details.tier).label,
-      effectiveTier: tierMeta(effectiveTier(district)).label,
-      score: Math.round(details.score)
+      companyTier: plan.tier ? tierMeta(plan.tier).label : 'Unassigned'
     },
-    tierDrivers: details.items.map(item => ({
-      label: item.label,
-      points: item.points,
-      reason: item.reason
-    })),
+    tierDrivers: [],
     instructions: [
       'Run quick public-web research for a Derivita AE.',
       'Return useful source-backed clues, not generic could-not-confirm filler.',
@@ -35140,18 +35137,22 @@ function bindPlannerControls() {
   });
   document.getElementById('district-search')?.addEventListener('input', event => {
     searchQuery = event.target.value;
+    renderAnnualSummary();
     renderDistrictTable();
   });
   document.getElementById('tier-filter')?.addEventListener('change', event => {
     tierFilter = event.target.value;
+    renderAnnualSummary();
     renderDistrictTable();
   });
   document.getElementById('enrollment-filter')?.addEventListener('change', event => {
     enrollmentFilter = event.target.value;
+    renderAnnualSummary();
     renderDistrictTable();
   });
   document.getElementById('lea-filter')?.addEventListener('change', event => {
     leaTypeFilter = event.target.value;
+    renderAnnualSummary();
     renderDistrictTable();
   });
   document.getElementById('reset-filters')?.addEventListener('click', () => {
@@ -35167,6 +35168,7 @@ function bindPlannerControls() {
     if (tier) tier.value = 'all';
     if (enrollment) enrollment.value = 'all';
     if (lea) lea.value = 'all';
+    renderAnnualSummary();
     renderDistrictTable();
   });
   document.getElementById('reset-planning')?.addEventListener('click', () => {
@@ -35268,10 +35270,7 @@ function exportColumns() {
     'city',
     'lea_id',
     'lea_type',
-    'suggested_tier',
-    'suggested_score',
-    'ae_tier',
-    'effective_tier',
+    'company_tier',
     'math_need_signal',
     'lms_signal',
     'curriculum_signal',
@@ -35293,8 +35292,6 @@ function exportColumns() {
 function exportRows() {
   return visibleDistricts().map(district => {
     const plan = getDistrictPlan(district);
-    const suggested = suggestedTier(district, currentProfile);
-    const details = tierScoreDetails(district, currentProfile);
     const effective = effectiveTier(district);
     const split = secondaryBandSplit(district);
     return [
@@ -35304,9 +35301,6 @@ function exportRows() {
       district.city,
       district.leaId || '',
       district.leaType || '',
-      tierMeta(suggested).label,
-      Math.round(details.score),
-      plan.tier ? tierMeta(plan.tier).label : '',
       tierMeta(effective).label,
       signalOption('mathNeed', plan.mathNeed).label,
       signalOption('lms', plan.lms).label,
