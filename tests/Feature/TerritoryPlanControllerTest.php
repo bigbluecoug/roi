@@ -18,15 +18,18 @@ class TerritoryPlanControllerTest extends TestCase
         $this->actingAs($user)->getJson('/api/territory-plan')
             ->assertOk()
             ->assertJsonPath('accountEmail', 'ae@derivita.com')
+            ->assertJsonPath('workspaceKey', 'team:derivita-territory-planner')
+            ->assertJsonPath('workspaceName', 'Derivita Team Workspace')
             ->assertJsonPath('planningState', [])
             ->assertJsonPath('focusedStateCodes', [])
             ->assertJsonPath('plannerSettings', [])
             ->assertJsonPath('source', 'empty');
     }
 
-    public function test_account_plan_can_be_saved_and_loaded_by_email(): void
+    public function test_account_plan_can_be_saved_and_loaded_from_shared_workspace(): void
     {
         $user = User::factory()->create(['email' => 'AE@Derivita.com']);
+        $teammate = User::factory()->create(['email' => 'teammate@derivita.com']);
 
         $payload = [
             'planningState' => [
@@ -48,17 +51,19 @@ class TerritoryPlanControllerTest extends TestCase
         $this->actingAs($user)->putJson('/api/territory-plan', $payload)
             ->assertOk()
             ->assertJsonPath('accountEmail', 'ae@derivita.com')
+            ->assertJsonPath('workspaceName', 'Derivita Team Workspace')
             ->assertJsonPath('planningState.CO:lea-0803450:douglas:castle-rock.tier', 'tier1')
             ->assertJsonPath('focusedStateCodes', ['CO', 'TX'])
             ->assertJsonPath('plannerSettings.CO.rate', 15)
             ->assertJsonPath('source', 'account');
 
         $this->assertDatabaseHas('territory_plans', [
-            'account_email' => 'ae@derivita.com',
+            'account_email' => 'team:derivita-territory-planner',
         ]);
 
-        $this->actingAs($user)->getJson('/api/territory-plan')
+        $this->actingAs($teammate)->getJson('/api/territory-plan')
             ->assertOk()
+            ->assertJsonPath('accountEmail', 'teammate@derivita.com')
             ->assertJsonPath('planningState.CO:lea-0803450:douglas:castle-rock.note', 'Strong district target.')
             ->assertJsonPath('plannerSettings.CO.defaultPenetration', 30);
     }
@@ -68,7 +73,7 @@ class TerritoryPlanControllerTest extends TestCase
         $user = User::factory()->create(['email' => 'ae@derivita.com']);
 
         TerritoryPlan::query()->create([
-            'account_email' => 'ae@derivita.com',
+            'account_email' => 'team:derivita-territory-planner',
             'planning_state' => [
                 'old' => ['tier' => 'tier3'],
             ],

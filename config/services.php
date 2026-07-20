@@ -45,6 +45,11 @@ return [
         'token' => env('HUBSPOT_ACCESS_TOKEN'),
     ],
 
+    'territory_planner' => [
+        'workspace_key' => env('TERRITORY_PLANNER_WORKSPACE_KEY', 'team:derivita-territory-planner'),
+        'workspace_name' => env('TERRITORY_PLANNER_WORKSPACE_NAME', 'Derivita Team Workspace'),
+    ],
+
     'capture_retention_days' => env('CAPTURE_RETENTION_DAYS', 30),
 
 ];

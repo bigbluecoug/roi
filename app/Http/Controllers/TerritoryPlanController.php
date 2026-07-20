@@ -9,10 +9,13 @@ use Illuminate\Support\Str;
 
 class TerritoryPlanController extends Controller
 {
+    private const SHARED_WORKSPACE_KEY = 'team:derivita-territory-planner';
+    private const SHARED_WORKSPACE_NAME = 'Derivita Team Workspace';
+
     public function show(Request $request): JsonResponse
     {
         $email = $this->accountEmail($request);
-        $plan = TerritoryPlan::query()->where('account_email', $email)->first();
+        $plan = TerritoryPlan::query()->where('account_email', $this->workspaceKey())->first();
 
         return response()->json($this->payload($email, $plan));
     }
@@ -28,7 +31,7 @@ class TerritoryPlanController extends Controller
 
         $email = $this->accountEmail($request);
         $plan = TerritoryPlan::query()->updateOrCreate(
-            ['account_email' => $email],
+            ['account_email' => $this->workspaceKey()],
             [
                 'planning_state' => $validated['planningState'] ?? [],
                 'focused_state_codes' => array_values(array_unique($validated['focusedStateCodes'] ?? [])),
@@ -43,6 +46,8 @@ class TerritoryPlanController extends Controller
     {
         return [
             'accountEmail' => $email,
+            'workspaceKey' => $this->workspaceKey(),
+            'workspaceName' => $this->workspaceName(),
             'planningState' => $plan?->planning_state ?? [],
             'focusedStateCodes' => $plan?->focused_state_codes ?? [],
             'plannerSettings' => $plan?->planner_settings ?? [],
@@ -55,5 +60,15 @@ class TerritoryPlanController extends Controller
     private function accountEmail(Request $request): string
     {
         return Str::of((string) $request->user()->email)->trim()->lower()->toString();
+    }
+
+    private function workspaceKey(): string
+    {
+        return (string) config('services.territory_planner.workspace_key', self::SHARED_WORKSPACE_KEY);
+    }
+
+    private function workspaceName(): string
+    {
+        return (string) config('services.territory_planner.workspace_name', self::SHARED_WORKSPACE_NAME);
     }
 }

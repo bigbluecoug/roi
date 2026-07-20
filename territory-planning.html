@@ -137,6 +137,12 @@
     border: 1px solid var(--border);
   }
   .login-error { min-height: 18px; font-size: 12px; color: #dc2626; margin: -4px 0 12px; }
+  .login-help {
+    margin: -6px 0 14px;
+    color: var(--body);
+    font-size: 12px;
+    line-height: 1.5;
+  }
   .app-shell.is-auth-hidden { filter: blur(6px); pointer-events: none; user-select: none; }
   .page-header {
     background: var(--navy);
@@ -169,6 +175,17 @@
   .header-meta { text-align: right; }
   .header-meta .label { font-size: 10px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(255,255,255,0.5); }
   .header-meta .value { font-size: 15px; font-weight: 600; color: white; }
+  .workspace-chip {
+    display: inline-block;
+    margin-top: 7px;
+    padding: 4px 10px;
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 999px;
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.76);
+    font-size: 11px;
+    font-weight: 700;
+  }
   .account-save-status {
     min-height: 16px;
     margin-top: 4px;
@@ -638,6 +655,12 @@
     margin: 0 10px 10px;
     min-height: 78px;
     font-size: 12px;
+    line-height: 1.45;
+  }
+  .last-change-meta {
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 11px;
     line-height: 1.45;
   }
   .numeric { text-align: right; font-weight: 700; }
@@ -1290,6 +1313,11 @@
       <label for="login-email">Work email</label>
       <input type="email" id="login-email" autocomplete="email" placeholder="you@derivita.com">
     </div>
+    <div class="login-field">
+      <label for="login-password">App password</label>
+      <input type="password" id="login-password" autocomplete="current-password" placeholder="Shared internal password">
+    </div>
+    <div class="login-help">On the deployed app, this signs you into the shared team workspace. Local file previews still use browser-only autosave.</div>
     <div class="login-error" id="login-error"></div>
     <button class="login-button" type="submit">Enter planner</button>
   </form>
@@ -1306,6 +1334,7 @@
         <div class="header-meta">
           <div class="label">Territory Coverage</div>
           <div class="value" id="header-coverage">Annual Planning</div>
+          <div class="workspace-chip" id="workspace-chip">Shared workspace</div>
           <div class="account-save-status" id="account-save-status" aria-live="polite">Browser autosave ready</div>
           <button class="sign-out-button" id="sign-out-button" type="button">Sign out</button>
         </div>
@@ -1318,7 +1347,7 @@
       <div class="page-wrap">
         <div class="eyebrow" id="overview-eyebrow">Territory Plan</div>
         <h1 class="section-title" id="overview-title">State Territory Planning</h1>
-        <p class="section-sub" id="overview-sub">Build a full-year account plan from NCES enrollment and district signals.</p>
+        <p class="section-sub" id="overview-sub">Build a shared full-year territory plan from NCES enrollment and district signals.</p>
 
         <div class="selector-panel">
           <div>
@@ -33463,6 +33492,7 @@ let planningState = migratePlanningStateKeys(loadPlanningState());
 let focusedStateCodes = loadFocusedStateCodes();
 let plannerSettings = loadPlannerSettings();
 let plannerAccountEmail = loadPlannerAccountEmail();
+let plannerWorkspaceName = 'Shared workspace';
 let accountPlanLoaded = false;
 let accountSyncReady = false;
 let accountCsrfToken = '';
@@ -33597,6 +33627,11 @@ function savePlannerAccountEmail(email) {
   } catch {}
 }
 
+function setPlannerWorkspaceName(name) {
+  plannerWorkspaceName = String(name || 'Shared workspace').trim() || 'Shared workspace';
+  setText('workspace-chip', plannerWorkspaceName);
+}
+
 function accountApiAvailable() {
   return location.protocol === 'http:' || location.protocol === 'https:';
 }
@@ -33606,6 +33641,10 @@ function setAccountSaveStatus(message, state = '') {
   if (!status) return;
   status.textContent = message;
   status.className = 'account-save-status' + (state ? ' is-' + state : '');
+}
+
+function currentEditorLabel() {
+  return plannerAccountEmail || 'Browser user';
 }
 
 function accountPlanPayload() {
@@ -33641,7 +33680,7 @@ async function loadAccountPlan() {
     return;
   }
 
-  setAccountSaveStatus('Checking account save...', 'saving');
+  setAccountSaveStatus('Checking team workspace...', 'saving');
   try {
     const response = await fetch('/api/territory-plan', {
       headers: { 'Accept': 'application/json' },
@@ -33650,7 +33689,7 @@ async function loadAccountPlan() {
     if (response.status === 401 || response.status === 403) {
       accountPlanLoaded = true;
       accountSyncReady = false;
-      setAccountSaveStatus('Browser saved. Sign into the app to sync account.', 'warning');
+      setAccountSaveStatus('Browser saved. Sign into the app to sync team workspace.', 'warning');
       return;
     }
     if (!response.ok) throw new Error('Account plan load failed.');
@@ -33660,15 +33699,18 @@ async function loadAccountPlan() {
     accountSyncReady = true;
     accountCsrfToken = data.csrfToken || '';
     if (data.accountEmail) savePlannerAccountEmail(data.accountEmail);
+    if (data.workspaceName) setPlannerWorkspaceName(data.workspaceName);
+    setAuthenticated(true);
+    showLoginScreen(false);
 
     const merged = mergeAccountPlan(data);
     if (merged) {
       populateStateSelector();
       updateFocusedToggle();
       applyProfile(currentProfile.stateCode, false);
-      setAccountSaveStatus('Loaded account plan', 'saved');
+      setAccountSaveStatus('Loaded team workspace', 'saved');
     } else {
-      setAccountSaveStatus('Account autosave ready', 'saved');
+      setAccountSaveStatus('Team workspace autosave ready', 'saved');
       scheduleAccountPlanSave(100);
     }
 
@@ -33676,7 +33718,7 @@ async function loadAccountPlan() {
   } catch {
     accountPlanLoaded = true;
     accountSyncReady = false;
-    setAccountSaveStatus('Browser saved. Account sync unavailable.', 'warning');
+    setAccountSaveStatus('Browser saved. Team sync unavailable.', 'warning');
   }
 }
 
@@ -33691,13 +33733,13 @@ function scheduleAccountPlanSave(delay = 700) {
   }
   if (!accountSyncReady || !accountCsrfToken) {
     pendingAccountSave = true;
-    setAccountSaveStatus('Browser saved. Sign into the app to sync account.', 'warning');
+    setAccountSaveStatus('Browser saved. Sign into the app to sync team workspace.', 'warning');
     return;
   }
 
   pendingAccountSave = false;
   window.clearTimeout(accountSaveTimer);
-  setAccountSaveStatus('Saving to account...', 'saving');
+  setAccountSaveStatus('Saving to team workspace...', 'saving');
   accountSaveTimer = window.setTimeout(saveAccountPlan, delay);
 }
 
@@ -33716,17 +33758,18 @@ async function saveAccountPlan() {
     if (response.status === 401 || response.status === 403 || response.status === 419) {
       accountSyncReady = false;
       pendingAccountSave = true;
-      setAccountSaveStatus('Browser saved. Sign into the app to sync account.', 'warning');
+      setAccountSaveStatus('Browser saved. Sign into the app to sync team workspace.', 'warning');
       return;
     }
     if (!response.ok) throw new Error('Account plan save failed.');
     const data = await response.json();
     accountCsrfToken = data.csrfToken || accountCsrfToken;
     if (data.accountEmail) savePlannerAccountEmail(data.accountEmail);
-    setAccountSaveStatus('Saved to account', 'saved');
+    if (data.workspaceName) setPlannerWorkspaceName(data.workspaceName);
+    setAccountSaveStatus('Saved to team workspace', 'saved');
   } catch {
     pendingAccountSave = true;
-    setAccountSaveStatus('Browser saved. Account sync pending.', 'warning');
+    setAccountSaveStatus('Browser saved. Team sync pending.', 'warning');
   }
 }
 
@@ -33756,26 +33799,94 @@ function showLoginScreen(show) {
   if (show) document.getElementById('login-email')?.focus();
 }
 
+async function fetchLoginToken() {
+  const response = await fetch('/login', {
+    headers: { 'Accept': 'text/html' },
+    credentials: 'same-origin'
+  });
+  if (!response.ok) throw new Error('Login page unavailable.');
+  const html = await response.text();
+  const match = html.match(/name=["']_token["'][^>]*value=["']([^"']+)["']/);
+  if (!match) throw new Error('Login token unavailable.');
+  return match[1];
+}
+
+async function loginToAppSession(email, password) {
+  const token = await fetchLoginToken();
+  const body = new URLSearchParams();
+  body.set('_token', token);
+  body.set('email', email);
+  body.set('password', password);
+  body.set('remember', '1');
+  const response = await fetch('/login', {
+    method: 'POST',
+    headers: {
+      'Accept': 'text/html',
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    credentials: 'same-origin',
+    body
+  });
+  if (!response.ok) throw new Error('Login request failed.');
+
+  const check = await fetch('/api/territory-plan', {
+    headers: { 'Accept': 'application/json' },
+    credentials: 'same-origin'
+  });
+  if (check.status === 401 || check.status === 403) throw new Error('Those credentials did not sign into the app.');
+  return true;
+}
+
 function bindLoginGate() {
   const emailInput = document.getElementById('login-email');
+  const passwordInput = document.getElementById('login-password');
   if (emailInput && plannerAccountEmail) emailInput.value = plannerAccountEmail;
   showLoginScreen(!isAuthenticated());
-  document.getElementById('login-form')?.addEventListener('submit', event => {
+  document.getElementById('login-form')?.addEventListener('submit', async event => {
     event.preventDefault();
     const email = emailInput?.value.trim() || '';
+    const password = passwordInput?.value || '';
     if (!email) {
       setText('login-error', 'Enter your work email to continue.');
       return;
     }
     setText('login-error', '');
+    if (accountApiAvailable()) {
+      setText('login-error', 'Signing in...');
+      try {
+        await loginToAppSession(email, password);
+      } catch (err) {
+        if (/Login page unavailable|Login token unavailable/i.test(err?.message || '')) {
+          setText('login-error', '');
+          setAccountSaveStatus('Local preview: browser autosave only', 'warning');
+        } else {
+          setText('login-error', 'Could not sign into the app. Check the email and password, or use the Laravel login page.');
+          return;
+        }
+      }
+      setText('login-error', '');
+    }
     savePlannerAccountEmail(email);
     setAuthenticated(true);
     showLoginScreen(false);
     loadAccountPlan();
   });
-  document.getElementById('sign-out-button')?.addEventListener('click', () => {
+  document.getElementById('sign-out-button')?.addEventListener('click', async () => {
+    if (accountApiAvailable() && accountCsrfToken) {
+      try {
+        await fetch('/logout', {
+          method: 'POST',
+          headers: {
+            'Accept': 'text/html',
+            'X-CSRF-TOKEN': accountCsrfToken
+          },
+          credentials: 'same-origin'
+        });
+      } catch {}
+    }
     setAuthenticated(false);
     accountSyncReady = false;
+    accountCsrfToken = '';
     setAccountSaveStatus('Browser autosave ready');
     showLoginScreen(true);
   });
@@ -33883,13 +33994,15 @@ function getDistrictPlan(district) {
     penetrationPct: Number.isFinite(Number(saved.penetrationPct)) ? Number(saved.penetrationPct) : null,
     middlePenetrationPct: Number.isFinite(Number(saved.middlePenetrationPct)) ? Number(saved.middlePenetrationPct) : null,
     highPenetrationPct: Number.isFinite(Number(saved.highPenetrationPct)) ? Number(saved.highPenetrationPct) : null,
-    note: saved.note || ''
+    note: saved.note || '',
+    updatedAt: saved.updatedAt || '',
+    updatedBy: saved.updatedBy || ''
   };
 }
 
 function updateDistrictPlan(key, patch) {
   const current = planningState[key] || {};
-  const next = { ...current, ...patch, updatedAt: new Date().toISOString() };
+  const next = { ...current, ...patch, updatedAt: new Date().toISOString(), updatedBy: currentEditorLabel() };
   const empty = !next.tier && !next.quarter && !next.status && !next.nextAction && !next.mathNeed && !next.lms && !next.curriculum && !next.note
     && (next.penetrationPct === null || next.penetrationPct === undefined || next.penetrationPct === '')
     && (next.middlePenetrationPct === null || next.middlePenetrationPct === undefined || next.middlePenetrationPct === '')
@@ -33933,6 +34046,20 @@ function tierSelectHtml(selected, key) {
   return '<select class="planner-input planner-tier" data-key="' + key + '">' + optionHtml(TIER_OPTIONS, selected) + '</select>';
 }
 
+function formatChangedAt(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+function lastChangedHtml(plan) {
+  if (!plan.updatedBy && !plan.updatedAt) return '';
+  const by = plan.updatedBy ? escapeHtml(plan.updatedBy) : 'Unknown user';
+  const when = formatChangedAt(plan.updatedAt);
+  return '<div class="last-change-meta">Last changed by ' + by + (when ? ' · ' + escapeHtml(when) : '') + '</div>';
+}
+
 function rationaleTierControlHtml(district) {
   const plan = getDistrictPlan(district);
   const effective = effectiveTier(district);
@@ -33943,6 +34070,7 @@ function rationaleTierControlHtml(district) {
     + '<div class="rationale-tier-readout">'
     + '<div><b>Selected:</b> ' + escapeHtml(tierMeta(effective).label) + '</div>'
     + '<div>Choose the tier that best matches company strategy.</div>'
+    + lastChangedHtml(plan)
     + '</div></div>';
 }
 
@@ -34144,7 +34272,7 @@ function renderProfileCopy() {
   setText('header-coverage', profile.stateName + ' Annual Planning');
   setText('overview-eyebrow', 'Territory Plan · ' + profile.stateName);
   setText('overview-title', profile.stateName + ' Territory Planning');
-  setText('overview-sub', 'Build a full-year account plan from NCES enrollment, secondary school counts for grades 6-12, TAM, state rank, and district signals. AE edits autosave locally and sync to the signed-in account when available.');
+  setText('overview-sub', 'Build a shared full-year territory plan from NCES enrollment, secondary school counts for grades 6-12, TAM, state rank, and district signals. AE edits autosave locally and sync to the team workspace when signed in.');
   setText('state-event-label', profile.eventLabel);
   setText('state-count-label', profile.countLabel);
   setText('anchor-name', anchor ? anchor.short : 'No anchor available');
@@ -34238,6 +34366,7 @@ function renderDistrictTable() {
       + '<td class="needs-cell"><a class="needs-review-button" href="' + escapeHtml(reviewHref) + '">Review needs</a></td>'
       + '<td class="tier-cell"><div class="tier-select-stack">'
       + tierSelectHtml(plan.tier, key)
+      + lastChangedHtml(plan)
       + '</div></td>'
       + '</tr>';
   }).join('');
@@ -34382,7 +34511,7 @@ function researchLinksHtml(district) {
     { label: 'Google math vs state average', query: `${base} ${district.leaId || ''} math scores compared to state average district report card CMAS` },
     { label: 'Google LMS used by district', query: `${base} Canvas Schoology Clever LMS student parent portal` },
     { label: 'Google secondary math curriculum', query: `${base} secondary math curriculum middle school high school math course catalog curriculum guide board adoption` },
-    { label: 'Google official district clues', query: `${base} official district math curriculum Canvas` }
+    { label: 'Google district math specialist', query: `${base} district math specialist mathematics coordinator secondary math director curriculum instruction` }
   ];
   return '<div class="ai-brief-section"><h4>Google-style follow-up searches</h4><p>Click a box to open a targeted Google search for more detail on that topic.</p><div class="investigation-grid">' + links.map(link =>
     followUpQueryButtonHtml(link.label, link.query)
@@ -35312,6 +35441,8 @@ function exportColumns() {
     'modeled_middle_jr_high_opportunity',
     'modeled_high_school_opportunity',
     'modeled_secondary_opportunity',
+    'last_changed_by',
+    'last_changed_at',
     'lead_note'
   ];
 }
@@ -35343,6 +35474,8 @@ function exportRows() {
       Math.round(modeledMiddleOpportunity(district)),
       Math.round(modeledHighOpportunity(district)),
       Math.round(modeledOpportunity(district)),
+      plan.updatedBy || '',
+      plan.updatedAt || '',
       plan.note || ''
     ];
   });
@@ -35458,7 +35591,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const initial = reviewKey ? stateCodeFromPlanKey(reviewKey) : normalizeStateCode(location.hash.replace('#', '') || 'CO');
   applyProfile(STATE_PROFILES[initial] ? initial : 'CO', false);
   if (reviewKey) openReviewFromHash();
-  if (isAuthenticated()) loadAccountPlan();
+  if (isAuthenticated() || accountApiAvailable()) loadAccountPlan();
   else if (!accountApiAvailable()) setAccountSaveStatus('Browser autosave only', 'warning');
 });
 
