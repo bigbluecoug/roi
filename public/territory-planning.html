@@ -1438,7 +1438,7 @@
             <summary class="primary-button">Export</summary>
             <div class="export-options">
               <button class="secondary-button" id="export-download-csv" type="button">Download CSV</button>
-              <button class="secondary-button" id="export-copy-sheets" type="button">Copy + open Google Sheets</button>
+              <button class="secondary-button" id="export-copy-sheets" type="button">Send CSV to Google Sheets</button>
               <button class="secondary-button" id="export-open-sheets" type="button">Open blank Google Sheet</button>
             </div>
           </details>
@@ -35399,6 +35399,12 @@ async function copyText(text) {
 
 function exportCsv() {
   const csv = buildCsvText();
+  downloadCsvBlob(csv);
+  closeExportMenu();
+  setExportStatus('CSV downloaded.');
+}
+
+function downloadCsvBlob(csv) {
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -35408,18 +35414,38 @@ function exportCsv() {
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
-  closeExportMenu();
-  setExportStatus('CSV downloaded.');
 }
 
 async function exportToGoogleSheets() {
+  const csv = buildCsvText();
+  const file = new File([csv], exportFilename('csv'), { type: 'text/csv' });
+  if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
+    try {
+      await navigator.share({
+        files: [file],
+        title: currentProfile.stateName + ' territory plan CSV',
+        text: 'Open this CSV in Google Sheets.'
+      });
+      closeExportMenu();
+      setExportStatus('CSV sent to the share sheet. Choose Google Sheets if available.');
+      return;
+    } catch (err) {
+      if (err?.name === 'AbortError') {
+        closeExportMenu();
+        setExportStatus('CSV share canceled.');
+        return;
+      }
+    }
+  }
+
+  downloadCsvBlob(csv);
   const sheetWindow = window.open('https://sheets.new', '_blank', 'noopener,noreferrer');
   try {
     await copyText(buildSheetText());
-    setExportStatus('Copied for Google Sheets. Paste into the new sheet.');
+    setExportStatus('CSV downloaded and copied. In Google Sheets, paste into A1 or import the downloaded CSV.');
   } catch (err) {
     if (sheetWindow) sheetWindow.close();
-    setExportStatus('Copy failed. Download CSV instead.');
+    setExportStatus('CSV downloaded. Import it into Google Sheets.');
   }
   closeExportMenu();
 }
